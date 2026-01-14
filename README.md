@@ -6,9 +6,9 @@
 
 A [Strapi](https://strapi.io/) plugin that provides a [MapLibre](https://www.maplibre.org/) map custom field for your content-types, allowing for mutiple base maps and multiple POI layers configuration, storing GeoJSON Features behind the scene.
 
-![Map Field](./add-or-pin-on-map.png)
+![Map Field](https://codeberg.org/Premiate-Edizioni/strapi-plugin-maplibre-field/raw/branch/main/add-or-pin-on-map.png)
 
-You can use the search box to pinpoint the location you are looking for. Alternatively, you can double-click anywhere on the map, which will put a marker at the exact point and set longitude and latitude. Any point Of Interest on the base map or  while setting the address at the closest geolocated point on OpenStreetMap.
+You can use the search box to pinpoint the location you are looking for. Alternatively, you can double-click anywhere on the map, which will put a marker at the exact point and set longitude and latitude. Any Point Of Interest on the base map or  while setting the address at the closest geolocated point on OpenStreetMap.
 
 The longitude and latitude of the geolocated point are displayed in the readonly fields underneath the map. The address matches the closest geolocated point.
 
@@ -359,7 +359,7 @@ In the Strapi content type builder:
 - Type a name for the field
 - Click `Finish`
 
-![Add map field to content type](./add-maplibre-custom-field.png)
+![Add map field to content type](https://codeberg.org/Premiate-Edizioni/strapi-plugin-maplibre-field/raw/branch/main/add-maplibre-custom-field.png)
 
 ### Localization (i18n)
 
