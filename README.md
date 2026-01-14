@@ -1,6 +1,6 @@
 # MapLibre Field - Strapi v5 Plugin
 
-[![npm version](https://img.shields.io/npm/v/strapi-plugin-maplibre-field)](https://www.npmjs.com/package/strapi-plugin-maplibre-field)
+[![npm version](https://img.shields.io/npm/v/@premiate/strapi-plugin-maplibre-field)](https://www.npmjs.com/package/@premiate/strapi-plugin-maplibre-field)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Strapi v5](https://img.shields.io/badge/Strapi-v5-blue)](https://strapi.io)
 
