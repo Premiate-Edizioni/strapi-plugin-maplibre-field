@@ -1,5 +1,5 @@
 {
-	"name": "strapi-plugin-maplibre-field",
+	"name": "@premiate/strapi-plugin-maplibre-field",
 	"version": "1.0.1",
 	"description": "Strapi plugin that provides a MapLibre custom field",
 	"repository": {
@@ -78,6 +78,7 @@
 		"styled-components": "^6.0.0"
 	},
 	"publishConfig": {
+		"access": "public",
 		"registry": "https://registry.npmjs.org/"
 	},
 	"engines": {
