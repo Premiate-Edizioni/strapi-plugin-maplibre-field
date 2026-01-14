@@ -1,0 +1,70 @@
+# NPM Publish - Include only necessary files for production
+
+# Development files
+.claude/
+.env.example
+.vscode/
+.idea/
+*.code-workspace
+
+# Test files
+tests/
+coverage/
+jest.config.ts
+jest.config.js
+*.test.ts
+*.test.tsx
+*.test.js
+*.test.jsx
+*.spec.ts
+*.spec.tsx
+*.spec.js
+*.spec.jsx
+
+# TypeScript source (dist/ is compiled output)
+src/
+tsconfig.json
+tsconfig.*.json
+*.tsbuildinfo
+
+# Build tools
+.eslintrc*
+.prettierrc*
+.editorconfig
+
+# Documentation (keep README.md and LICENSE)
+CLAUDE.md
+IMPLEMENTATION_PLAN.md
+CONTRIBUTING.md
+
+# Large assets (keep logo.png for npm page)
+add-or-pin-on-map.png
+add-maplibre-custom-field.png
+*.mov
+*.mp4
+*.gif
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.gitlab-ci.yml
+.github/
+
+# OS files
+.DS_Store
+Thumbs.db
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+*.cache
+.tmp
+.temp

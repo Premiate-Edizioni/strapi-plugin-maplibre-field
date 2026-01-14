@@ -1,0 +1,98 @@
+{
+	"name": "strapi-plugin-maplibre-field",
+	"version": "1.0.0",
+	"description": "Strapi plugin that provides a MapLibre custom field",
+	"repository": {
+		"type": "git",
+		"url": "https://codeberg.org/premiate-edizioni/strapi-plugin-maplibre-field.git"
+	},
+	"strapi": {
+		"name": "maplibre-field",
+		"description": "Add a MapLibre custom field to your Strapi content types",
+		"kind": "plugin",
+		"displayName": "MapLibre Field"
+	},
+	"files": [
+		"dist/",
+		"LICENSE",
+		"README.md",
+		"CHANGELOG.md",
+		"logo.png"
+	],
+	"exports": {
+		"./package.json": "./package.json",
+		"./strapi-admin": {
+			"types": "./dist/admin/src/index.d.ts",
+			"source": "./admin/src/index.tsx",
+			"import": "./dist/admin/index.mjs",
+			"require": "./dist/admin/index.js",
+			"default": "./dist/admin/index.js"
+		},
+		"./strapi-server": {
+			"types": "./dist/server/src/index.d.ts",
+			"source": "./server/src/index.ts",
+			"import": "./dist/server/index.mjs",
+			"require": "./dist/server/index.js",
+			"default": "./dist/server/index.js"
+		}
+	},
+	"scripts": {
+		"build": "strapi-plugin build",
+		"watch": "tsc --watch --preserveWatchOutput",
+		"verify": "strapi-plugin verify",
+		"test": "jest",
+		"prepublishOnly": "npm run build && npm run verify && npm test"
+	},
+	"dependencies": {
+		"@maplibre/maplibre-gl-geocoder": "^1.9.4",
+		"maplibre-gl": "^5.16.0",
+		"pmtiles": "^4.3.2",
+		"react-map-gl": "^8.1.0"
+	},
+	"devDependencies": {
+		"@strapi/sdk-plugin": "^5.4.0",
+		"@strapi/typescript-utils": "^5.0.0",
+		"@testing-library/jest-dom": "^6.0.0",
+		"@testing-library/react": "^14.0.0",
+		"@types/jest": "^30.0.0",
+		"@types/react": "^18.0.0",
+		"@types/react-dom": "^18.0.0",
+		"identity-obj-proxy": "^3.0.0",
+		"jest": "^30.2.0",
+		"jest-environment-jsdom": "^30.2.0",
+		"ts-jest": "^29.0.0",
+		"typescript": "^5.0.0"
+	},
+	"author": {
+		"name": "Claudio Bernardini",
+		"email": "claudiob@premiate.org",
+		"url": "https://premiate.org"
+	},
+	"peerDependencies": {
+		"@strapi/design-system": "^2.0.0",
+		"@strapi/icons": "^2.0.0",
+		"@strapi/strapi": "^5.0.0",
+		"react": "^17.0.0 || ^18.0.0",
+		"react-dom": "^17.0.0 || ^18.0.0",
+		"react-router-dom": "^6.0.0",
+		"styled-components": "^6.0.0"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org/"
+	},
+	"engines": {
+		"node": ">=20.0.0 <=24.x.x",
+		"npm": ">=6.0.0"
+	},
+	"license": "MIT",
+	"keywords": [
+		"strapi",
+		"strapi-plugin",
+		"plugin",
+		"maplibre",
+		"nominatim",
+		"protomaps",
+		"pmtiles",
+		"strapi5"
+	]
+}

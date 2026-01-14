@@ -1,0 +1,23 @@
+{
+  "extends": "@strapi/typescript-utils/tsconfigs/server",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "module": "ES2020",
+    "moduleResolution": "bundler",
+    "types": ["jest", "@testing-library/jest-dom"],
+    "lib": ["ES2020", "DOM"],
+    "declaration": true,
+    "declarationMap": true
+  },
+  "include": ["./admin/src/**/*", "./server/src/**/*", "./tests/**/*"],
+  "exclude": ["node_modules", "dist", "build", ".cache"]
+}

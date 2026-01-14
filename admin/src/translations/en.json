@@ -1,0 +1,13 @@
+{
+  "maplibre-field.label": "Map",
+  "maplibre-field.search": "Search for a place or address on OpenStreetMap",
+  "maplibre-field.description": "A map custom field using MapLibre",
+  "maplibre-field.fields.address": "address",
+  "maplibre-field.fields.longitude": "longitude",
+  "maplibre-field.fields.latitude": "latitude",
+  "maplibre-field.geocoding.success": "Address updated successfully",
+  "maplibre-field.geocoding.error": "Failed to fetch address. Please try again.",
+  "maplibre-field.geocoding.no-results": "No address found for this location",
+  "maplibre-field.i18n.localized.label": "Enable localization for this field",
+  "maplibre-field.i18n.localized.description": "The field can have different values in each language"
+}

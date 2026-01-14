@@ -1,0 +1,13 @@
+{
+  "maplibre-field.label": "Mapa",
+  "maplibre-field.search": "Buscar un lugar o dirección en OpenStreetMap",
+  "maplibre-field.description": "Un campo personalizado de mapa usando MapLibre",
+  "maplibre-field.fields.address": "dirección",
+  "maplibre-field.fields.longitude": "longitud",
+  "maplibre-field.fields.latitude": "latitud",
+  "maplibre-field.geocoding.success": "Dirección actualizada con éxito",
+  "maplibre-field.geocoding.error": "Error al obtener la dirección. Por favor, inténtelo de nuevo.",
+  "maplibre-field.geocoding.no-results": "No se encontró dirección para esta ubicación",
+  "maplibre-field.i18n.localized.label": "Activar localización para este campo",
+  "maplibre-field.i18n.localized.description": "El campo puede tener valores diferentes en cada idioma"
+}
