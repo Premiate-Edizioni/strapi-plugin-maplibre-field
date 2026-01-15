@@ -8,11 +8,19 @@ A [Strapi](https://strapi.io/) plugin that provides a [MapLibre](https://www.map
 
 ![Map Field](https://codeberg.org/Premiate-Edizioni/strapi-plugin-maplibre-field/raw/branch/main/add-or-pin-on-map.png)
 
-You can use the search box to pinpoint the location you are looking for. Alternatively, you can double-click anywhere on the map, which will put a marker at the exact point and set longitude and latitude. Any Point Of Interest on the base map or while setting the address at the closest geolocated point on OpenStreetMap.
+## How to Select a Location
 
-The longitude and latitude of the geolocated point are displayed in the readonly fields underneath the map. The address matches the closest geolocated point.
+There are multiple ways to select a location on the map:
 
-The field is stored as a standard [GeoJSON Feature](https://geojson.org/) (RFC 7946) in a JSON field:
+- **Search box**: Type an address or place name to search and select from the results
+- **Single click on POI**: Click on any POI marker (from custom GeoJSON layers) to select it
+- **Double-click on map**:
+  - At high zoom levels, double-clicking near a POI from the base map (e.g., shops, restaurants from OpenStreetMap tiles) will snap to that POI
+  - Double-clicking on an empty area will set the marker at the exact coordinates and save longitude and latitude only.
+
+The longitude and latitude of the selected point are displayed in the readonly fields underneath the map. The address is resolved via reverse geocoding from OpenStreetMap/Nominatim.
+
+The field is stored as a [GeoJSON Feature] object (https://datatracker.ietf.org/doc/html/rfc7946#section-3.2) (RFC 7946) in a JSON field:
 
 ```json
 {
@@ -447,19 +455,19 @@ export default {
       poiSearchEnabled: true, // Include custom API results in search
       poiSnapRadius: 5, // Snap radius in meters for double-click POI detection (default: 5m)
       poiSources: [
-        // Example using static GeoJSON files from the public repository
+        // Working examples using static GeoJSON files (hosted with CORS enabled)
         {
           id: "skatespots",
           name: "My Skatespots",
           apiUrl:
-            "https://codeberg.org/premiate-edizioni/strapi-plugin-maplibre-field/raw/branch/main/samples/skatespots.geojson",
+            "https://fotta-maps.it-mil-1.linodeobjects.com/samples/skatespots.geojson",
           enabled: true,
         },
         {
           id: "skateshops",
           name: "My Skateshops",
           apiUrl:
-            "https://codeberg.org/premiate-edizioni/strapi-plugin-maplibre-field/raw/branch/main/samples/skateshops.geojson",
+            "https://fotta-maps.it-mil-1.linodeobjects.com/samples/skateshops.geojson",
           enabled: false,
         },
       ],
