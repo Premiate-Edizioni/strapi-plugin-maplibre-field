@@ -8,7 +8,7 @@ A [Strapi](https://strapi.io/) plugin that provides a [MapLibre](https://www.map
 
 ![Map Field](https://codeberg.org/Premiate-Edizioni/strapi-plugin-maplibre-field/raw/branch/main/add-or-pin-on-map.png)
 
-You can use the search box to pinpoint the location you are looking for. Alternatively, you can double-click anywhere on the map, which will put a marker at the exact point and set longitude and latitude. Any Point Of Interest on the base map or  while setting the address at the closest geolocated point on OpenStreetMap.
+You can use the search box to pinpoint the location you are looking for. Alternatively, you can double-click anywhere on the map, which will put a marker at the exact point and set longitude and latitude. Any Point Of Interest on the base map or while setting the address at the closest geolocated point on OpenStreetMap.
 
 The longitude and latitude of the geolocated point are displayed in the readonly fields underneath the map. The address matches the closest geolocated point.
 
@@ -124,14 +124,6 @@ interface MapStyle {
 ### Map Style Options
 
 The plugin uses **MapLibre GL JS** for rendering, which supports any style that follows the [MapLibre Style Specification](https://maplibre.org/maplibre-style-spec/).
-
-#### Default Configuration
-
-By default, the plugin includes multiple map styles:
-
-- **Satellite** view using MapTiler satellite imagery
-- **OpenStreetMap** view with vector tiles
-- Users can switch between styles using the basemap control in the map interface
 
 #### Configuring Map Styles
 
@@ -390,6 +382,7 @@ However, if you need different locations per language (e.g., different office ad
 ### Multi-language Support
 
 Built-in translations for:
+
 - English
 - German (Deutsch)
 - French (Français)
@@ -458,13 +451,15 @@ export default {
         {
           id: "skatespots",
           name: "My Skatespots",
-          apiUrl: "https://codeberg.org/premiate-edizioni/strapi-plugin-maplibre-field/raw/branch/main/samples/skatespots.geojson",
+          apiUrl:
+            "https://codeberg.org/premiate-edizioni/strapi-plugin-maplibre-field/raw/branch/main/samples/skatespots.geojson",
           enabled: true,
         },
         {
           id: "skateshops",
           name: "My Skateshops",
-          apiUrl: "https://codeberg.org/premiate-edizioni/strapi-plugin-maplibre-field/raw/branch/main/samples/skateshops.geojson",
+          apiUrl:
+            "https://codeberg.org/premiate-edizioni/strapi-plugin-maplibre-field/raw/branch/main/samples/skateshops.geojson",
           enabled: false,
         },
       ],
@@ -621,17 +616,17 @@ interface LocationFeature {
   type: "Feature";
   geometry: {
     type: "Point";
-    coordinates: [number, number];  // [longitude, latitude]
+    coordinates: [number, number]; // [longitude, latitude]
   };
   properties: {
-    name?: string;        // POI name or short location name
-    address?: string;     // Full formatted address
-    source?: string;      // "nominatim" or custom source ID (e.g., "fotta-skatespots")
-    sourceId?: string;    // Original ID from the source
+    name?: string; // POI name or short location name
+    address?: string; // Full formatted address
+    source?: string; // "nominatim" or custom source ID (e.g., "fotta-skatespots")
+    sourceId?: string; // Original ID from the source
     sourceLayer?: string; // Display name of the source (e.g., "Fotta Skatespots")
-    category?: string;    // POI type/category (e.g., "skating_spot", "bus_stop")
+    category?: string; // POI type/category (e.g., "skating_spot", "bus_stop")
     inputMethod?: string; // How it was created: "search" | "poi_click" | "map_click"
-    metadata?: object;    // Original metadata from the source
+    metadata?: object; // Original metadata from the source
   };
 }
 ```
@@ -706,16 +701,16 @@ When double-clicking on an empty area (no POI within snap radius), only coordina
 
 ### Properties Reference
 
-| Property      | Type     | Description                                                       |
-| ------------- | -------- | ----------------------------------------------------------------- |
-| `name`        | `string` | POI name or short location name                                   |
-| `address`     | `string` | Full formatted address (from Nominatim or reverse geocoding)      |
-| `source`      | `string` | Data source: `"nominatim"` or custom source ID                    |
-| `sourceId`    | `string` | Original identifier from the source                               |
-| `sourceLayer` | `string` | Human-readable name of the source layer                           |
-| `category`    | `string` | POI type/category (e.g., `"skating_spot"`, `"bus_stop"`)          |
+| Property      | Type     | Description                                                             |
+| ------------- | -------- | ----------------------------------------------------------------------- |
+| `name`        | `string` | POI name or short location name                                         |
+| `address`     | `string` | Full formatted address (from Nominatim or reverse geocoding)            |
+| `source`      | `string` | Data source: `"nominatim"` or custom source ID                          |
+| `sourceId`    | `string` | Original identifier from the source                                     |
+| `sourceLayer` | `string` | Human-readable name of the source layer                                 |
+| `category`    | `string` | POI type/category (e.g., `"skating_spot"`, `"bus_stop"`)                |
 | `inputMethod` | `string` | How the location was selected: `"search"`, `"poi_click"`, `"map_click"` |
-| `metadata`    | `object` | Additional metadata from the source (varies by source)            |
+| `metadata`    | `object` | Additional metadata from the source (varies by source)                  |
 
 **Note**: All properties are optional and only included when available. Empty strings and null values are automatically omitted.
 
