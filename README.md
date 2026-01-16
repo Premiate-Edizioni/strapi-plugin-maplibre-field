@@ -235,7 +235,73 @@ module.exports = ({ env }) => ({
 STADIA_API_KEY=your_actual_api_key_here
 ```
 
-**4. Custom Style**:
+**4. PMTiles** (Self-hosted, no API key required):
+
+[PMTiles](https://docs.protomaps.com/pmtiles/) is a cloud-native, single-file format for storing map tiles. It allows you to host complete map tile archives on any static file server or object storage (S3, Cloudflare R2, etc.) without running a tile server.
+
+The plugin has built-in support for the `pmtiles://` protocol, allowing you to use PMTiles archives directly in your map styles.
+
+```typescript
+// In Strapi's config/plugins.ts
+export default {
+  "maplibre-field": {
+    enabled: true,
+    config: {
+      mapStyles: [
+        {
+          id: "pmtiles-basemap",
+          name: "Self-hosted Basemap",
+          url: "https://your-server.com/styles/pmtiles-style.json",
+          isDefault: true,
+        },
+      ],
+    },
+  },
+};
+```
+
+Your style JSON file should reference PMTiles sources using the `pmtiles://` protocol:
+
+```json
+{
+  "version": 8,
+  "name": "PMTiles Basemap",
+  "sources": {
+    "protomaps": {
+      "type": "vector",
+      "url": "pmtiles://https://your-server.com/tiles/basemap.pmtiles"
+    }
+  },
+  "layers": [
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "protomaps",
+      "source-layer": "water",
+      "paint": {
+        "fill-color": "#a0c4ff"
+      }
+    }
+  ]
+}
+```
+
+**Benefits of PMTiles**:
+
+- **No tile server required**: Serve tiles from any static hosting (S3, R2, GitHub Pages, etc.)
+- **Single file**: One `.pmtiles` file contains all zoom levels and tiles
+- **Cost-effective**: No server costs, only storage and bandwidth
+- **HTTP range requests**: Only downloads the tiles needed for the current view
+- **Offline-friendly**: Download the entire file for offline use
+
+**Resources**:
+
+- [Protomaps Documentation](https://docs.protomaps.com/)
+- [PMTiles Specification](https://github.com/protomaps/PMTiles)
+- [Protomaps Basemaps](https://docs.protomaps.com/basemaps/) - Pre-built OpenStreetMap basemaps
+- [go-pmtiles](https://github.com/protomaps/go-pmtiles) - CLI tool to create and inspect PMTiles
+
+**5. Custom Style**:
 
 - Create your own style using [Maputnik](https://maputnik.github.io/) (visual style editor)
 - Host the style JSON file on your server or object storage
