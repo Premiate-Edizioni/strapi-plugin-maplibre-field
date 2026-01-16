@@ -3,15 +3,10 @@ export default {
     type: 'array',
     default: [
       {
-        id: 'satellite',
-        name: 'Satellite',
-        url: 'https://api.maptiler.com/maps/satellite-v4/style.json?key=sOr6q24xbu24UhKuyK8a',
-        isDefault: true,
-      },
-      {
         id: 'osm',
         name: 'OpenStreetMap',
-        url: 'https://api.maptiler.com/maps/openstreetmap/style.json?key=sOr6q24xbu24UhKuyK8a',
+        url: 'https://demotiles.maplibre.org/style.json',
+        isDefault: true,
       },
     ],
   },

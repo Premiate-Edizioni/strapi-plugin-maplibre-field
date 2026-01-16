@@ -29,11 +29,24 @@ import {
   createLocationFeature,
   queryPOIsForViewport,
   searchNearbyPOIsForSnap,
-  findNearestPOI
+  findNearestPOI,
 } from '../../services/poi-service';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-let protocol = new Protocol();
+// GeocoderResult type for geocoder callback
+interface GeocoderResult {
+  result: {
+    center?: [number, number];
+    place_name: string;
+    geometry?: {
+      type: string;
+      coordinates: [number, number];
+    };
+    properties?: Record<string, unknown>;
+  };
+}
+
+const protocol = new Protocol();
 maplibregl.addProtocol('pmtiles', protocol.tile);
 
 interface MapFieldProps {
@@ -51,9 +64,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   const { toggleNotification } = useNotification();
   const config = usePluginConfig();
   const mapRef = useRef<MapRef>(null);
-
-  // Debug: Log the configuration being used
-  console.log('[MapLibre MapField] Using config:', config);
 
   // Ensure intlLabel has the correct format for formatMessage
   const label = intlLabel || { id: 'maplibre-field.label', defaultMessage: 'Map' };
@@ -86,7 +96,8 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
 
   // Show "Null Island" when coordinates are [0, 0] and no address is defined
   const isNullIsland = initialCoordinates[0] === 0 && initialCoordinates[1] === 0;
-  const initialAddress = result?.properties?.name || result?.properties?.address || (isNullIsland ? 'Null Island' : '');
+  const initialAddress =
+    result?.properties?.name || result?.properties?.address || (isNullIsland ? 'Null Island' : '');
 
   const [longitude, setLongitude] = useState(initialCoordinates[0]);
   const [latitude, setLatitude] = useState(initialCoordinates[1]);
@@ -95,7 +106,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   const [viewState, setViewState] = useState({
     longitude: initialCoordinates[0],
     latitude: initialCoordinates[1],
-    zoom: isDefaultViewState ? (config.defaultZoom || 4.5) : 15, // Use zoom 15 when coordinates are saved
+    zoom: isDefaultViewState ? config.defaultZoom || 4.5 : 15, // Use zoom 15 when coordinates are saved
   });
 
   // Initialize current style from config (prefer isDefault, fallback to first)
@@ -222,9 +233,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   // Handle layer toggle from layer control
   const handleLayerToggle = (layerId: string, enabled: boolean) => {
     setPoiLayers((prevLayers) =>
-      prevLayers.map((layer) =>
-        layer.id === layerId ? { ...layer, enabled } : layer
-      )
+      prevLayers.map((layer) => (layer.id === layerId ? { ...layer, enabled } : layer))
     );
     // Note: updatePOIMarkers() will be triggered by the useEffect that watches poiLayers
   };
@@ -358,22 +367,22 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     }
 
     // Update field values with POI data as GeoJSON Feature
-    updateValues(createLocationFeature(poi.coordinates, {
-      name: poi.name,
-      address: address,
-      source: poi.source === 'custom' ? poi.layerId : 'nominatim',
-      sourceId: poi.id,
-      sourceLayer: poi.mapName,
-      category: poi.type,
-      inputMethod: 'poi_click',
-      metadata: poi.metadata,
-    }));
+    updateValues(
+      createLocationFeature(poi.coordinates, {
+        name: poi.name,
+        address: address,
+        source: poi.source === 'custom' ? poi.layerId : 'nominatim',
+        sourceId: poi.id,
+        sourceLayer: poi.mapName,
+        category: poi.type,
+        inputMethod: 'poi_click',
+        metadata: poi.metadata,
+      })
+    );
 
     toggleNotification({
       type: 'success',
-      message: poi.mapName
-        ? `${poi.mapName} → ${poi.name}`
-        : `Selected ${poi.name}`,
+      message: poi.mapName ? `${poi.mapName} → ${poi.name}` : `Selected ${poi.name}`,
     });
   };
 
@@ -426,10 +435,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     const clickCoords: [number, number] = [evt.lngLat.lng, evt.lngLat.lat];
 
     // Get snap radius from config (default: 5 meters)
-    // Handle both direct number value and schema object
-    const snapRadius = typeof config.poiSnapRadius === 'number'
-      ? config.poiSnapRadius
-      : (config.poiSnapRadius as any)?.default ?? 5;
+    const snapRadius = typeof config.poiSnapRadius === 'number' ? config.poiSnapRadius : 5;
 
     // Try to find nearby POI within snap radius from all enabled sources
     try {
@@ -481,9 +487,11 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         });
       } else {
         // No POI found nearby - save coordinates only as minimal GeoJSON Feature
-        updateValues(createLocationFeature(clickCoords, {
-          inputMethod: 'map_click',
-        }));
+        updateValues(
+          createLocationFeature(clickCoords, {
+            inputMethod: 'map_click',
+          })
+        );
 
         toggleNotification({
           type: 'info',
@@ -497,9 +505,11 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       console.error('Failed to search nearby POIs:', error);
 
       // Fallback: save coordinates only as minimal GeoJSON Feature
-      updateValues(createLocationFeature(clickCoords, {
-        inputMethod: 'map_click',
-      }));
+      updateValues(
+        createLocationFeature(clickCoords, {
+          inputMethod: 'map_click',
+        })
+      );
 
       toggleNotification({
         type: 'info',
@@ -520,34 +530,43 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     onChange({ target: { name, value, type: 'json' } });
   };
 
-  const handleGeocoderResult = (evt: any) => {
+  const handleGeocoderResult = (evt: GeocoderResult) => {
     const { result } = evt;
     if (result?.center) {
       const properties = result.properties || {};
       const isCustomSource = properties.source === 'custom';
 
+      // Helper to safely get string from unknown
+      const getString = (val: unknown): string | undefined =>
+        typeof val === 'string' ? val : undefined;
+
       // Extract name - for Nominatim use first part of display_name, for custom use name
       let name = result.place_name || '';
-      if (!isCustomSource && properties.display_name) {
+      const displayName = getString(properties.display_name);
+      if (!isCustomSource && displayName) {
         // For Nominatim, use the name field if available, otherwise use display_name
-        name = properties.name || properties.display_name.split(',')[0].trim();
+        name = getString(properties.name) || displayName.split(',')[0].trim();
       }
 
-      updateValues(createLocationFeature(result.center, {
-        name: isCustomSource ? result.place_name : name,
-        address: isCustomSource ? undefined : result.place_name, // Full address for Nominatim
-        source: isCustomSource ? properties.poi_source_id : 'nominatim',
-        sourceId: isCustomSource ? properties.id : `nominatim-${properties.place_id}`,
-        sourceLayer: isCustomSource ? properties.mapName : undefined,
-        category: properties.type || properties.class,
-        inputMethod: 'search',
-        metadata: isCustomSource ? properties.metadata : {
-          osm_id: properties.osm_id,
-          osm_type: properties.osm_type,
-          place_id: properties.place_id,
-          addresstype: properties.addresstype,
-        },
-      }));
+      updateValues(
+        createLocationFeature(result.center, {
+          name: isCustomSource ? result.place_name : name,
+          address: isCustomSource ? undefined : result.place_name, // Full address for Nominatim
+          source: getString(isCustomSource ? properties.poi_source_id : 'nominatim'),
+          sourceId: getString(isCustomSource ? properties.id : `nominatim-${properties.place_id}`),
+          sourceLayer: getString(isCustomSource ? properties.mapName : undefined),
+          category: getString(properties.type) || getString(properties.class),
+          inputMethod: 'search',
+          metadata: isCustomSource
+            ? (properties.metadata as Record<string, unknown> | undefined)
+            : {
+                osm_id: properties.osm_id,
+                osm_type: properties.osm_type,
+                place_id: properties.place_id,
+                addresstype: properties.addresstype,
+              },
+        })
+      );
     }
   };
 
@@ -559,7 +578,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   }, [longitude, latitude, isDefaultViewState]);
 
   useEffect(() => {
-    let protocol = new Protocol();
+    const protocol = new Protocol();
     maplibregl.addProtocol('pmtiles', protocol.tile);
     return () => {
       maplibregl.removeProtocol('pmtiles');
@@ -599,7 +618,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
 
     // Trigger POI reload when layer state changes
     updatePOIMarkers();
-  }, [JSON.stringify(poiLayers.map(l => ({ id: l.id, enabled: l.enabled })))]);
+  }, [JSON.stringify(poiLayers.map((l) => ({ id: l.id, enabled: l.enabled })))]);
 
   // Add cursor pointer on POI hover
   useEffect(() => {
@@ -654,11 +673,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           <FullscreenControl />
           <NavigationControl />
           <GeolocateControl />
-          <GeocoderControl
-            mapRef={mapRef}
-            position="top-left"
-            onResult={handleGeocoderResult}
-          />
+          <GeocoderControl mapRef={mapRef} position="top-left" onResult={handleGeocoderResult} />
           {config.mapStyles && config.mapStyles.length > 1 && (
             <BasemapControlComponent
               mapStyles={config.mapStyles}
@@ -669,102 +684,101 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
 
           {/* Layer Control for POIs */}
           {poiLayers.length > 0 && (
-            <LayerControl
-              mapRef={mapRef}
-              layers={poiLayers}
-              onLayerToggle={handleLayerToggle}
-            />
+            <LayerControl mapRef={mapRef} layers={poiLayers} onLayerToggle={handleLayerToggle} />
           )}
 
           {/* Credits Control */}
           <CreditsControl mapRef={mapRef} />
 
           {/* POI Markers Layer */}
-          {config.poiDisplayEnabled && displayedPOIs.length > 0 && (() => {
-            // Create color mapping from layer configuration
-            const layerColorMap: Record<string, string> = {};
-            poiLayers.forEach((layer) => {
-              if (layer.color) {
-                layerColorMap[layer.id] = layer.color;
-              }
-            });
+          {config.poiDisplayEnabled &&
+            displayedPOIs.length > 0 &&
+            (() => {
+              // Create color mapping from layer configuration
+              const layerColorMap: Record<string, string> = {};
+              poiLayers.forEach((layer) => {
+                if (layer.color) {
+                  layerColorMap[layer.id] = layer.color;
+                }
+              });
 
-            // Build MapLibre match expression for dynamic colors
-            // Format: ['match', ['get', 'layerId'], 'layer1', 'color1', 'layer2', 'color2', ..., 'fallback']
-            const colorMatchExpression: (string | any[])[] = ['match', ['get', 'layerId']];
-            Object.entries(layerColorMap).forEach(([layerId, color]) => {
-              colorMatchExpression.push(layerId, color);
-            });
-            colorMatchExpression.push('#999999'); // Fallback color for POIs without layerId
+              // Build MapLibre match expression for dynamic colors
+              // Format: ['match', ['get', 'layerId'], 'layer1', 'color1', 'layer2', 'color2', ..., 'fallback']
+              const colorMatchExpression: (string | string[])[] = ['match', ['get', 'layerId']];
+              Object.entries(layerColorMap).forEach(([layerId, color]) => {
+                colorMatchExpression.push(layerId, color);
+              });
+              colorMatchExpression.push('#999999'); // Fallback color for POIs without layerId
 
-            return (
-              <Source
-                key={`poi-source-${displayedPOIs.length}-${selectedPOI?.id || 'none'}`}
-                id="poi-markers"
-                type="geojson"
-                data={{
-                  type: 'FeatureCollection',
-                  features: displayedPOIs.slice(0, 100).map((poi) => ({
-                    type: 'Feature',
-                    id: poi.id,
-                    geometry: {
-                      type: 'Point',
-                      coordinates: poi.coordinates,
-                    },
-                    properties: {
-                      name: poi.name || 'Unknown',
-                      type: poi.type || 'poi',
-                      source: poi.source,
-                      layerId: poi.layerId || '', // Include layerId for color mapping
-                      isSelected: selectedPOI?.id === poi.id,
-                    },
-                  })),
-                }}
-              >
-              <Layer
-                id="poi-circles"
-                type="circle"
-                paint={{
-                  'circle-radius': [
-                    'case',
-                    ['get', 'isSelected'],
-                    12, // Larger radius for selected
-                    10, // Regular radius
-                  ],
-                  'circle-color': colorMatchExpression as any, // Use dynamic color mapping based on layerId for all POIs
-                  'circle-stroke-width': 2,
-                  'circle-stroke-color': '#ffffff',
-                  'circle-opacity': [
-                    'case',
-                    ['get', 'isSelected'],
-                    0.8, // Selected POI opacity
-                    1.0, // Regular POI opacity
-                  ],
-                }}
-              />
-              <Layer
-                id="poi-labels"
-                type="symbol"
-                minzoom={12}
-                layout={{
-                  'text-field': ['get', 'name'],
-                  'text-size': 12,
-                  'text-offset': [0, 1.5],
-                  'text-anchor': 'top',
-                  'text-optional': true,
-                  'symbol-placement': 'point',
-                  'text-allow-overlap': false,
-                  'text-ignore-placement': false,
-                }}
-                paint={{
-                  'text-color': '#333333',
-                  'text-halo-color': '#ffffff',
-                  'text-halo-width': 2,
-                }}
-              />
-            </Source>
-            );
-          })()}
+              return (
+                <Source
+                  key={`poi-source-${displayedPOIs.length}-${selectedPOI?.id || 'none'}`}
+                  id="poi-markers"
+                  type="geojson"
+                  data={{
+                    type: 'FeatureCollection',
+                    features: displayedPOIs.slice(0, 100).map((poi) => ({
+                      type: 'Feature',
+                      id: poi.id,
+                      geometry: {
+                        type: 'Point',
+                        coordinates: poi.coordinates,
+                      },
+                      properties: {
+                        name: poi.name || 'Unknown',
+                        type: poi.type || 'poi',
+                        source: poi.source,
+                        layerId: poi.layerId || '', // Include layerId for color mapping
+                        isSelected: selectedPOI?.id === poi.id,
+                      },
+                    })),
+                  }}
+                >
+                  <Layer
+                    id="poi-circles"
+                    type="circle"
+                    paint={{
+                      'circle-radius': [
+                        'case',
+                        ['get', 'isSelected'],
+                        12, // Larger radius for selected
+                        10, // Regular radius
+                      ],
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      'circle-color': colorMatchExpression as any, // Use dynamic color mapping based on layerId per POI
+                      'circle-stroke-width': 2,
+                      'circle-stroke-color': '#ffffff',
+                      'circle-opacity': [
+                        'case',
+                        ['get', 'isSelected'],
+                        0.8, // Selected POI opacity
+                        1.0, // Regular POI opacity
+                      ],
+                    }}
+                  />
+                  <Layer
+                    id="poi-labels"
+                    type="symbol"
+                    minzoom={12}
+                    layout={{
+                      'text-field': ['get', 'name'],
+                      'text-size': 12,
+                      'text-offset': [0, 1.5],
+                      'text-anchor': 'top',
+                      'text-optional': true,
+                      'symbol-placement': 'point',
+                      'text-allow-overlap': false,
+                      'text-ignore-placement': false,
+                    }}
+                    paint={{
+                      'text-color': '#333333',
+                      'text-halo-color': '#ffffff',
+                      'text-halo-width': 2,
+                    }}
+                  />
+                </Source>
+              );
+            })()}
 
           <Marker longitude={longitude} latitude={latitude} color="#1da1f2" />
         </Map>
@@ -775,7 +789,9 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           <Field.Root>
             <Field.Label>
               {formatMessage({
-                id: result?.properties?.sourceId ? getTranslation('fields.poi-name') : getTranslation('fields.address'),
+                id: result?.properties?.sourceId
+                  ? getTranslation('fields.poi-name')
+                  : getTranslation('fields.address'),
                 defaultMessage: result?.properties?.sourceId ? 'POI Name' : 'Address',
               })}
             </Field.Label>
