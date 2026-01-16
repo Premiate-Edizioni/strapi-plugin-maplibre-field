@@ -4,8 +4,12 @@
 	"description": "Strapi plugin that provides a MapLibre custom field",
 	"repository": {
 		"type": "git",
-		"url": "https://codeberg.org/premiate-edizioni/strapi-plugin-maplibre-field.git"
+		"url": "git+https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field.git"
 	},
+	"bugs": {
+		"url": "https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/issues"
+	},
+	"homepage": "https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field",
 	"strapi": {
 		"name": "maplibre-field",
 		"description": "Add a MapLibre custom field to your Strapi content types",

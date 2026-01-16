@@ -6,7 +6,7 @@
 
 A [Strapi](https://strapi.io/) plugin that provides a [MapLibre](https://www.maplibre.org/) map custom field for your content-types, allowing for mutiple base maps and multiple POI layers configuration, storing GeoJSON Features behind the scene.
 
-![Map Field](https://codeberg.org/Premiate-Edizioni/strapi-plugin-maplibre-field/raw/branch/main/add-or-pin-on-map.png)
+![Map Field](https://raw.githubusercontent.com/Premiate-Edizioni/strapi-plugin-maplibre-field/main/add-or-pin-on-map.png)
 
 ## How to Select a Location
 
@@ -425,7 +425,7 @@ In the Strapi content type builder:
 - Type a name for the field
 - Click `Finish`
 
-![Add map field to content type](https://codeberg.org/Premiate-Edizioni/strapi-plugin-maplibre-field/raw/branch/main/add-maplibre-custom-field.png)
+![Add map field to content type](https://raw.githubusercontent.com/Premiate-Edizioni/strapi-plugin-maplibre-field/main/add-maplibre-custom-field.png)
 
 ### Localization (i18n)
 
@@ -837,7 +837,7 @@ npm run watch
 
 ## Contributing
 
-Bug reports and pull requests are welcome on [Codeberg](https://codeberg.org/premiate-edizioni/strapi-plugin-maplibre-field).
+Bug reports are welcome on [GitHub Issues](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/issues). Pull requests are welcome on [GitHub](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field).
 
 ## Credits
 
