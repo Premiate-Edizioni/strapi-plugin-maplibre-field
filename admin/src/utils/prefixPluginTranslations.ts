@@ -1,9 +1,6 @@
 type TradOptions = Record<string, string>;
 
-export const prefixPluginTranslations = (
-  trad: TradOptions,
-  pluginId: string
-): TradOptions => {
+export const prefixPluginTranslations = (trad: TradOptions, pluginId: string): TradOptions => {
   if (!pluginId) {
     throw new TypeError("pluginId can't be empty");
   }

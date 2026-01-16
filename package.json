@@ -41,6 +41,10 @@
 		"watch": "tsc --watch --preserveWatchOutput",
 		"verify": "strapi-plugin verify",
 		"test": "jest",
+		"lint": "eslint admin/src server/src --ext .ts,.tsx",
+		"lint:fix": "eslint admin/src server/src --ext .ts,.tsx --fix",
+		"format": "prettier --write \"admin/src/**/*.{ts,tsx}\" \"server/src/**/*.ts\"",
+		"format:check": "prettier --check \"admin/src/**/*.{ts,tsx}\" \"server/src/**/*.ts\"",
 		"prepublishOnly": "npm run build && npm run verify && npm test"
 	},
 	"dependencies": {
@@ -50,6 +54,7 @@
 		"react-map-gl": "^8.1.0"
 	},
 	"devDependencies": {
+		"@strapi/eslint-config": "^1.0.1",
 		"@strapi/sdk-plugin": "^5.4.0",
 		"@strapi/typescript-utils": "^5.0.0",
 		"@testing-library/jest-dom": "^6.0.0",
@@ -57,10 +62,16 @@
 		"@types/jest": "^30.0.0",
 		"@types/react": "^18.0.0",
 		"@types/react-dom": "^18.0.0",
+		"@typescript-eslint/eslint-plugin": "^6.0.0",
+		"@typescript-eslint/parser": "^6.0.0",
+		"eslint": "^8.0.0",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-prettier": "^5.5.5",
 		"identity-obj-proxy": "^3.0.0",
 		"jest": "^30.2.0",
 		"jest-environment-jsdom": "^30.2.0",
 		"ts-jest": "^29.0.0",
+		"ts-node": "^10.9.2",
 		"typescript": "^5.0.0"
 	},
 	"author": {

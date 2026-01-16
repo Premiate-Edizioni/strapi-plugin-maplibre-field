@@ -1,6 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import type { MapRef } from 'react-map-gl/maplibre';
-import MapLibreGeocoder, { CarmenGeojsonFeature, MaplibreGeocoderSuggestion } from '@maplibre/maplibre-gl-geocoder';
+import MapLibreGeocoder, {
+  CarmenGeojsonFeature,
+  MaplibreGeocoderSuggestion,
+} from '@maplibre/maplibre-gl-geocoder';
 import maplibregl from 'maplibre-gl';
 import { usePluginConfig } from '../../hooks/usePluginConfig';
 import { searchPOIsForGeocoder } from '../../services/poi-service';
@@ -43,7 +46,7 @@ const GeocoderControl: React.FC<GeocoderControlProps> = ({
   position = 'top-left',
   onResult,
 }) => {
-  const geocoderRef = useRef<any>(null);
+  const geocoderRef = useRef<MapLibreGeocoder | null>(null);
   const config = usePluginConfig();
 
   useEffect(() => {
@@ -61,7 +64,15 @@ const GeocoderControl: React.FC<GeocoderControlProps> = ({
         }
 
         try {
-          const results: any[] = [];
+          const results: Array<{
+            type: 'Feature';
+            geometry: { type: 'Point'; coordinates: [number, number] };
+            place_name: string;
+            properties: object;
+            text: string;
+            place_type: string[];
+            center: [number, number];
+          }> = [];
 
           // 1. First query custom POI sources (if configured and search enabled)
           if (config.poiSources && config.poiSearchEnabled) {
@@ -69,16 +80,13 @@ const GeocoderControl: React.FC<GeocoderControlProps> = ({
 
             for (const source of enabledSources) {
               try {
-                const customPOIs = await searchPOIsForGeocoder(
-                  query,
-                  {
-                    nominatimUrl: config.nominatimUrl || 'https://nominatim.openstreetmap.org',
-                    customApiUrl: source.apiUrl,
-                    mapName: source.name,
-                    radius: 100,
-                    categories: [],
-                  }
-                );
+                const customPOIs = await searchPOIsForGeocoder(query, {
+                  nominatimUrl: config.nominatimUrl || 'https://nominatim.openstreetmap.org',
+                  customApiUrl: source.apiUrl,
+                  mapName: source.name,
+                  radius: 100,
+                  categories: [],
+                });
 
                 // Convert custom POIs to GeoJSON features
                 const customFeatures = customPOIs
@@ -110,7 +118,9 @@ const GeocoderControl: React.FC<GeocoderControlProps> = ({
 
           // 2. Then query Nominatim for global address search
           const nominatimResponse = await fetch(
-            `${config.nominatimUrl}/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5`,
+            `${config.nominatimUrl}/search?q=${encodeURIComponent(
+              query
+            )}&format=json&addressdetails=1&limit=5`,
             {
               headers: {
                 'User-Agent': USER_AGENT,
@@ -162,7 +172,7 @@ const GeocoderControl: React.FC<GeocoderControlProps> = ({
         if (source === 'custom') {
           // Look up color from POI source config
           const poiSourceId = properties?.poi_source_id;
-          const poiSource = config.poiSources?.find((s: any) => s.id === poiSourceId);
+          const poiSource = config.poiSources?.find((s) => s.id === poiSourceId);
           dotColor = poiSource?.color || '#cc0000'; // Configured or fallback red
         }
 
@@ -199,12 +209,33 @@ const GeocoderControl: React.FC<GeocoderControlProps> = ({
     const geocoder = new MapLibreGeocoder(geocoderApi, geocoderOptions);
 
     if (onResult) {
-      geocoder.on('result', (evt: any) => {
-        onResult(evt as GeocoderResult);
+      geocoder.on('result', (evt: { result: CarmenGeojsonFeature }) => {
+        // Convert to our GeocoderResult type with proper coordinate handling
+        const feature = evt.result;
+        const geometry = feature.geometry;
+        // Extract coordinates only from Point geometry (not GeometryCollection)
+        const coords = geometry && 'coordinates' in geometry ? geometry.coordinates : undefined;
+        const result: GeocoderResult = {
+          result: {
+            center:
+              Array.isArray(coords) && coords.length >= 2
+                ? [coords[0] as number, coords[1] as number]
+                : undefined,
+            place_name: feature.place_name || '',
+            geometry:
+              geometry?.type === 'Point' && Array.isArray(coords) && coords.length >= 2
+                ? {
+                    type: 'Point',
+                    coordinates: [coords[0] as number, coords[1] as number],
+                  }
+                : undefined,
+          },
+        };
+        onResult(result);
       });
     }
 
-    map.addControl(geocoder, position as any);
+    map.addControl(geocoder, position as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right');
     geocoderRef.current = geocoder;
 
     return () => {

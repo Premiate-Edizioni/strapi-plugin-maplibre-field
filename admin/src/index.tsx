@@ -7,8 +7,17 @@ import { prefixPluginTranslations } from './utils/prefixPluginTranslations';
 
 const name = pluginPkg.strapi.name;
 
+// Strapi admin app interface for plugin registration
+interface StrapiApp {
+  customFields: {
+    register: (config: Record<string, unknown>) => void;
+  };
+  registerPlugin: (config: Record<string, unknown>) => void;
+  registerHook: (name: string, hook: unknown) => void;
+}
+
 export default {
-  register(app: any) {
+  register(app: StrapiApp) {
     // Configuration is fetched dynamically in usePluginConfig hook via API
     app.customFields.register({
       name: 'map',
@@ -59,11 +68,8 @@ export default {
     });
   },
 
-  bootstrap(app: any) {
-    app.registerHook(
-      'Admin/CM/pages/EditView/mutate-edit-view-layout',
-      mutateEditViewHook
-    );
+  bootstrap(app: StrapiApp) {
+    app.registerHook('Admin/CM/pages/EditView/mutate-edit-view-layout', mutateEditViewHook);
   },
 
   async registerTrads({ locales }: { locales: string[] }) {

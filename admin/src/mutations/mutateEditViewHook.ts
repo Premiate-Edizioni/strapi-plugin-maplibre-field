@@ -13,7 +13,7 @@ interface EditFieldLayout {
   };
   name?: string;
   size?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface EditLayout {
@@ -21,22 +21,21 @@ interface EditLayout {
   components: {
     [uid: string]: {
       layout: Array<EditFieldLayout>;
-      settings: any;
+      settings: unknown;
     };
   };
   metadatas: {
-    [key: string]: any;
+    [key: string]: unknown;
   };
-  options: any;
-  settings: any;
+  options: unknown;
+  settings: unknown;
 }
 
 const mutateLayouts = (layouts: Array<Array<EditFieldLayout>>): Array<Array<EditFieldLayout>> => {
   return layouts.map((row) => {
     return row.map((field) => {
       // Check if this field has the maplibre-field plugin option enabled
-      const hasMapFieldEnabled =
-        field.attribute?.pluginOptions?.['maplibre-field']?.enabled;
+      const hasMapFieldEnabled = field.attribute?.pluginOptions?.['maplibre-field']?.enabled;
 
       if (!hasMapFieldEnabled) {
         return field;

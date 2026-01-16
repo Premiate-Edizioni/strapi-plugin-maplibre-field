@@ -66,9 +66,9 @@ class CreditsControlImpl implements IControl {
     `;
 
     // Style links
-    content.querySelectorAll('a').forEach((link: any) => {
-      link.style.color = 'rgba(0, 0, 0, 0.75)';
-      link.style.textDecoration = 'none';
+    content.querySelectorAll('a').forEach((link) => {
+      (link as HTMLAnchorElement).style.color = 'rgba(0, 0, 0, 0.75)';
+      (link as HTMLAnchorElement).style.textDecoration = 'none';
     });
 
     panel.appendChild(content);
@@ -88,11 +88,7 @@ class CreditsControlImpl implements IControl {
 
     // Close panel when clicking outside
     document.addEventListener('click', (e) => {
-      if (
-        isPanelOpen &&
-        this._container &&
-        !this._container.contains(e.target as Node)
-      ) {
+      if (isPanelOpen && this._container && !this._container.contains(e.target as Node)) {
         togglePanel(false);
       }
     });

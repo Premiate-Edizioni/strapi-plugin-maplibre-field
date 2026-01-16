@@ -83,7 +83,7 @@ export interface POI {
   coordinates: [number, number]; // [lng, lat]
   address: string;
   distance?: number; // meters from reference point
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   source: 'nominatim' | 'custom'; // Track data source
   mapName?: string; // Display name of the custom map source
   layerId?: string; // ID of the layer this POI belongs to
@@ -98,7 +98,7 @@ export interface GeoJSONFeature {
   };
   properties: {
     name?: string | null;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -122,10 +122,7 @@ export interface POIServiceConfig {
  * @param coord2 Second coordinate [lng, lat]
  * @returns Distance in meters
  */
-export function calculateDistance(
-  coord1: [number, number],
-  coord2: [number, number]
-): number {
+export function calculateDistance(coord1: [number, number], coord2: [number, number]): number {
   const R = 6371e3; // Earth's radius in meters
   const φ1 = (coord1[1] * Math.PI) / 180;
   const φ2 = (coord2[1] * Math.PI) / 180;
@@ -155,7 +152,9 @@ export async function queryCustomAPI(
     const response = await fetch(apiUrl);
 
     if (!response.ok) {
-      console.error(`[POI Service] HTTP error for ${apiUrl}: ${response.status} ${response.statusText}`);
+      console.error(
+        `[POI Service] HTTP error for ${apiUrl}: ${response.status} ${response.statusText}`
+      );
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
@@ -294,15 +293,23 @@ export function geoJSONFeatureToPOI(
   const coordinates = feature.geometry.coordinates as [number, number];
   const properties = feature.properties || {};
 
+  // Helper to safely get string from unknown
+  const getString = (val: unknown): string | undefined =>
+    typeof val === 'string' ? val : undefined;
+
   // Handle null or missing name
-  const name = properties.name || 'Unnamed Location';
+  const name = getString(properties.name) || 'Unnamed Location';
 
   const poi: POI = {
     id: feature.id?.toString() || `custom-${Date.now()}-${Math.random()}`,
     name,
-    type: properties.type || properties.sport || properties.leisure || 'poi',
+    type:
+      getString(properties.type) ||
+      getString(properties.sport) ||
+      getString(properties.leisure) ||
+      'poi',
     coordinates,
-    address: properties.address || '', // Leave empty if not provided
+    address: getString(properties.address) || '', // Leave empty if not provided
     metadata: properties,
     source: 'custom',
     mapName, // Include the custom map name
@@ -346,10 +353,7 @@ export function filterByDistance(
  * @param pois Array of POIs
  * @returns Nearest POI or null if none found
  */
-export function findNearestPOI(
-  clickCoordinates: [number, number],
-  pois: POI[]
-): POI | null {
+export function findNearestPOI(clickCoordinates: [number, number], pois: POI[]): POI | null {
   if (!pois || pois.length === 0) {
     return null;
   }
@@ -422,12 +426,7 @@ export async function searchNearbyPOIsForSnap(
 
   try {
     // 1. Query Nominatim
-    const nominatimPOIs = await queryNominatim(
-      lat,
-      lng,
-      config.radius,
-      config.nominatimUrl
-    );
+    const nominatimPOIs = await queryNominatim(lat, lng, config.radius, config.nominatimUrl);
     results.push(...nominatimPOIs);
 
     // 2. Query custom API if configured
@@ -436,14 +435,12 @@ export async function searchNearbyPOIsForSnap(
         const customFeatures = await queryCustomAPI(config.customApiUrl);
 
         // Filter by distance from click point
-        const nearbyFeatures = filterByDistance(
-          customFeatures,
-          [lng, lat],
-          config.radius
-        );
+        const nearbyFeatures = filterByDistance(customFeatures, [lng, lat], config.radius);
 
         const customPOIs = nearbyFeatures
-          .map((feature) => geoJSONFeatureToPOI(feature, [lng, lat], config.mapName, config.layerId))
+          .map((feature) =>
+            geoJSONFeatureToPOI(feature, [lng, lat], config.mapName, config.layerId)
+          )
           .filter((poi): poi is POI => poi !== null);
 
         results.push(...customPOIs);
@@ -489,10 +486,7 @@ export async function queryPOIsForViewport(
 
           const [lng, lat] = feature.geometry.coordinates;
           return (
-            lat >= bounds.south &&
-            lat <= bounds.north &&
-            lng >= bounds.west &&
-            lng <= bounds.east
+            lat >= bounds.south && lat <= bounds.north && lng >= bounds.west && lng <= bounds.east
           );
         });
 

@@ -1,5 +1,3 @@
-import type { Core } from '@strapi/strapi';
-
-export default ({ strapi }: { strapi: Core.Strapi }) => {
+export default () => {
   // Empty - cleanup logic if needed
 };

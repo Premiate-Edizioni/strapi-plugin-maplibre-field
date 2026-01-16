@@ -158,11 +158,7 @@ class LayerControlImpl implements IControl {
 
     // Close panel when clicking outside
     document.addEventListener('click', (e) => {
-      if (
-        isPanelOpen &&
-        this._container &&
-        !this._container.contains(e.target as Node)
-      ) {
+      if (isPanelOpen && this._container && !this._container.contains(e.target as Node)) {
         isPanelOpen = false;
         panel.style.display = 'none';
       }
