@@ -20,7 +20,7 @@ There are multiple ways to select a location on the map:
 
 The longitude and latitude of the selected point are displayed in the readonly fields underneath the map. The address is resolved via reverse geocoding from OpenStreetMap/Nominatim.
 
-The field is stored as a [GeoJSON Feature](https://datatracker.ietf.org/doc/html/rfc7946#section-3.2) object (RFC 7946) in a JSON field:
+The field is stored as a GeoJSON Feature object (RFC 7946) in a JSON field:
 
 ```json
 {
@@ -681,7 +681,7 @@ GET https://your-api-server.org/endpoint
 
 ## Data Model
 
-The field stores location data as a **standard GeoJSON Feature** ([RFC 7946](https://datatracker.ietf.org/doc/html/rfc7946)). Properties are only included when available (no null or empty values).
+The field stores location data as a **GeoJSON Feature** object ([RFC 7946](https://datatracker.ietf.org/doc/html/rfc7946#section-3.2)). Properties are only included when available (no null or empty values).
 
 ### GeoJSON Feature Structure
 
