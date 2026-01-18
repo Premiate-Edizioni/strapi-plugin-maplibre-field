@@ -33,6 +33,7 @@ tsconfig.*.json
 .editorconfig
 
 # Documentation (keep README.md and LICENSE)
+docs/
 CLAUDE.md
 IMPLEMENTATION_PLAN.md
 CONTRIBUTING.md

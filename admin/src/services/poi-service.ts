@@ -5,8 +5,8 @@
  * Provides distance calculations, viewport filtering, and data transformation
  */
 
-// User-Agent for Nominatim API compliance (update version on plugin release)
-const USER_AGENT = 'strapi-plugin-maplibre-field/1.0.0 (Strapi CMS)';
+// User-Agent for Nominatim API compliance
+const USER_AGENT = 'strapi-plugin-maplibre-field (Strapi CMS)';
 
 // =============================================================================
 // GeoJSON Feature Interface (RFC 7946) - Used for storing location data
