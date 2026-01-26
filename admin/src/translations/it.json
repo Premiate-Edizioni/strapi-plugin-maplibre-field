@@ -1,13 +1,16 @@
 {
-  "maplibre-field.label": "Mappa",
-  "maplibre-field.search": "Cerca un indirizzo o luogo su OpenStreetMap",
-  "maplibre-field.description": "Un custom field per mappe usando Maplibre",
-  "maplibre-field.fields.address": "indirizzo",
-  "maplibre-field.fields.longitude": "longitudine",
-  "maplibre-field.fields.latitude": "latitudine",
-  "maplibre-field.geocoding.success": "Indirizzo aggiornato con successo",
-  "maplibre-field.geocoding.error": "Impossibile recuperare l'indirizzo. Riprova.",
-  "maplibre-field.geocoding.no-results": "Nessun indirizzo trovato per questa posizione",
-  "maplibre-field.i18n.localized.label": "Abilita la localizzazione per questo campo",
-  "maplibre-field.i18n.localized.description": "Il campo può avere valori diversi in ogni lingua"
+  "label": "Mappa",
+  "description": "Un custom field per mappe usando MapLibre",
+  "search": "Cerca un indirizzo o luogo su OpenStreetMap",
+  "fields.address": "Indirizzo",
+  "fields.longitude": "Longitudine",
+  "fields.latitude": "Latitudine",
+  "fields.poi-name": "Nome POI",
+  "fields.poi-address": "Indirizzo completo",
+  "coordinates-saved": "Coordinate impostate",
+  "geocoding.success": "Indirizzo aggiornato con successo",
+  "geocoding.error": "Impossibile recuperare l'indirizzo. Riprova.",
+  "geocoding.no-results": "Nessun indirizzo trovato per questa posizione",
+  "i18n.localized.label": "Abilita la localizzazione per questo campo",
+  "i18n.localized.description": "Il campo può avere valori diversi in ogni lingua"
 }

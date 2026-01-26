@@ -1,5 +1,6 @@
 import pluginPkg from '../../package.json';
 import pluginId from './utils/pluginId';
+import getTrad from './utils/getTrad';
 import Initializer from './components/Initializer';
 import PluginIcon from './components/PluginIcon';
 import mutateEditViewHook from './mutations/mutateEditViewHook';
@@ -24,11 +25,11 @@ export default {
       pluginId: pluginId,
       type: 'json',
       intlLabel: {
-        id: 'maplibre-field.label',
+        id: getTrad('label'),
         defaultMessage: 'Map',
       },
       intlDescription: {
-        id: 'maplibre-field.description',
+        id: getTrad('description'),
         defaultMessage: 'A map custom field using MapLibre',
       },
       icon: PluginIcon,
@@ -45,11 +46,11 @@ export default {
                 name: 'options.pluginOptions.i18n.localized',
                 type: 'checkbox',
                 intlLabel: {
-                  id: 'maplibre-field.i18n.localized.label',
+                  id: getTrad('i18n.localized.label'),
                   defaultMessage: 'Enable localization for this field',
                 },
-                description: {
-                  id: 'maplibre-field.i18n.localized.description',
+                intlDescription: {
+                  id: getTrad('i18n.localized.description'),
                   defaultMessage: 'The field can have different values in each language',
                 },
                 defaultValue: false,

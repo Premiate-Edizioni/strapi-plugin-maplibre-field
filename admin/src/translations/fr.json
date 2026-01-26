@@ -1,13 +1,16 @@
 {
-  "maplibre-field.label": "Carte",
-  "maplibre-field.search": "Recherche d'un lieu ou d'une adresse",
-  "maplibre-field.description": "Un champ carte utilisant MapLibre",
-  "maplibre-field.fields.address": "adresse",
-  "maplibre-field.fields.longitude": "longitude",
-  "maplibre-field.fields.latitude": "latitude",
-  "maplibre-field.geocoding.success": "Adresse mise à jour avec succès",
-  "maplibre-field.geocoding.error": "Impossible de récupérer l'adresse. Veuillez réessayer.",
-  "maplibre-field.geocoding.no-results": "Aucune adresse trouvée pour cet emplacement",
-  "maplibre-field.i18n.localized.label": "Activer la localisation pour ce champ",
-  "maplibre-field.i18n.localized.description": "Le champ peut avoir des valeurs différentes dans chaque langue"
+  "label": "Carte",
+  "description": "Un champ carte utilisant MapLibre",
+  "search": "Recherche d'un lieu ou d'une adresse",
+  "fields.address": "Adresse",
+  "fields.longitude": "Longitude",
+  "fields.latitude": "Latitude",
+  "fields.poi-name": "Nom du POI",
+  "fields.poi-address": "Adresse complète",
+  "coordinates-saved": "Coordonnées enregistrées",
+  "geocoding.success": "Adresse mise à jour avec succès",
+  "geocoding.error": "Impossible de récupérer l'adresse. Veuillez réessayer.",
+  "geocoding.no-results": "Aucune adresse trouvée pour cet emplacement",
+  "i18n.localized.label": "Activer la localisation pour ce champ",
+  "i18n.localized.description": "Le champ peut avoir des valeurs différentes dans chaque langue"
 }

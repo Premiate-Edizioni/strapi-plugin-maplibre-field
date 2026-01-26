@@ -1,13 +1,16 @@
 {
-  "maplibre-field.label": "Karte",
-  "maplibre-field.search": "Suchen Sie nach einem Ort oder einer Adresse",
-  "maplibre-field.description": "Eine Kartenkomponente, basierend auf MapLibre",
-  "maplibre-field.fields.address": "Adresse",
-  "maplibre-field.fields.longitude": "Längengrad",
-  "maplibre-field.fields.latitude": "Breitengrad",
-  "maplibre-field.geocoding.success": "Adresse erfolgreich aktualisiert",
-  "maplibre-field.geocoding.error": "Fehler beim Abrufen der Adresse. Bitte versuchen Sie es erneut.",
-  "maplibre-field.geocoding.no-results": "Keine Adresse für diesen Standort gefunden",
-  "maplibre-field.i18n.localized.label": "Lokalisierung für dieses Feld aktivieren",
-  "maplibre-field.i18n.localized.description": "Das Feld kann in jeder Sprache unterschiedliche Werte haben"
+  "label": "Karte",
+  "description": "Eine Kartenkomponente, basierend auf MapLibre",
+  "search": "Suchen Sie nach einem Ort oder einer Adresse",
+  "fields.address": "Adresse",
+  "fields.longitude": "Längengrad",
+  "fields.latitude": "Breitengrad",
+  "fields.poi-name": "POI-Name",
+  "fields.poi-address": "Vollständige Adresse",
+  "coordinates-saved": "Koordinaten gespeichert",
+  "geocoding.success": "Adresse erfolgreich aktualisiert",
+  "geocoding.error": "Fehler beim Abrufen der Adresse. Bitte versuchen Sie es erneut.",
+  "geocoding.no-results": "Keine Adresse für diesen Standort gefunden",
+  "i18n.localized.label": "Lokalisierung für dieses Feld aktivieren",
+  "i18n.localized.description": "Das Feld kann in jeder Sprache unterschiedliche Werte haben"
 }
