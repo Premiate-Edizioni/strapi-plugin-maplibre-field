@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useIntl } from 'react-intl';
 import { useNotification } from '@strapi/strapi/admin';
-import GeocoderControl from './geocoder-control';
+import SearchBox from './SearchBox';
 import BasemapControlComponent from './basemap-control';
 import LayerControl, { LayerConfig } from './layer-control';
 import CreditsControl from './credits-control';
@@ -32,19 +32,6 @@ import {
   findNearestPOI,
 } from '../../services/poi-service';
 import 'maplibre-gl/dist/maplibre-gl.css';
-
-// GeocoderResult type for geocoder callback
-interface GeocoderResult {
-  result: {
-    center?: [number, number];
-    place_name: string;
-    geometry?: {
-      type: string;
-      coordinates: [number, number];
-    };
-    properties?: Record<string, unknown>;
-  };
-}
 
 const protocol = new Protocol();
 maplibregl.addProtocol('pmtiles', protocol.tile);
@@ -530,44 +517,26 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     onChange({ target: { name, value, type: 'json' } });
   };
 
-  const handleGeocoderResult = (evt: GeocoderResult) => {
-    const { result } = evt;
-    if (result?.center) {
-      const properties = result.properties || {};
-      const isCustomSource = properties.source === 'custom';
-
-      // Helper to safely get string from unknown
-      const getString = (val: unknown): string | undefined =>
-        typeof val === 'string' ? val : undefined;
-
-      // Extract name - for Nominatim use first part of display_name, for custom use name
-      let name = result.place_name || '';
-      const displayName = getString(properties.display_name);
-      if (!isCustomSource && displayName) {
-        // For Nominatim, use the name field if available, otherwise use display_name
-        name = getString(properties.name) || displayName.split(',')[0].trim();
-      }
-
-      updateValues(
-        createLocationFeature(result.center, {
-          name: isCustomSource ? result.place_name : name,
-          address: isCustomSource ? undefined : result.place_name, // Full address for Nominatim
-          source: getString(isCustomSource ? properties.poi_source_id : 'nominatim'),
-          sourceId: getString(isCustomSource ? properties.id : `nominatim-${properties.place_id}`),
-          sourceLayer: getString(isCustomSource ? properties.mapName : undefined),
-          category: getString(properties.type) || getString(properties.class),
-          inputMethod: 'search',
-          metadata: isCustomSource
-            ? (properties.metadata as Record<string, unknown> | undefined)
-            : {
-                osm_id: properties.osm_id,
-                osm_type: properties.osm_type,
-                place_id: properties.place_id,
-                addresstype: properties.addresstype,
-              },
-        })
-      );
+  // Handle search result selection from SearchBox
+  const handleSearchResult = (feature: LocationFeature) => {
+    // Update map position
+    if (feature.geometry?.coordinates) {
+      const [lng, lat] = feature.geometry.coordinates;
+      mapRef.current?.flyTo({
+        center: [lng, lat],
+        zoom: 16,
+        essential: true,
+      });
     }
+
+    // Update form values - this will call onChange ONCE
+    updateValues(feature);
+
+    // Show notification
+    toggleNotification({
+      type: 'success',
+      message: `Location set to: ${feature.properties.name || feature.properties.address}`,
+    });
   };
 
   useEffect(() => {
@@ -651,6 +620,14 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         {formatMessage(label)}
       </Typography>
 
+      {/* Search Box - NEW */}
+      <SearchBox
+        onSelectResult={handleSearchResult}
+        nominatimUrl={config.nominatimUrl || 'https://nominatim.openstreetmap.org'}
+        poiSearchEnabled={config.poiSearchEnabled}
+        poiSources={config.poiSources}
+      />
+
       <Flex
         direction="column"
         alignItems="stretch"
@@ -673,7 +650,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           <FullscreenControl />
           <NavigationControl />
           <GeolocateControl />
-          <GeocoderControl mapRef={mapRef} position="top-left" onResult={handleGeocoderResult} />
           {config.mapStyles && config.mapStyles.length > 1 && (
             <BasemapControlComponent
               mapStyles={config.mapStyles}

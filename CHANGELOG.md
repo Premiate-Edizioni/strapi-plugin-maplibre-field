@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Fixed
-- Align translations with Strapi v5 plugin conventions
+- Align translations with Strapi v5 plugin conventions [[ca4cdeb](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/commit/ca4cdeb61fe4c2e9c32410a861cf8ad61534e564)]
 
 ## [1.1.2] - 2026-01-18
 
