@@ -8,7 +8,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Flex, Box, Typography, Button, TextInput } from '@strapi/design-system';
 import { Search } from '@strapi/icons';
-import { performSearch, type SearchResult, type SearchConfig } from '../../services/geocoder-service';
+import {
+  performSearch,
+  type SearchResult,
+  type SearchConfig,
+} from '../../services/geocoder-service';
 import type { LocationFeature } from '../../services/poi-service';
 
 export interface SearchBoxProps {
@@ -34,16 +38,14 @@ const SearchBox: React.FC<SearchBoxProps> = ({
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
@@ -100,6 +102,29 @@ const SearchBox: React.FC<SearchBoxProps> = ({
     setResults([]);
   };
 
+  /**
+   * Get the indicator color for a search result
+   * - Nominatim results: gray (#6c757d)
+   * - Custom POI results: color from configuration (or red fallback)
+   */
+  const getResultColor = (result: SearchResult): string => {
+    if (result.source === 'nominatim') {
+      return '#6c757d'; // Gray for Nominatim
+    }
+
+    // Custom POI - look up color from configuration
+    const sourceId = result.feature.properties?.sourceId;
+    if (sourceId && poiSources) {
+      const source = poiSources.find((s) => s.id === sourceId);
+      if (source?.color) {
+        return source.color;
+      }
+    }
+
+    // Fallback color for custom POIs without configured color
+    return '#cc0000'; // Red fallback
+  };
+
   return (
     <Box ref={containerRef} style={{ position: 'relative', width: '100%' }}>
       <Flex gap={2}>
@@ -141,53 +166,51 @@ const SearchBox: React.FC<SearchBoxProps> = ({
             overflowY: 'auto',
           }}
         >
-          {results.map((result) => (
-            <button
-              key={result.id}
-              type="button"
-              onClick={() => handleSelectResult(result)}
-              style={{
-                width: '100%',
-                textAlign: 'left',
-                border: 'none',
-                cursor: 'pointer',
-                marginBottom: '4px',
-                padding: '8px',
-                borderRadius: '4px',
-                background: 'transparent',
-                transition: 'background 0.2s',
-              }}
-              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.currentTarget.style.background = '#f0f0ff';
-              }}
-              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              <Flex gap={2} alignItems="center">
-                {/* Source indicator dot */}
-                <Box
-                  style={{
-                    width: '10px',
-                    height: '10px',
-                    borderRadius: '50%',
-                    backgroundColor: result.source === 'custom' ? '#cc0000' : '#6c757d',
-                    flexShrink: 0,
-                  }}
-                />
-                <Typography
-                  variant="omega"
-                  style={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {result.place_name}
-                </Typography>
-              </Flex>
-            </button>
-          ))}
+          {results.map((result) => {
+            const dotColor = getResultColor(result);
+
+            return (
+              <Box
+                key={result.id}
+                paddingTop={2}
+                paddingBottom={2}
+                paddingLeft={3}
+                paddingRight={3}
+                hasRadius
+                background={hoveredId === result.id ? 'primary100' : 'neutral0'}
+                onMouseEnter={() => setHoveredId(result.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                onClick={() => handleSelectResult(result)}
+                style={{
+                  cursor: 'pointer',
+                }}
+              >
+                <Flex gap={2} alignItems="center">
+                  {/* Source indicator dot */}
+                  <div
+                    style={{
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      backgroundColor: dotColor,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <Typography
+                    variant="omega"
+                    textColor="neutral800"
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {result.place_name}
+                  </Typography>
+                </Flex>
+              </Box>
+            );
+          })}
         </Box>
       )}
 
