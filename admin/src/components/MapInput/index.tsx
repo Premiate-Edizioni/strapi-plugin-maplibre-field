@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useIntl } from 'react-intl';
 import { useNotification } from '@strapi/strapi/admin';
 import SearchBox from './SearchBox';
@@ -136,16 +136,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     poiLayersRef.current = poiLayers;
   }, [poiLayers]);
 
-  // Debug: log state changes
-  useEffect(() => {
-    console.log('[POI Debug] State update', {
-      displayedPOIsCount: displayedPOIs.length,
-      poiDisplayEnabled: config.poiDisplayEnabled,
-      poiMinZoom: config.poiMinZoom,
-      poiLayers: poiLayers.map((l) => ({ id: l.id, enabled: l.enabled })),
-    });
-  }, [displayedPOIs.length, config.poiDisplayEnabled, poiLayers]);
-
   // Update zoom when config is loaded
   useEffect(() => {
     if (config.defaultZoom && isDefaultViewState) {
@@ -235,32 +225,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     // Note: updatePOIMarkers() will be triggered by the useEffect that watches poiLayers
   };
 
-  // Calculate color expression for POI markers based on layer configuration
-  const poiColorExpression = useMemo(() => {
-    // Create color mapping from layer configuration
-    const layerColorMap: Record<string, string> = {};
-    poiLayers.forEach((layer) => {
-      if (layer.color) {
-        layerColorMap[layer.id] = layer.color;
-      }
-    });
-
-    // If no colors are configured, return a simple blue color
-    if (Object.keys(layerColorMap).length === 0) {
-      return '#3b82f6'; // blue-500
-    }
-
-    // Build MapLibre match expression for dynamic colors
-    // Format: ['match', ['get', 'layerId'], 'layer1', 'color1', 'layer2', 'color2', ..., 'fallback']
-    const colorMatchExpression: (string | string[])[] = ['match', ['get', 'layerId']];
-    Object.entries(layerColorMap).forEach(([layerId, color]) => {
-      colorMatchExpression.push(layerId, color);
-    });
-    colorMatchExpression.push('#3b82f6'); // Fallback color for POIs without layerId
-
-    return colorMatchExpression;
-  }, [poiLayers]);
-
   // Update POI markers based on map viewport (with debouncing)
   const updatePOIMarkers = async () => {
     // Clear any pending update
@@ -276,39 +240,26 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       // Check if any layer is enabled (calculate inside the async function to get latest state)
       const hasEnabledLayers = currentPoiLayers.some((layer) => layer.enabled);
 
-      console.log('[POI Debug] updatePOIMarkers called', {
-        poiDisplayEnabled: config.poiDisplayEnabled,
-        currentPoiLayers,
-        hasEnabledLayers,
-      });
-
       if (!mapRef.current || !config.poiDisplayEnabled) {
-        console.log('[POI Debug] Early return: no mapRef or poiDisplayEnabled=false');
         return;
       }
 
       // If no layers are enabled, clear POIs
       if (!hasEnabledLayers) {
-        console.log('[POI Debug] No enabled layers, clearing POIs');
         setDisplayedPOIs([]);
         return;
       }
 
       // Don't block on isUpdatingPOIs - instead, cancel and restart
       if (isUpdatingPOIs) {
-        console.log('[POI Debug] Already updating, skipping');
         return;
       }
 
       const map = mapRef.current.getMap();
       const zoom = map.getZoom();
-      const minZoom = config.poiMinZoom || 10;
-
-      console.log('[POI Debug] Zoom check', { zoom, minZoom, passed: zoom >= minZoom });
 
       // Hide POIs when zoomed out
-      if (zoom < minZoom) {
-        console.log('[POI Debug] Zoom too low, clearing POIs');
+      if (zoom < (config.poiMinZoom || 10)) {
         setDisplayedPOIs([]);
         return;
       }
@@ -321,8 +272,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
 
         // Get enabled layers from current state
         const enabledLayers = currentPoiLayers.filter((layer) => layer.enabled);
-
-        console.log('[POI Debug] Fetching POIs for enabled layers', { enabledLayers });
 
         // Collect POIs from all enabled sources
         const allPOIs: POI[] = [];
@@ -340,8 +289,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
               mapName = source.name;
             }
           }
-
-          console.log('[POI Debug] Layer config', { layerId: layer.id, apiUrl, mapName });
 
           if (apiUrl) {
             const pois = await queryPOIsForViewport(
@@ -363,18 +310,9 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
               }
             );
 
-            console.log('[POI Debug] Received POIs for layer', {
-              layerId: layer.id,
-              count: pois.length,
-            });
-
             allPOIs.push(...pois);
-          } else {
-            console.log('[POI Debug] No API URL for layer, skipping', { layerId: layer.id });
           }
         }
-
-        console.log('[POI Debug] Total POIs to display', { count: allPOIs.length });
 
         // Use requestAnimationFrame to update during next render cycle
         requestAnimationFrame(() => {
@@ -382,7 +320,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           setIsUpdatingPOIs(false);
         });
       } catch (error) {
-        console.error('[POI Debug] Failed to load POIs:', error);
+        console.error('Failed to load POIs:', error);
         setIsUpdatingPOIs(false);
       }
     }, 300); // 300ms debounce delay
@@ -729,64 +667,94 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           <CreditsControl mapRef={mapRef} />
 
           {/* POI Markers Layer */}
-          {config.poiDisplayEnabled && displayedPOIs.length > 0 && (
-            <Source
-              key={`poi-source-${displayedPOIs.length}-${selectedPOI?.id || 'none'}`}
-              id="poi-markers"
-              type="geojson"
-              data={{
-                type: 'FeatureCollection',
-                features: displayedPOIs.slice(0, 100).map((poi) => ({
-                  type: 'Feature',
-                  id: poi.id,
-                  geometry: {
-                    type: 'Point',
-                    coordinates: poi.coordinates,
-                  },
-                  properties: {
-                    name: poi.name || 'Unknown',
-                    type: poi.type || 'poi',
-                    source: poi.source,
-                    layerId: poi.layerId || '', // Include layerId for color mapping
-                    isSelected: selectedPOI?.id === poi.id,
-                  },
-                })),
-              }}
-            >
-              <Layer
-                id="poi-circles"
-                type="circle"
-                paint={{
-                  'circle-radius': ['case', ['get', 'isSelected'], 12, 10],
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  'circle-color': poiColorExpression as any, // Dynamic color based on layer
-                  'circle-stroke-width': 2,
-                  'circle-stroke-color': '#ffffff',
-                  'circle-opacity': ['case', ['get', 'isSelected'], 0.8, 1.0],
-                }}
-              />
-              <Layer
-                id="poi-labels"
-                type="symbol"
-                minzoom={12}
-                layout={{
-                  'text-field': ['get', 'name'],
-                  'text-size': 12,
-                  'text-offset': [0, 1.5],
-                  'text-anchor': 'top',
-                  'text-optional': true,
-                  'symbol-placement': 'point',
-                  'text-allow-overlap': false,
-                  'text-ignore-placement': false,
-                }}
-                paint={{
-                  'text-color': '#333333',
-                  'text-halo-color': '#ffffff',
-                  'text-halo-width': 2,
-                }}
-              />
-            </Source>
-          )}
+          {config.poiDisplayEnabled &&
+            displayedPOIs.length > 0 &&
+            (() => {
+              // Create color mapping from layer configuration
+              const layerColorMap: Record<string, string> = {};
+              poiLayers.forEach((layer) => {
+                if (layer.color) {
+                  layerColorMap[layer.id] = layer.color;
+                }
+              });
+
+              // Build MapLibre match expression for dynamic colors
+              // Format: ['match', ['get', 'layerId'], 'layer1', 'color1', 'layer2', 'color2', ..., 'fallback']
+              const colorMatchExpression: (string | string[])[] = ['match', ['get', 'layerId']];
+              Object.entries(layerColorMap).forEach(([layerId, color]) => {
+                colorMatchExpression.push(layerId, color);
+              });
+              colorMatchExpression.push('#999999'); // Fallback color for POIs without layerId
+
+              return (
+                <Source
+                  key={`poi-source-${displayedPOIs.length}-${selectedPOI?.id || 'none'}`}
+                  id="poi-markers"
+                  type="geojson"
+                  data={{
+                    type: 'FeatureCollection',
+                    features: displayedPOIs.slice(0, 100).map((poi) => ({
+                      type: 'Feature',
+                      id: poi.id,
+                      geometry: {
+                        type: 'Point',
+                        coordinates: poi.coordinates,
+                      },
+                      properties: {
+                        name: poi.name || 'Unknown',
+                        type: poi.type || 'poi',
+                        source: poi.source,
+                        layerId: poi.layerId || '', // Include layerId for color mapping
+                        isSelected: selectedPOI?.id === poi.id,
+                      },
+                    })),
+                  }}
+                >
+                  <Layer
+                    id="poi-circles"
+                    type="circle"
+                    paint={{
+                      'circle-radius': [
+                        'case',
+                        ['get', 'isSelected'],
+                        12, // Larger radius for selected
+                        10, // Regular radius
+                      ],
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      'circle-color': colorMatchExpression as any, // Use dynamic color mapping based on layerId per POI
+                      'circle-stroke-width': 2,
+                      'circle-stroke-color': '#ffffff',
+                      'circle-opacity': [
+                        'case',
+                        ['get', 'isSelected'],
+                        0.8, // Selected POI opacity
+                        1.0, // Regular POI opacity
+                      ],
+                    }}
+                  />
+                  <Layer
+                    id="poi-labels"
+                    type="symbol"
+                    minzoom={12}
+                    layout={{
+                      'text-field': ['get', 'name'],
+                      'text-size': 12,
+                      'text-offset': [0, 1.5],
+                      'text-anchor': 'top',
+                      'text-optional': true,
+                      'symbol-placement': 'point',
+                      'text-allow-overlap': false,
+                      'text-ignore-placement': false,
+                    }}
+                    paint={{
+                      'text-color': '#333333',
+                      'text-halo-color': '#ffffff',
+                      'text-halo-width': 2,
+                    }}
+                  />
+                </Source>
+              );
+            })()}
 
           <Marker longitude={longitude} latitude={latitude} color="#1da1f2" />
         </Map>
