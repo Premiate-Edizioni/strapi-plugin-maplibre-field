@@ -101,10 +101,39 @@ jest.mock('react-map-gl/maplibre', () => {
   };
 });
 
-// Mock geocoder control
-jest.mock('../../../admin/src/components/MapInput/geocoder-control', () => ({
+// Mock SearchBox component
+jest.mock('../../../admin/src/components/MapInput/SearchBox', () => ({
   __esModule: true,
-  default: () => <div>GeocoderControl</div>,
+  default: () => <div>SearchBox</div>,
+}));
+
+// Mock other MapInput components
+jest.mock('../../../admin/src/components/MapInput/basemap-control', () => ({
+  __esModule: true,
+  default: () => <div>BasemapControl</div>,
+}));
+
+jest.mock('../../../admin/src/components/MapInput/layer-control', () => ({
+  __esModule: true,
+  default: () => <div>LayerControl</div>,
+}));
+
+jest.mock('../../../admin/src/components/MapInput/credits-control', () => ({
+  __esModule: true,
+  default: () => <div>CreditsControl</div>,
+}));
+
+// Mock POI service
+jest.mock('../../../admin/src/services/poi-service', () => ({
+  __esModule: true,
+  createLocationFeature: jest.fn((coords: [number, number], address?: string) => ({
+    type: 'Feature',
+    geometry: { type: 'Point', coordinates: coords },
+    properties: { name: address || '', address: address || '' },
+  })),
+  queryPOIsForViewport: jest.fn(() => Promise.resolve([])),
+  searchNearbyPOIsForSnap: jest.fn(() => []),
+  findNearestPOI: jest.fn(() => null),
 }));
 
 // Mock pmtiles
