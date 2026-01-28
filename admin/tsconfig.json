@@ -2,6 +2,7 @@
   "extends": "@strapi/typescript-utils/tsconfigs/admin",
   "include": ["./src", "./custom.d.ts"],
   "compilerOptions": {
+    "jsx": "react-jsx",
     "rootDir": "../",
     "baseUrl": "."
   }

@@ -55,8 +55,13 @@ const mutateLayouts = (layouts: Array<Array<EditFieldLayout>>): Array<Array<Edit
 
 const mutateEditViewHook = (editLayout: EditLayout): EditLayout => {
   // Safety check for Strapi V5 structure
-  if (!editLayout?.layout || !Array.isArray(editLayout.layout)) {
-    console.warn('maplibre-field: Invalid EditLayout structure received', editLayout);
+  // Handle cases where layout might be undefined or not an array
+  if (!editLayout) {
+    return editLayout;
+  }
+
+  // If layout is not present or not an array, return unchanged
+  if (!Array.isArray(editLayout.layout)) {
     return editLayout;
   }
 

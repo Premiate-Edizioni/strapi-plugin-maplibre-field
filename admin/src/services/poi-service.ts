@@ -148,7 +148,6 @@ export async function queryCustomAPI(
   searchQuery?: string
 ): Promise<GeoJSONFeature[]> {
   try {
-    console.log(`[POI Service] Fetching from: ${apiUrl}`);
     const response = await fetch(apiUrl);
 
     if (!response.ok) {
@@ -164,8 +163,6 @@ export async function queryCustomAPI(
       console.error(`[POI Service] Invalid GeoJSON from ${apiUrl}`);
       throw new Error('Invalid GeoJSON response format');
     }
-
-    console.log(`[POI Service] Loaded ${data.features.length} features from ${apiUrl}`);
 
     let features = data.features;
 
@@ -204,7 +201,6 @@ export async function queryNominatim(
     // Use zoom=18 to get building/POI level detail (higher zoom = more specific)
     // zoom 3: country, zoom 10: city, zoom 18: building
     const url = `${nominatimUrl}/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
-    console.log('[Nominatim] Querying:', url);
 
     const response = await fetch(url, {
       headers: {
@@ -217,22 +213,16 @@ export async function queryNominatim(
     }
 
     const data = await response.json();
-    console.log('[Nominatim] Response:', data);
 
     if (!data) {
-      console.log('[Nominatim] No data returned');
       return [];
     }
 
     const coordinates: [number, number] = [parseFloat(data.lon), parseFloat(data.lat)];
     const distance = calculateDistance([lng, lat], coordinates);
 
-    console.log('[Nominatim] Distance calculated:', distance, 'meters (radius:', radius, 'm)');
-    console.log('[Nominatim] Click coords:', [lng, lat], 'Result coords:', coordinates);
-
     // Only return if within radius
     if (distance > radius) {
-      console.log('[Nominatim] POI outside radius, rejecting');
       return [];
     }
 
@@ -243,8 +233,6 @@ export async function queryNominatim(
     if (data.namedetails) {
       poiName = data.namedetails.name || poiName;
     }
-
-    console.log('[Nominatim] POI found:', poiName, 'type:', data.type || data.class);
 
     // Convert Nominatim response to POI
     const poi: POI = {

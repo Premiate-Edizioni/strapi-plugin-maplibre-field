@@ -2,6 +2,8 @@
   "label": "Carte",
   "description": "Un champ carte utilisant MapLibre",
   "search": "Recherche d'un lieu ou d'une adresse",
+  "search.placeholder": "Rechercher un lieu...",
+  "search.button": "Rechercher",
   "fields.address": "Adresse",
   "fields.longitude": "Longitude",
   "fields.latitude": "Latitude",

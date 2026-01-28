@@ -2,6 +2,8 @@
   "label": "Karte",
   "description": "Eine Kartenkomponente, basierend auf MapLibre",
   "search": "Suchen Sie nach einem Ort oder einer Adresse",
+  "search.placeholder": "Suchen Sie nach einem Ort...",
+  "search.button": "Suchen",
   "fields.address": "Adresse",
   "fields.longitude": "Längengrad",
   "fields.latitude": "Breitengrad",

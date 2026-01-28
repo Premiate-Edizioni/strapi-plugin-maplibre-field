@@ -2,6 +2,8 @@
   "label": "Map",
   "description": "A map custom field using MapLibre",
   "search": "Search for a place or address on OpenStreetMap",
+  "search.placeholder": "Search for a location...",
+  "search.button": "Search",
   "fields.address": "Address",
   "fields.longitude": "Longitude",
   "fields.latitude": "Latitude",

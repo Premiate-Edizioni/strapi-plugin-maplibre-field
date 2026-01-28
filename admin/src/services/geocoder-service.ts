@@ -37,10 +37,7 @@ export interface SearchConfig {
  * @param config Search configuration
  * @returns Array of search results
  */
-export async function performSearch(
-  query: string,
-  config: SearchConfig
-): Promise<SearchResult[]> {
+export async function performSearch(query: string, config: SearchConfig): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
 
   // 1. Search custom POIs if enabled (reuse existing logic)

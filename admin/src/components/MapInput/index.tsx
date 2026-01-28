@@ -369,7 +369,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
 
     toggleNotification({
       type: 'success',
-      message: poi.mapName ? `${poi.mapName} → ${poi.name}` : `Selected ${poi.name}`,
+      message: poi.mapName ? `${poi.mapName} ➙ ${poi.name}` : `Selected ${poi.name}`,
     });
   };
 
@@ -484,7 +484,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           type: 'info',
           message: formatMessage({
             id: getTranslation('coordinates-saved'),
-            defaultMessage: 'Coordinates saved',
+            defaultMessage: 'Coordinates set',
           }),
         });
       }
@@ -502,7 +502,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         type: 'info',
         message: formatMessage({
           id: getTranslation('coordinates-saved'),
-          defaultMessage: 'Coordinates saved',
+          defaultMessage: 'Coordinates set',
         }),
       });
     }

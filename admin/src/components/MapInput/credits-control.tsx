@@ -62,7 +62,7 @@ class CreditsControlImpl implements IControl {
     const content = document.createElement('div');
     content.innerHTML = `
       <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap</a> |
-      <a href="https://maplibre.org/" target="_blank" rel="noopener noreferrer">MapLibre</a> | SkateMap
+      <a href="https://maplibre.org/" target="_blank" rel="noopener noreferrer">MapLibre</a>
     `;
 
     // Style links

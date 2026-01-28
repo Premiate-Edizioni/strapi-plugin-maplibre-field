@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useIntl } from 'react-intl';
 import { Flex, Box, Typography, Button, TextInput } from '@strapi/design-system';
 import { Search } from '@strapi/icons';
 import {
@@ -14,6 +15,7 @@ import {
   type SearchConfig,
 } from '../../services/geocoder-service';
 import type { LocationFeature } from '../../services/poi-service';
+import getTranslation from '../../utils/getTrad';
 
 export interface SearchBoxProps {
   onSelectResult: (result: LocationFeature) => void;
@@ -34,6 +36,7 @@ const SearchBox: React.FC<SearchBoxProps> = ({
   poiSearchEnabled,
   poiSources,
 }) => {
+  const { formatMessage } = useIntl();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -127,10 +130,10 @@ const SearchBox: React.FC<SearchBoxProps> = ({
 
   return (
     <Box ref={containerRef} style={{ position: 'relative', width: '100%' }}>
-      <Flex gap={2}>
-        <Box style={{ flex: 1 }}>
+      <Flex gap={2} alignItems="flex-end">
+        <Box grow={1}>
           <TextInput
-            placeholder="Search for a location..."
+            placeholder={formatMessage({ id: getTranslation('search.placeholder') })}
             value={query}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -143,7 +146,7 @@ const SearchBox: React.FC<SearchBoxProps> = ({
           disabled={isLoading || !query.trim()}
           startIcon={<Search />}
         >
-          Search
+          {formatMessage({ id: getTranslation('search.button') })}
         </Button>
       </Flex>
 
