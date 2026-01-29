@@ -7,13 +7,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useIntl } from 'react-intl';
-import { Flex, Box, Typography, Button, TextInput } from '@strapi/design-system';
-import { Search } from '@strapi/icons';
-import {
-  performSearch,
-  type SearchResult,
-  type SearchConfig,
-} from '../../services/geocoder-service';
+import { Flex, Box, Typography, TextInput } from '@strapi/design-system';
+import { performSearch, type SearchResult } from '../../services/geocoder-service';
 import type { LocationFeature } from '../../services/poi-service';
 import getTranslation from '../../utils/getTrad';
 
@@ -130,25 +125,13 @@ const SearchBox: React.FC<SearchBoxProps> = ({
 
   return (
     <Box ref={containerRef} style={{ position: 'relative', width: '100%' }}>
-      <Flex gap={2} alignItems="flex-end">
-        <Box grow={1}>
-          <TextInput
-            placeholder={formatMessage({ id: getTranslation('search.placeholder') })}
-            value={query}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            aria-label="Location search"
-          />
-        </Box>
-        <Button
-          onClick={handleSearch}
-          loading={isLoading}
-          disabled={isLoading || !query.trim()}
-          startIcon={<Search />}
-        >
-          {formatMessage({ id: getTranslation('search.button') })}
-        </Button>
-      </Flex>
+      <TextInput
+        placeholder={formatMessage({ id: getTranslation('search.placeholder') })}
+        value={query}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
+        onKeyDown={handleKeyDown}
+        aria-label="Location search"
+      />
 
       {/* Results Dropdown */}
       {isOpen && results.length > 0 && (
