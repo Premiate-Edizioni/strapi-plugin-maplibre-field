@@ -751,7 +751,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
               );
             })()}
 
-          <Marker longitude={longitude} latitude={latitude} color="#1da1f2" />
+          <Marker longitude={longitude} latitude={latitude} color="#4945ff" /* primary600 */ />
         </Map>
       </Flex>
 
