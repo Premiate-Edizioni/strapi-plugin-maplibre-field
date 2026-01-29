@@ -118,11 +118,6 @@ jest.mock('../../../admin/src/components/MapInput/layer-control', () => ({
   default: () => <div>LayerControl</div>,
 }));
 
-jest.mock('../../../admin/src/components/MapInput/credits-control', () => ({
-  __esModule: true,
-  default: () => <div>CreditsControl</div>,
-}));
-
 // Mock POI service
 jest.mock('../../../admin/src/services/poi-service', () => ({
   __esModule: true,

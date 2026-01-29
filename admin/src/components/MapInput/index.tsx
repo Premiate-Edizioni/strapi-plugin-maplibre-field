@@ -4,7 +4,6 @@ import { useNotification } from '@strapi/strapi/admin';
 import SearchBox from './SearchBox';
 import BasemapControlComponent from './basemap-control';
 import LayerControl, { LayerConfig } from './layer-control';
-import CreditsControl from './credits-control';
 import { Flex, Typography, Field, Grid } from '@strapi/design-system';
 import Map, {
   FullscreenControl,
@@ -645,7 +644,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           onClick={handleMapClick}
           onDblClick={handleMapDoubleClick}
           mapStyle={currentStyleUrl}
-          attributionControl={false}
         >
           <FullscreenControl />
           <NavigationControl />
@@ -662,9 +660,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           {poiLayers.length > 0 && (
             <LayerControl mapRef={mapRef} layers={poiLayers} onLayerToggle={handleLayerToggle} />
           )}
-
-          {/* Credits Control */}
-          <CreditsControl mapRef={mapRef} />
 
           {/* POI Markers Layer */}
           {config.poiDisplayEnabled &&

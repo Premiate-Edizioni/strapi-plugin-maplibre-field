@@ -6,6 +6,7 @@ Complete configuration reference for the MapLibre Field plugin.
 
 - [Plugin Configuration](#plugin-configuration)
 - [Map Styles](#map-styles)
+- [Map Attributions](#map-attributions)
 - [Geocoding Configuration](#geocoding-configuration)
 - [POI Configuration](#poi-configuration)
 - [Security Middleware](#security-middleware)
@@ -39,7 +40,7 @@ export default {
       // Geocoding
       geocodingProvider: "nominatim",
       nominatimUrl: "https://nominatim.openstreetmap.org",
-      
+
       // POI configuration (optional)
       poiDisplayEnabled: true,
       poiMinZoom: 10,
@@ -332,6 +333,19 @@ MAPTILER_API_KEY=your_secret_key_here
 - Use template literals (backticks) when interpolating variables
 - API keys for map tiles are client-safe but should still use domain restrictions
 - Set all environment variables in your production deployment environment
+
+## Map Attributions
+
+The plugin uses MapLibre's native `AttributionControl` which **automatically extracts and displays attributions from map styles**.
+
+### How It Works
+
+Attributions are automatically read from:
+
+1. **Map style metadata** - Top-level `metadata.attribution` field in the style JSON
+2. **Source attributions** - Each source's `attribution` field (tile providers, data sources, etc.)
+
+**No configuration required** - attributions from OpenStreetMap, MapTiler, OpenFreeMap, or any other tile provider are displayed automatically if present in the style JSON.
 
 ## Geocoding Configuration
 
