@@ -103,7 +103,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       const defaultStyle = config.mapStyles.find((s) => s.isDefault);
       return defaultStyle?.url || config.mapStyles[0].url;
     }
-    // Fallback to empty string if no mapStyles configured (should not happen with proper config)
+    // No fallback - if config is missing, MapLibre will fail with a clear error
     return '';
   });
 
