@@ -48,9 +48,9 @@ export default {
     config: {
       mapStyles: [
         {
-          id: "osm",
-          name: "OpenStreetMap",
-          url: "https://demotiles.maplibre.org/style.json",
+          id: "ofm",
+          name: "OpenFreeMap",
+          url: "https://tiles.openfreemap.org/styles/liberty",
           isDefault: true,
         },
       ],
@@ -119,7 +119,7 @@ The selected location is saved as a GeoJSON Feature with coordinates, name, addr
 
 The plugin supports any [MapLibre Style Specification](https://maplibre.org/maplibre-style-spec/) compatible provider:
 
-- **MapLibre Demo Tiles** - Free, public, no API key required (setup as fallback if no configuration available)
+- **OpenFreeMap** - Free, public OpenStreetMap tiles, no API key required (setup as fallback if no configuration available)
 - **MapTiler** - Requires API key, multiple styles available
 - **Stadia Maps** - Requires API key, OSM-based styles
 - **PMTiles** - Self-hosted tiles, no tile server required

@@ -3,9 +3,9 @@ export default {
     type: 'array',
     default: [
       {
-        id: 'osm',
-        name: 'OpenStreetMap',
-        url: 'https://demotiles.maplibre.org/style.json',
+        id: 'ofm',
+        name: 'OpenFreeMap',
+        url: 'https://tiles.openfreemap.org/styles/liberty',
         isDefault: true,
       },
     ],

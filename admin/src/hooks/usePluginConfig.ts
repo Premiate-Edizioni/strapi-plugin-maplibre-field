@@ -8,7 +8,7 @@ const DEFAULT_CONFIG: MapLibreConfig = {
     {
       id: 'default',
       name: 'Default',
-      url: 'https://demotiles.maplibre.org/style.json',
+      url: 'https://tiles.openfreemap.org/styles/liberty',
       isDefault: true,
     },
   ],
