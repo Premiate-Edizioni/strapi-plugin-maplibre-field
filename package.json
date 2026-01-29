@@ -52,7 +52,6 @@
 		"prepublishOnly": "npm run build && npm run verify && npm test"
 	},
 	"dependencies": {
-		"@maplibre/maplibre-gl-geocoder": "^1.9.4",
 		"maplibre-gl": "5.16.0",
 		"pmtiles": "^4.3.2",
 		"react-map-gl": "^8.1.0"
