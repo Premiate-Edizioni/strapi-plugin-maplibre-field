@@ -28,4 +28,7 @@ export interface MapLibreConfig {
   poiMaxDisplay?: number;
   poiSearchEnabled?: boolean;
   poiSnapRadius?: number; // Snap radius in meters for double-click POI detection (default: 5m)
+
+  // FullscreenControl options (MapLibre v5.18.0+)
+  useFullscreenPseudo?: boolean; // Use CSS-based fullscreen instead of native API
 }

@@ -645,7 +645,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           onDblClick={handleMapDoubleClick}
           mapStyle={currentStyleUrl}
         >
-          <FullscreenControl />
+          <FullscreenControl pseudo={config.useFullscreenPseudo ?? true} />
           <NavigationControl />
           <GeolocateControl />
           {config.mapStyles && config.mapStyles.length > 1 && (
