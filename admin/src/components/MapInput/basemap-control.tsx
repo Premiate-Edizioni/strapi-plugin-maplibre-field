@@ -10,21 +10,13 @@ interface BasemapControlProps {
 }
 
 class BasemapControl implements maplibregl.IControl {
-  _map: maplibregl.Map | undefined;
-  _container: HTMLDivElement | undefined;
-  _styles: MapStyle[];
-  _currentStyleUrl: string;
-  _onStyleChange: (styleUrl: string) => void;
-
   constructor(
-    styles: MapStyle[],
-    currentStyleUrl: string,
-    onStyleChange: (styleUrl: string) => void
-  ) {
-    this._styles = styles;
-    this._currentStyleUrl = currentStyleUrl;
-    this._onStyleChange = onStyleChange;
-  }
+    private _styles: MapStyle[],
+    private _currentStyleUrl: string,
+    private _onStyleChange: (styleUrl: string) => void,
+    private _map?: maplibregl.Map,
+    private _container?: HTMLDivElement
+  ) {}
 
   onAdd(map: maplibregl.Map): HTMLElement {
     this._map = map;

@@ -332,7 +332,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     // Shows current coordinates in a notification
     toggleNotification({
       type: 'info',
-      message: `📍 Marker: [${longitude.toFixed(4)}, ${latitude.toFixed(4)}]`,
+      message: `Marker: [${longitude.toFixed(4)}, ${latitude.toFixed(4)}]`,
     });
   };
 

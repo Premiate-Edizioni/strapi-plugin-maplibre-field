@@ -20,15 +20,12 @@ interface LayerControlProps {
  * Follows MapLibre GL JS IControl interface standard
  */
 class LayerControlImpl implements IControl {
-  private _map: MapLibreMap | undefined;
-  private _container: HTMLDivElement | undefined;
-  private _layers: LayerConfig[];
-  private _onToggle: (layerId: string, enabled: boolean) => void;
-
-  constructor(layers: LayerConfig[], onToggle: (layerId: string, enabled: boolean) => void) {
-    this._layers = layers;
-    this._onToggle = onToggle;
-  }
+  constructor(
+    private _layers: LayerConfig[],
+    private _onToggle: (layerId: string, enabled: boolean) => void,
+    private _map?: MapLibreMap,
+    private _container?: HTMLDivElement
+  ) {}
 
   onAdd(map: MapLibreMap): HTMLElement {
     this._map = map;
