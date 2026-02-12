@@ -23,6 +23,7 @@
 		"CHANGELOG.md",
 		"logo.png"
 	],
+	"types": "./dist/server/src/index.d.ts",
 	"exports": {
 		"./package.json": "./package.json",
 		"./strapi-admin": {
