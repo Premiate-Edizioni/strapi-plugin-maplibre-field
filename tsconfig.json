@@ -7,11 +7,9 @@
       "@/*": ["./src/*"]
     },
     "jsx": "react-jsx",
-    "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "module": "ES2020",
     "moduleResolution": "bundler",
     "types": ["jest", "@testing-library/jest-dom"],
     "lib": ["ES2020", "DOM"],
