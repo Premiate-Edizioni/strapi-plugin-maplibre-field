@@ -10,6 +10,12 @@ import type { LocationFeature } from './poi-service';
 // User-Agent for Nominatim API compliance
 const USER_AGENT = 'strapi-plugin-maplibre-field/1.0.0 (Strapi CMS)';
 
+interface NominatimResult {
+  display_name: string;
+  lon: string;
+  lat: string;
+}
+
 export interface SearchResult {
   id: string;
   place_name: string;
@@ -101,7 +107,7 @@ export async function performSearch(query: string, config: SearchConfig): Promis
 
       // Convert Nominatim results to SearchResult format
       results.push(
-        ...data.map((result: any, idx: number) => ({
+        ...data.map((result: NominatimResult, idx: number) => ({
           id: `nominatim-${idx}`,
           place_name: result.display_name,
           feature: {

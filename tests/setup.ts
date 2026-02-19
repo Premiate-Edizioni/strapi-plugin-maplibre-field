@@ -1,4 +1,8 @@
+import React from 'react';
 import '@testing-library/jest-dom';
+
+// styled-components (used by @strapi/design-system) expects React in global scope
+(global as any).React = React;
 
 // Mock window.maplibregl
 (global as any).window = {

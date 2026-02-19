@@ -19,8 +19,6 @@ import getTranslation from '../../utils/getTrad';
 import { Protocol } from 'pmtiles';
 import maplibregl from 'maplibre-gl';
 
-// User-Agent for Nominatim API compliance (update version on plugin release)
-const USER_AGENT = 'strapi-plugin-maplibre-field/1.0.0 (Strapi CMS)';
 import { usePluginConfig } from '../../hooks/usePluginConfig';
 import {
   POI,

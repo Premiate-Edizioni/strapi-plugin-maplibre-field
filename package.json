@@ -57,16 +57,15 @@
 		"react-map-gl": "^8.1.0"
 	},
 	"devDependencies": {
-		"@strapi/eslint-config": "^1.0.1",
-		"@strapi/sdk-plugin": "^5.4.0",
+		"@strapi/sdk-plugin": "^6.0.0",
 		"@strapi/typescript-utils": "^5.0.0",
 		"@testing-library/jest-dom": "^6.0.0",
 		"@testing-library/react": "^14.0.0",
 		"@types/jest": "^30.0.0",
 		"@types/react": "^18.0.0",
 		"@types/react-dom": "^18.0.0",
-		"@typescript-eslint/eslint-plugin": "^6.0.0",
-		"@typescript-eslint/parser": "^6.0.0",
+		"@typescript-eslint/eslint-plugin": "^7.0.0",
+		"@typescript-eslint/parser": "^7.0.0",
 		"eslint": "^8.0.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-prettier": "^5.5.5",
@@ -95,8 +94,11 @@
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"
 	},
+	"overrides": {
+		"@microsoft/api-extractor": "7.56.3"
+	},
 	"engines": {
-		"node": ">=20.0.0 <=24.x.x",
+		"node": ">=20.0.0 <=22.x.x",
 		"npm": ">=6.0.0"
 	},
 	"license": "MIT",
