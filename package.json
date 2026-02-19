@@ -53,13 +53,12 @@
 		"prepublishOnly": "npm run build && npm run verify && npm test"
 	},
 	"dependencies": {
-		"maplibre-gl": "5.16.0",
+		"maplibre-gl": "5.18.0",
 		"pmtiles": "^4.4.0",
 		"react-map-gl": "^8.1.0"
 	},
 	"devDependencies": {
-		"@strapi/eslint-config": "^1.0.1",
-		"@strapi/sdk-plugin": "^5.4.0",
+		"@strapi/sdk-plugin": "^6.0.0",
 		"@strapi/typescript-utils": "^5.0.0",
 		"@testing-library/jest-dom": "^6.0.0",
 		"@testing-library/react": "^14.0.0",
@@ -96,8 +95,11 @@
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"
 	},
+	"overrides": {
+		"@microsoft/api-extractor": "7.56.3"
+	},
 	"engines": {
-		"node": ">=20.0.0 <=24.x.x",
+		"node": ">=20.0.0 <=22.x.x",
 		"npm": ">=6.0.0"
 	},
 	"license": "MIT",

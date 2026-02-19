@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-02-11
+
+### Fixed
+
+- **Vite/esbuild class field transpilation** - Removed ES2022 class field declarations from `BasemapControl` and `LayerControlImpl` to prevent `__publicField is not defined` runtime error when Strapi's Vite pre-bundles the plugin with esbuild targeting below ES2022
+- **Prettier formatting** - Fixed line length violation in config schema
+
+### Changed
+
+- **MapLibre GL** - Updated from v5.16.0 to v5.18.0
+- **PMTiles** - Updated from v4.3.2 to v4.4.0
+- **Native Marker click events** - Main location marker now supports click events (MapLibre v5.18.0+ feature), showing coordinate feedback via Strapi notification
+- **FullscreenControl** - Added `useFullscreenPseudo` config option for CSS-based fullscreen (faster on some devices, requires MapLibre v5.18.0+)
+
+### Known issue: `__publicField is not defined` in Strapi dev mode
+
+`maplibre-gl` v5 uses ES2022 class field declarations internally (e.g., in the MLT codec). Strapi's Vite dev server does not set `optimizeDeps.esbuildOptions.target` to match its modern `build.target`, so esbuild may transpile these fields into `__publicField()` helper calls that fail at runtime.
+
+This is an upstream issue at the intersection of Strapi, Vite 5, and maplibre-gl v5. It may be resolved by a future release of any of these projects.
+
+**Workaround:** create `src/admin/vite.config.ts` in the Strapi host app:
+
+```typescript
+import { mergeConfig, type UserConfig } from 'vite';
+
+export default (config: UserConfig) => {
+  return mergeConfig(config, {
+    optimizeDeps: {
+      esbuildOptions: {
+        target: 'es2022',
+      },
+    },
+  });
+};
+```
+
 ## [1.2.0] - 2026-01-29
 
 ### Added

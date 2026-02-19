@@ -51,4 +51,10 @@ export default {
     default: 5,
     description: 'Snap radius in meters for double-click POI detection (default: 5m)',
   },
+  useFullscreenPseudo: {
+    type: 'boolean',
+    default: true,
+    description:
+      'Use CSS-based fullscreen (faster on some devices) instead of native fullscreen API (requires MapLibre v5.18.0+)',
+  },
 };

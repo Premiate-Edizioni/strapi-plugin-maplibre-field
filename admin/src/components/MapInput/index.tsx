@@ -19,8 +19,6 @@ import getTranslation from '../../utils/getTrad';
 import { Protocol } from 'pmtiles';
 import maplibregl from 'maplibre-gl';
 
-// User-Agent for Nominatim API compliance (update version on plugin release)
-const USER_AGENT = 'strapi-plugin-maplibre-field/1.0.0 (Strapi CMS)';
 import { usePluginConfig } from '../../hooks/usePluginConfig';
 import {
   POI,
@@ -326,31 +324,21 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   };
 
   // Handle POI marker click
+  // Handle main marker click (MapLibre v5.18.0+ feature)
+  const handleMainMarkerClick = () => {
+    // Provide user feedback when main marker is clicked
+    // Shows current coordinates in a notification
+    toggleNotification({
+      type: 'info',
+      message: `Marker: [${longitude.toFixed(4)}, ${latitude.toFixed(4)}]`,
+    });
+  };
+
   const handlePOIClick = async (poi: POI) => {
     setSelectedPOI(poi);
 
-    // If address is empty, try reverse geocoding
-    let address = poi.address;
-    if (!address || address.trim() === '') {
-      try {
-        const [lng, lat] = poi.coordinates;
-        const nominatimUrl = config.nominatimUrl || 'https://nominatim.openstreetmap.org';
-        const response = await fetch(
-          `${nominatimUrl}/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
-          {
-            headers: {
-              'User-Agent': USER_AGENT,
-            },
-          }
-        );
-        if (response.ok) {
-          const data = await response.json();
-          address = data.display_name || '';
-        }
-      } catch (error) {
-        console.warn('Reverse geocoding failed:', error);
-      }
-    }
+    // Use existing address from POI (NO additional reverse geocoding)
+    const address = poi.address || '';
 
     // Update field values with POI data as GeoJSON Feature
     updateValues(
@@ -645,7 +633,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           onDblClick={handleMapDoubleClick}
           mapStyle={currentStyleUrl}
         >
-          <FullscreenControl />
+          <FullscreenControl pseudo={config.useFullscreenPseudo ?? true} />
           <NavigationControl />
           <GeolocateControl />
           {config.mapStyles && config.mapStyles.length > 1 && (
@@ -751,7 +739,12 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
               );
             })()}
 
-          <Marker longitude={longitude} latitude={latitude} color="#4945ff" /* primary600 */ />
+          <Marker
+            longitude={longitude}
+            latitude={latitude}
+            color="#4945ff" /* primary600 */
+            onClick={handleMainMarkerClick}
+          />
         </Map>
       </Flex>
 
