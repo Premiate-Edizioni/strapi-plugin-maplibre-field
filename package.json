@@ -99,7 +99,7 @@
 		"@microsoft/api-extractor": "7.56.3"
 	},
 	"engines": {
-		"node": ">=20.0.0 <=22.x.x",
+		"node": ">=20.0.0 <=24.x.x",
 		"npm": ">=6.0.0"
 	},
 	"license": "MIT",

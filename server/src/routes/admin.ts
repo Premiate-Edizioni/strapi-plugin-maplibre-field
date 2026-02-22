@@ -6,7 +6,7 @@ export default {
       path: '/config',
       handler: 'config.getConfig',
       config: {
-        auth: false, // Config must be accessible from frontend to initialize the map
+        policies: ['admin::isAuthenticatedAdmin'],
       },
     },
   ],
