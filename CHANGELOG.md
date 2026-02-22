@@ -5,15 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.1] - 2026-02-11
+## [1.2.1] - 2026-02-22
 
 ### Fixed
 
 - **Vite/esbuild class field transpilation** - Removed ES2022 class field declarations from `BasemapControl` and `LayerControlImpl` to prevent `__publicField is not defined` runtime error when Strapi's Vite pre-bundles the plugin with esbuild targeting below ES2022
 - **Prettier formatting** - Fixed line length violation in config schema
+- **Admin route security** - Protected `/config` endpoint with `policies: ['admin::isAuthenticatedAdmin']` to prevent unauthorized access
 
 ### Changed
 
+- **Node.js support** - Extended compatibility to Node.js 24.x (>=20.0.0 <=24.x.x)
+- **TypeScript** - Updated from ^5.0.0 to ^5.5.0
+- **ESLint** - Updated from ^8.0.0 to ^8.57.0
 - **MapLibre GL** - Updated from v5.16.0 to v5.18.0
 - **PMTiles** - Updated from v4.3.2 to v4.4.0
 - **Native Marker click events** - Main location marker now supports click events (MapLibre v5.18.0+ feature), showing coordinate feedback via Strapi notification
