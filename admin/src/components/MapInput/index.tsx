@@ -749,7 +749,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       </Flex>
 
       <Grid.Root>
-        <Grid.Item padding={1} col={8} xs={12}>
+        <Grid.Item padding={1} col={6} xs={12}>
           <Field.Root>
             <Field.Label>
               {formatMessage({
@@ -763,7 +763,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           </Field.Root>
         </Grid.Item>
 
-        <Grid.Item padding={1} col={2} xs={12}>
+        <Grid.Item padding={1} col={3} xs={12}>
           <Field.Root>
             <Field.Label>
               {formatMessage({
@@ -774,7 +774,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
             <Field.Input name="longitude" value={longitude} disabled />
           </Field.Root>
         </Grid.Item>
-        <Grid.Item padding={1} col={2} xs={12}>
+        <Grid.Item padding={1} col={3} xs={12}>
           <Field.Root>
             <Field.Label>
               {formatMessage({

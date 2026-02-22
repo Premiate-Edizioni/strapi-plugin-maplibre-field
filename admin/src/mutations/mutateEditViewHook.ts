@@ -41,9 +41,10 @@ const mutateLayouts = (layouts: Array<Array<EditFieldLayout>>): Array<Array<Edit
         return field;
       }
 
-      // Update the customField type to use our plugin
+      // Update the customField type to use our plugin and set full width
       return {
         ...field,
+        size: 12, // Full width (12 columns out of 12)
         attribute: {
           ...field.attribute,
           customField: `plugin::${pluginId}.map`,
