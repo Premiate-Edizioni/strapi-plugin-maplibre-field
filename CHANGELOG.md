@@ -7,25 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.1] - 2026-02-22
 
+### Added
+
+- **Full-width map field** - Map field now spans all 12 columns in the edit view layout for better usability
+- **Rebalanced info grid** - Place name (6 cols), longitude (3 cols), latitude (3 cols) instead of 8-2-2
+
 ### Fixed
 
+- **Admin route security** - Protected `/config` endpoint with `policies: ['admin::isAuthenticatedAdmin']` to allow access to every Strapi authenticated role and prevent unauthorized access
 - **Vite/esbuild class field transpilation** - Removed ES2022 class field declarations from `BasemapControl` and `LayerControlImpl` to prevent `__publicField is not defined` runtime error when Strapi's Vite pre-bundles the plugin with esbuild targeting below ES2022
+- **MapLibre GL pinned to v5.16.0** - Pinned exact version to avoid `__publicField` runtime error with newer releases that use ES2022 class fields
 - **Prettier formatting** - Fixed line length violation in config schema
-- **Admin route security** - Protected `/config` endpoint with `policies: ['admin::isAuthenticatedAdmin']` to prevent unauthorized access
 
 ### Changed
 
 - **Node.js support** - Extended compatibility to Node.js 24.x (>=20.0.0 <=24.x.x)
 - **TypeScript** - Updated from ^5.0.0 to ^5.5.0
 - **ESLint** - Updated from ^8.0.0 to ^8.57.0
-- **MapLibre GL** - Updated from v5.16.0 to v5.18.0
 - **PMTiles** - Updated from v4.3.2 to v4.4.0
-- **Native Marker click events** - Main location marker now supports click events (MapLibre v5.18.0+ feature), showing coordinate feedback via Strapi notification
-- **FullscreenControl** - Added `useFullscreenPseudo` config option for CSS-based fullscreen (faster on some devices, requires MapLibre v5.18.0+)
 
 ### Known issue: `__publicField is not defined` in Strapi dev mode
 
-`maplibre-gl` v5 uses ES2022 class field declarations internally (e.g., in the MLT codec). Strapi's Vite dev server does not set `optimizeDeps.esbuildOptions.target` to match its modern `build.target`, so esbuild may transpile these fields into `__publicField()` helper calls that fail at runtime.
+`maplibre-gl` v5 uses ES2022 class field declarations internally (e.g., in the MLT codec). Strapi's Vite dev server does not set `optimizeDeps.esbuildOptions.target` to match its modern `build.target`, so esbuild may transpile these fields into `__publicField()` helper calls that fail at runtime. For this reason `maplibre-gl` is pinned to `5.16.0`.
 
 This is an upstream issue at the intersection of Strapi, Vite 5, and maplibre-gl v5. It may be resolved by a future release of any of these projects.
 
