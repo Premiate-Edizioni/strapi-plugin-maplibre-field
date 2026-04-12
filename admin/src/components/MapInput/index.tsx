@@ -928,7 +928,10 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         {result?.properties?.sourceId && result?.properties?.address && (
           <Field.Root style={{ flexBasis: '100%' }}>
             <Field.Label>
-              {formatMessage({ id: getTranslation('fields.poi-address'), defaultMessage: 'Full Address' })}
+              {formatMessage({
+                id: getTranslation('fields.poi-address'),
+                defaultMessage: 'Full Address',
+              })}
             </Field.Label>
             <Field.Input name="poi_address" value={result.properties.address} disabled />
           </Field.Root>
