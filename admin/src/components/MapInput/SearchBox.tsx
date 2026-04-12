@@ -25,7 +25,14 @@ export interface SearchBoxProps {
     enabled?: boolean;
     color?: string;
   }>;
-  queryMapFeatures?: (sourceId: string, sourceLayer: string) => { geometry: { type: string; coordinates: number[] }; properties: Record<string, unknown> | null; id?: string | number }[];
+  queryMapFeatures?: (
+    sourceId: string,
+    sourceLayer: string
+  ) => {
+    geometry: { type: string; coordinates: number[] };
+    properties: Record<string, unknown> | null;
+    id?: string | number;
+  }[];
 }
 
 const SearchBox: React.FC<SearchBoxProps> = ({

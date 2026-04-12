@@ -4,7 +4,7 @@ import { useNotification } from '@strapi/strapi/admin';
 import SearchBox from './SearchBox';
 import BasemapControlComponent from './basemap-control';
 import LayerControl, { LayerConfig } from './layer-control';
-import { Flex, Typography, Field, Grid } from '@strapi/design-system';
+import { Flex, Typography, Field } from '@strapi/design-system';
 import Map, {
   FullscreenControl,
   GeolocateControl,
@@ -898,58 +898,42 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         </Map>
       </Flex>
 
-      <Grid.Root>
-        <Grid.Item padding={1} col={6} xs={12}>
-          <Field.Root>
-            <Field.Label>
-              {formatMessage({
-                id: result?.properties?.sourceId
-                  ? getTranslation('fields.poi-name')
-                  : getTranslation('fields.address'),
-                defaultMessage: result?.properties?.sourceId ? 'POI Name' : 'Address',
-              })}
-            </Field.Label>
-            <Field.Input name="place_name" value={address} disabled />
-          </Field.Root>
-        </Grid.Item>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+        {/* Row 1: Name/Address (50%) + Longitude (25%) + Latitude (25%) */}
+        <Field.Root style={{ flex: '2 1 0' }}>
+          <Field.Label>
+            {formatMessage({
+              id: result?.properties?.sourceId
+                ? getTranslation('fields.poi-name')
+                : getTranslation('fields.address'),
+              defaultMessage: result?.properties?.sourceId ? 'POI Name' : 'Address',
+            })}
+          </Field.Label>
+          <Field.Input name="place_name" value={address} disabled />
+        </Field.Root>
+        <Field.Root style={{ flex: '1 1 0' }}>
+          <Field.Label>
+            {formatMessage({ id: getTranslation('fields.longitude'), defaultMessage: 'Longitude' })}
+          </Field.Label>
+          <Field.Input name="longitude" value={longitude} disabled />
+        </Field.Root>
+        <Field.Root style={{ flex: '1 1 0' }}>
+          <Field.Label>
+            {formatMessage({ id: getTranslation('fields.latitude'), defaultMessage: 'Latitude' })}
+          </Field.Label>
+          <Field.Input name="latitude" value={latitude} disabled />
+        </Field.Root>
 
-        <Grid.Item padding={1} col={3} xs={12}>
-          <Field.Root>
-            <Field.Label>
-              {formatMessage({
-                id: getTranslation('fields.longitude'),
-                defaultMessage: 'Longitude',
-              })}
-            </Field.Label>
-            <Field.Input name="longitude" value={longitude} disabled />
-          </Field.Root>
-        </Grid.Item>
-        <Grid.Item padding={1} col={3} xs={12}>
-          <Field.Root>
-            <Field.Label>
-              {formatMessage({
-                id: getTranslation('fields.latitude'),
-                defaultMessage: 'Latitude',
-              })}
-            </Field.Label>
-            <Field.Input name="latitude" value={latitude} disabled />
-          </Field.Root>
-        </Grid.Item>
-
+        {/* Row 2 (POI only): Full address at 100% */}
         {result?.properties?.sourceId && result?.properties?.address && (
-          <Grid.Item padding={1} col={12} xs={12}>
-            <Field.Root>
-              <Field.Label>
-                {formatMessage({
-                  id: getTranslation('fields.poi-address'),
-                  defaultMessage: 'Full Address',
-                })}
-              </Field.Label>
-              <Field.Input name="poi_address" value={result.properties.address} disabled />
-            </Field.Root>
-          </Grid.Item>
+          <Field.Root style={{ flexBasis: '100%' }}>
+            <Field.Label>
+              {formatMessage({ id: getTranslation('fields.poi-address'), defaultMessage: 'Full Address' })}
+            </Field.Label>
+            <Field.Input name="poi_address" value={result.properties.address} disabled />
+          </Field.Root>
         )}
-      </Grid.Root>
+      </div>
     </Flex>
   );
 };

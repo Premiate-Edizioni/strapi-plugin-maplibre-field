@@ -70,7 +70,11 @@ export async function performSearch(query: string, config: SearchConfig): Promis
             const features = config.queryMapFeatures(sourceId, source.sourceLayer);
             const q = query.toLowerCase();
             features
-              .filter((f) => String(f.properties?.name ?? '').toLowerCase().includes(q))
+              .filter((f) =>
+                String(f.properties?.name ?? '')
+                  .toLowerCase()
+                  .includes(q)
+              )
               .forEach((f, idx) => {
                 const coords = f.geometry.coordinates as [number, number];
                 results.push({
