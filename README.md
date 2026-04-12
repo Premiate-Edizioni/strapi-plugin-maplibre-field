@@ -13,7 +13,7 @@ A [Strapi](https://strapi.io/) plugin providing a [MapLibre](https://www.maplibr
 - **Interactive MapLibre GL map** with smooth zoom and pan
 - **Multiple basemap styles** support (MapTiler, Stadia, PMTiles, custom)
 - **OpenStreetMap geocoding** via Nominatim (forward & reverse)
-- **Custom POI layers** with GeoJSON API integration
+- **Custom POI layers** with GeoJSON API or PMTiles vector tiles
 - **Layer control panel** for toggling POI sources
 - **GeoJSON Feature** storage (RFC 7946 compliant)
 - **TypeScript** support with full type definitions
