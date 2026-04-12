@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useIntl } from 'react-intl';
 import { useNotification } from '@strapi/strapi/admin';
 import SearchBox from './SearchBox';
@@ -123,6 +123,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         name: source.name,
         enabled: source.enabled !== false, // Default to enabled if not specified
         color: source.color, // Pass the color from config
+        sourceType: source.type,
       }));
     }
 
@@ -188,6 +189,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           name: source.name,
           enabled: source.enabled !== false,
           color: source.color, // Pass the color from config
+          sourceType: source.type,
         }))
       );
       return;
@@ -216,12 +218,12 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   };
 
   // Handle layer toggle from layer control
-  const handleLayerToggle = (layerId: string, enabled: boolean) => {
+  const handleLayerToggle = useCallback((layerId: string, enabled: boolean) => {
     setPoiLayers((prevLayers) =>
       prevLayers.map((layer) => (layer.id === layerId ? { ...layer, enabled } : layer))
     );
     // Note: updatePOIMarkers() will be triggered by the useEffect that watches poiLayers
-  };
+  }, []);
 
   // Helper: collect active PMTiles circle layer IDs
   const getPMTilesLayerIds = (): string[] =>
