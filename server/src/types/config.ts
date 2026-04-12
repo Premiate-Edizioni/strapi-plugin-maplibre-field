@@ -9,6 +9,8 @@ export interface POISource {
   id: string;
   name: string;
   apiUrl: string;
+  type?: 'geojson' | 'pmtiles'; // Source type: 'geojson' (default, HTTP fetch) or 'pmtiles' (vector tiles)
+  sourceLayer?: string; // Required when type === 'pmtiles': the vector tile layer name inside the file
   enabled?: boolean;
   color?: string; // Hex color for dropdown dots and map markers
 }

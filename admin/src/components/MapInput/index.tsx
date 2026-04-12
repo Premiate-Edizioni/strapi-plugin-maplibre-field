@@ -27,6 +27,7 @@ import {
   queryPOIsForViewport,
   searchNearbyPOIsForSnap,
   findNearestPOI,
+  calculateDistance,
 } from '../../services/poi-service';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -222,6 +223,29 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     // Note: updatePOIMarkers() will be triggered by the useEffect that watches poiLayers
   };
 
+  // Helper: collect active PMTiles circle layer IDs
+  const getPMTilesLayerIds = (): string[] =>
+    (config.poiSources || [])
+      .filter(
+        (s) => s.type === 'pmtiles' && poiLayersRef.current.find((l) => l.id === s.id)?.enabled
+      )
+      .map((s) => `pmtiles-circle-${s.id}`);
+
+  // Callback passed to SearchBox so it can query features loaded in the map (for PMTiles sources)
+  const queryMapFeatures = (sourceId: string, sourceLayer: string) => {
+    if (!mapRef.current) return [];
+    const map = mapRef.current.getMap();
+    try {
+      return map.querySourceFeatures(sourceId, { sourceLayer }) as {
+        geometry: { type: string; coordinates: number[] };
+        properties: Record<string, unknown> | null;
+        id?: string | number;
+      }[];
+    } catch {
+      return [];
+    }
+  };
+
   // Update POI markers based on map viewport (with debouncing)
   const updatePOIMarkers = async () => {
     // Clear any pending update
@@ -284,6 +308,8 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
             if (source) {
               apiUrl = source.apiUrl;
               mapName = source.name;
+              // PMTiles sources are rendered natively as vector tile layers — skip HTTP fetch
+              if (source.type === 'pmtiles') continue;
             }
           }
 
@@ -301,7 +327,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
                 nominatimUrl: config.nominatimUrl || 'https://nominatim.openstreetmap.org',
                 customApiUrl: apiUrl,
                 mapName: mapName,
-                layerId: layer.id, // Pass the layer ID
+                layerId: layer.id,
                 radius: 100,
                 categories: [],
               }
@@ -360,46 +386,62 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     });
   };
 
-  // Handle map click - check for POI marker clicks
+  // Handle map click - check for POI marker clicks (GeoJSON and PMTiles layers)
   const handleMapClick = (evt: MapLayerMouseEvent) => {
     if (!mapRef.current) return;
 
     const map = mapRef.current.getMap();
 
-    // Check if the POI layer exists before querying
-    const poiLayer = map.getLayer('poi-circles');
-    if (!poiLayer) {
-      // POI layer doesn't exist (not loaded yet or disabled)
+    // Collect all queryable layers (GeoJSON + PMTiles)
+    const pmtilesLayerIds = getPMTilesLayerIds().filter((id) => map.getLayer(id));
+    const allQueryLayers = [
+      ...(map.getLayer('poi-circles') ? ['poi-circles'] : []),
+      ...pmtilesLayerIds,
+    ];
+
+    if (allQueryLayers.length === 0) return;
+
+    const features = map.queryRenderedFeatures(evt.point, { layers: allQueryLayers });
+    if (!features || features.length === 0) return;
+
+    const feature = features[0];
+
+    // Handle click on a PMTiles vector tile feature
+    if (feature.layer?.id?.startsWith('pmtiles-circle-')) {
+      const sourceId = feature.layer.id.replace('pmtiles-circle-', '');
+      const sourceConfig = config.poiSources?.find((s) => s.id === sourceId);
+      const coords = (feature.geometry as unknown as { coordinates: [number, number] }).coordinates;
+      const poi: POI = {
+        id: String(feature.id ?? `pmtiles-${Date.now()}`),
+        name: String(feature.properties?.name ?? 'Unknown'),
+        type: String(feature.properties?.type ?? 'poi'),
+        coordinates: coords,
+        address: String(feature.properties?.address ?? ''),
+        source: 'custom',
+        mapName: sourceConfig?.name,
+        layerId: sourceId,
+        metadata: feature.properties as Record<string, unknown>,
+      };
+      handlePOIClick(poi);
       return;
     }
 
-    const features = map.queryRenderedFeatures(evt.point, {
-      layers: ['poi-circles'],
-    });
+    // Handle click on a GeoJSON POI marker
+    const featureName = feature.properties?.name;
+    let clickedPOI = displayedPOIs.find((p) => p.name === featureName);
 
-    // If clicked on a POI marker, handle POI selection
-    if (features && features.length > 0) {
-      const feature = features[0];
+    // Fallback: try to match by ID if name didn't work
+    if (!clickedPOI) {
+      clickedPOI = displayedPOIs.find((p) => p.id === feature.id);
+    }
 
-      // Find POI by name and coordinates (more reliable than ID)
-      // MapLibre may not preserve the original UUID ID, so we match by properties
-      const featureName = feature.properties?.name;
-      let clickedPOI = displayedPOIs.find((p) => p.name === featureName);
+    // Fallback: try string comparison if numeric ID didn't match
+    if (!clickedPOI && feature.id !== undefined) {
+      clickedPOI = displayedPOIs.find((p) => p.id === String(feature.id));
+    }
 
-      // Fallback: try to match by ID if name didn't work
-      if (!clickedPOI) {
-        clickedPOI = displayedPOIs.find((p) => p.id === feature.id);
-      }
-
-      // Fallback: try string comparison if numeric ID didn't match
-      if (!clickedPOI && feature.id !== undefined) {
-        clickedPOI = displayedPOIs.find((p) => p.id === String(feature.id));
-      }
-
-      if (clickedPOI) {
-        handlePOIClick(clickedPOI);
-        return;
-      }
+    if (clickedPOI) {
+      handlePOIClick(clickedPOI);
     }
   };
 
@@ -427,6 +469,8 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           if (source) {
             apiUrl = source.apiUrl;
             mapName = source.name;
+            // PMTiles sources: snap handled below via queryRenderedFeatures
+            if (source.type === 'pmtiles') continue;
           }
         }
 
@@ -438,13 +482,48 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
               nominatimUrl: config.nominatimUrl || 'https://nominatim.openstreetmap.org',
               customApiUrl: apiUrl,
               mapName: mapName,
-              layerId: layer.id, // Pass the layer ID
+              layerId: layer.id,
               radius: snapRadius,
               categories: [],
             }
           );
 
           allNearbyPOIs.push(...pois);
+        }
+      }
+
+      // Snap on PMTiles sources via queryRenderedFeatures
+      if (mapRef.current) {
+        const map = mapRef.current.getMap();
+        const pmtilesLayerIds = getPMTilesLayerIds().filter((id) => map.getLayer(id));
+        if (pmtilesLayerIds.length > 0) {
+          const pixelPoint = map.project({ lng: clickCoords[0], lat: clickCoords[1] });
+          const pixelRadius = 20;
+          const bbox: [[number, number], [number, number]] = [
+            [pixelPoint.x - pixelRadius, pixelPoint.y - pixelRadius],
+            [pixelPoint.x + pixelRadius, pixelPoint.y + pixelRadius],
+          ];
+          const rendered = map.queryRenderedFeatures(bbox, { layers: pmtilesLayerIds });
+          for (const f of rendered) {
+            const coords = (f.geometry as unknown as { coordinates: [number, number] }).coordinates;
+            const dist = calculateDistance(clickCoords, coords);
+            if (dist <= snapRadius) {
+              const sourceId = f.layer.id.replace('pmtiles-circle-', '');
+              const sourceConfig = config.poiSources?.find((s) => s.id === sourceId);
+              allNearbyPOIs.push({
+                id: String(f.id ?? `pmtiles-snap-${Date.now()}`),
+                name: String(f.properties?.name ?? 'Unknown'),
+                type: String(f.properties?.type ?? 'poi'),
+                coordinates: coords,
+                address: String(f.properties?.address ?? ''),
+                source: 'custom',
+                mapName: sourceConfig?.name,
+                layerId: sourceId,
+                metadata: f.properties as Record<string, unknown>,
+                distance: dist,
+              });
+            }
+          }
         }
       }
 
@@ -576,7 +655,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     updatePOIMarkers();
   }, [JSON.stringify(poiLayers.map((l) => ({ id: l.id, enabled: l.enabled })))]);
 
-  // Add cursor pointer on POI hover
+  // Add cursor pointer on POI hover (GeoJSON and PMTiles layers)
   useEffect(() => {
     if (!mapRef.current || !config.poiDisplayEnabled) return;
 
@@ -590,16 +669,30 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       map.getCanvas().style.cursor = '';
     };
 
-    map.on('load', () => {
+    const registerHoverHandlers = () => {
       map.on('mouseenter', 'poi-circles', handleMouseEnter);
       map.on('mouseleave', 'poi-circles', handleMouseLeave);
-    });
+      for (const layerId of getPMTilesLayerIds()) {
+        map.on('mouseenter', layerId, handleMouseEnter);
+        map.on('mouseleave', layerId, handleMouseLeave);
+      }
+    };
+
+    if (map.loaded()) {
+      registerHoverHandlers();
+    } else {
+      map.on('load', registerHoverHandlers);
+    }
 
     return () => {
       map.off('mouseenter', 'poi-circles', handleMouseEnter);
       map.off('mouseleave', 'poi-circles', handleMouseLeave);
+      for (const layerId of getPMTilesLayerIds()) {
+        map.off('mouseenter', layerId, handleMouseEnter);
+        map.off('mouseleave', layerId, handleMouseLeave);
+      }
     };
-  }, [config.poiDisplayEnabled]);
+  }, [config.poiDisplayEnabled, JSON.stringify(getPMTilesLayerIds())]);
 
   return (
     <Flex direction="column" alignItems="stretch" gap={4}>
@@ -613,6 +706,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         nominatimUrl={config.nominatimUrl || 'https://nominatim.openstreetmap.org'}
         poiSearchEnabled={config.poiSearchEnabled}
         poiSources={config.poiSources}
+        queryMapFeatures={queryMapFeatures}
       />
 
       <Flex
@@ -738,6 +832,60 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
                 </Source>
               );
             })()}
+
+          {/* PMTiles Vector Tile POI Layers */}
+          {config.poiDisplayEnabled &&
+            (config.poiSources || [])
+              .filter((source) => source.type === 'pmtiles')
+              .map((source) => {
+                const layer = poiLayers.find((l) => l.id === source.id);
+                if (!layer?.enabled) return null;
+                const pmtilesUrl = source.apiUrl.startsWith('pmtiles://')
+                  ? source.apiUrl
+                  : `pmtiles://${source.apiUrl}`;
+                return (
+                  <Source
+                    key={`pmtiles-source-${source.id}`}
+                    id={`pmtiles-source-${source.id}`}
+                    type="vector"
+                    url={pmtilesUrl}
+                  >
+                    <Layer
+                      id={`pmtiles-circle-${source.id}`}
+                      type="circle"
+                      source-layer={source.sourceLayer}
+                      minzoom={config.poiMinZoom ?? 10}
+                      paint={{
+                        'circle-radius': 10,
+                        'circle-color': source.color ?? '#999999',
+                        'circle-stroke-width': 2,
+                        'circle-stroke-color': '#ffffff',
+                        'circle-opacity': 1.0,
+                      }}
+                    />
+                    <Layer
+                      id={`pmtiles-label-${source.id}`}
+                      type="symbol"
+                      source-layer={source.sourceLayer}
+                      minzoom={12}
+                      layout={{
+                        'text-field': ['get', 'name'],
+                        'text-size': 12,
+                        'text-offset': [0, 1.5],
+                        'text-anchor': 'top',
+                        'text-optional': true,
+                        'symbol-placement': 'point',
+                        'text-allow-overlap': false,
+                      }}
+                      paint={{
+                        'text-color': '#333333',
+                        'text-halo-color': '#ffffff',
+                        'text-halo-width': 2,
+                      }}
+                    />
+                  </Source>
+                );
+              })}
 
           <Marker
             longitude={longitude}

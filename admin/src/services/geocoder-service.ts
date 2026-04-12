@@ -10,6 +10,13 @@ import type { LocationFeature } from './poi-service';
 // User-Agent for Nominatim API compliance
 const USER_AGENT = 'strapi-plugin-maplibre-field/1.0.0 (Strapi CMS)';
 
+// Minimal GeoJSON Feature type for map feature queries
+interface MapFeature {
+  geometry: { type: string; coordinates: number[] };
+  properties: Record<string, unknown> | null;
+  id?: string | number;
+}
+
 interface NominatimResult {
   display_name: string;
   lon: string;
@@ -27,6 +34,8 @@ export interface POISource {
   id: string;
   name: string;
   apiUrl: string;
+  type?: 'geojson' | 'pmtiles';
+  sourceLayer?: string;
   enabled?: boolean;
   color?: string;
 }
@@ -35,6 +44,8 @@ export interface SearchConfig {
   nominatimUrl: string;
   poiSearchEnabled?: boolean;
   poiSources?: POISource[];
+  // Callback to query loaded map features (used for pmtiles sources)
+  queryMapFeatures?: (sourceId: string, sourceLayer: string) => MapFeature[];
 }
 
 /**
@@ -51,6 +62,44 @@ export async function performSearch(query: string, config: SearchConfig): Promis
     const enabledSources = config.poiSources.filter((source) => source.enabled !== false);
 
     for (const source of enabledSources) {
+      // PMTiles sources: search features already loaded in the map via querySourceFeatures
+      if (source.type === 'pmtiles') {
+        if (config.queryMapFeatures && source.sourceLayer) {
+          try {
+            const sourceId = `pmtiles-source-${source.id}`;
+            const features = config.queryMapFeatures(sourceId, source.sourceLayer);
+            const q = query.toLowerCase();
+            features
+              .filter((f) => String(f.properties?.name ?? '').toLowerCase().includes(q))
+              .forEach((f, idx) => {
+                const coords = f.geometry.coordinates as [number, number];
+                results.push({
+                  id: `pmtiles-${source.id}-${idx}`,
+                  place_name: String(f.properties?.name ?? 'Unknown'),
+                  feature: {
+                    type: 'Feature' as const,
+                    geometry: { type: 'Point' as const, coordinates: coords },
+                    properties: {
+                      name: f.properties?.name as string | undefined,
+                      address: f.properties?.address as string | undefined,
+                      source: 'custom',
+                      sourceId: source.id,
+                      sourceLayer: source.sourceLayer,
+                      category: f.properties?.type as string | undefined,
+                      inputMethod: 'search' as const,
+                    },
+                  },
+                  source: 'custom' as const,
+                });
+              });
+          } catch (error) {
+            console.warn(`PMTiles search failed for ${source.name}:`, error);
+          }
+        }
+        continue;
+      }
+
+      // GeoJSON sources: fetch via HTTP
       try {
         const poiResults = await searchPOIsForGeocoder(query, {
           nominatimUrl: config.nominatimUrl,

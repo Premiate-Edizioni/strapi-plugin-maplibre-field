@@ -114,6 +114,7 @@ export interface POIServiceConfig {
   layerId?: string; // ID of the layer
   radius: number;
   categories: string[];
+  sourceType?: 'geojson' | 'pmtiles'; // Skip HTTP fetch for pmtiles sources
 }
 
 /**
@@ -417,8 +418,8 @@ export async function searchNearbyPOIsForSnap(
     const nominatimPOIs = await queryNominatim(lat, lng, config.radius, config.nominatimUrl);
     results.push(...nominatimPOIs);
 
-    // 2. Query custom API if configured
-    if (config.customApiUrl) {
+    // 2. Query custom API if configured (skipped for pmtiles sources — handled via queryRenderedFeatures)
+    if (config.customApiUrl && config.sourceType !== 'pmtiles') {
       try {
         const customFeatures = await queryCustomAPI(config.customApiUrl);
 
@@ -461,8 +462,8 @@ export async function queryPOIsForViewport(
   const results: POI[] = [];
 
   try {
-    // Query custom API if configured
-    if (config.customApiUrl) {
+    // Query custom API if configured (skipped for pmtiles sources — rendered via vector tiles)
+    if (config.customApiUrl && config.sourceType !== 'pmtiles') {
       try {
         const customFeatures = await queryCustomAPI(config.customApiUrl);
 

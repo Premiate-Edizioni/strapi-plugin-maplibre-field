@@ -20,9 +20,12 @@ export interface SearchBoxProps {
     id: string;
     name: string;
     apiUrl: string;
+    type?: 'geojson' | 'pmtiles';
+    sourceLayer?: string;
     enabled?: boolean;
     color?: string;
   }>;
+  queryMapFeatures?: (sourceId: string, sourceLayer: string) => { geometry: { type: string; coordinates: number[] }; properties: Record<string, unknown> | null; id?: string | number }[];
 }
 
 const SearchBox: React.FC<SearchBoxProps> = ({
@@ -30,6 +33,7 @@ const SearchBox: React.FC<SearchBoxProps> = ({
   nominatimUrl,
   poiSearchEnabled,
   poiSources,
+  queryMapFeatures,
 }) => {
   const { formatMessage } = useIntl();
   const [query, setQuery] = useState('');
@@ -70,6 +74,7 @@ const SearchBox: React.FC<SearchBoxProps> = ({
         nominatimUrl,
         poiSearchEnabled,
         poiSources,
+        queryMapFeatures,
       });
 
       setResults(searchResults);
