@@ -14,12 +14,17 @@ Complete guide to integrating custom Points of Interest (POI) sources with the M
 
 ## Overview
 
-The MapLibre Field plugin supports integration of custom POI data from external GeoJSON APIs. This allows you to:
+The MapLibre Field plugin supports integration of custom POI data from two source types:
+
+- **GeoJSON** — fetched from an HTTP endpoint returning a GeoJSON FeatureCollection
+- **PMTiles** — loaded as vector tiles from a `.pmtiles` archive, rendered natively by MapLibre
+
+Both source types allow you to:
 
 - Display custom location markers on the map
 - Let users select pre-defined locations with a single click
 - Include custom POI data in search results
-- Toggle multiple POI layers on/off
+- Toggle multiple POI layers on/off independently
 - Save complete POI metadata automatically
 
 ### Use Cases
@@ -84,17 +89,21 @@ export default {
 
 ```typescript
 interface POISource {
-  id: string;         // Unique identifier for the layer
-  name: string;       // Display name in layer control panel
-  apiUrl: string;     // GeoJSON API endpoint URL
-  enabled?: boolean;  // Initial layer visibility (default: true)
+  id: string;                    // Unique identifier for the layer
+  name: string;                  // Display name in layer control panel
+  apiUrl: string;                // GeoJSON endpoint URL or PMTiles file URL
+  type?: 'geojson' | 'pmtiles'; // Source type (default: 'geojson')
+  sourceLayer?: string;          // Vector layer name inside the PMTiles file (required for PMTiles)
+  color?: string;                // Marker/circle color (CSS color, e.g. '#cc0000')
+  enabled?: boolean;             // Initial layer visibility (default: true)
 }
 ```
 
 **Notes**:
 - `id` must be unique across all POI sources
-- `name` is shown in the layer control panel
-- `apiUrl` must return a valid GeoJSON FeatureCollection
+- `name` is shown in the layer control panel (with source type label: `GEOJSON` or `PMTILES`)
+- For `type: 'geojson'`: `apiUrl` must return a valid GeoJSON FeatureCollection
+- For `type: 'pmtiles'`: `apiUrl` must point to a `.pmtiles` file; `sourceLayer` is required
 - `enabled` controls initial visibility (users can toggle anytime)
 
 ## Custom POI API
@@ -216,6 +225,66 @@ Access-Control-Allow-Headers: Content-Type
 ```
 
 For static files on S3/R2/Linode Object Storage, configure CORS in bucket settings.
+
+## PMTiles POI Sources
+
+[PMTiles](https://docs.protomaps.com/pmtiles/) is a cloud-native single-file format for vector tiles. It is an efficient alternative to GeoJSON for large POI datasets because MapLibre fetches only the tiles needed for the current viewport using HTTP range requests — no tile server required.
+
+### When to Use PMTiles vs GeoJSON
+
+| | GeoJSON | PMTiles |
+|---|---|---|
+| Dataset size | Small–medium (< 5,000 POIs) | Any size (tested with millions) |
+| Hosting | Any HTTP server, S3, CDN | S3, R2, Cloudflare, any static host |
+| Search support | Full (via cached features) | Partial (searches features visible in viewport) |
+| Setup complexity | Low | Medium (requires generating `.pmtiles` file) |
+| API requests | One request per viewport move | HTTP range requests (very efficient) |
+
+### Configuration
+
+```typescript
+poiSources: [
+  {
+    id: "skateparks",
+    name: "Skateparks",
+    apiUrl: "https://cdn.example.com/pmtiles/skateparks-world.pmtiles",
+    type: "pmtiles",
+    sourceLayer: "skateparks", // layer name inside the .pmtiles archive
+    color: "#1dbff0",
+    enabled: true,
+  },
+]
+```
+
+The `sourceLayer` value must match the layer name as encoded in the PMTiles file. If you created the file with `tippecanoe`, it defaults to the input filename without extension.
+
+### Generating a PMTiles File
+
+Use [tippecanoe](https://github.com/felt/tippecanoe) to convert a GeoJSON file to PMTiles:
+
+```bash
+tippecanoe \
+  --output=skateparks-world.pmtiles \
+  --layer=skateparks \
+  --minimum-zoom=0 \
+  --maximum-zoom=14 \
+  --drop-densest-as-needed \
+  skateparks.geojson
+```
+
+Then upload the `.pmtiles` file to your object storage (S3, Cloudflare R2, Linode Object Storage, etc.).
+
+### Search with PMTiles
+
+Because PMTiles data is rendered as vector tiles (not fetched as a single JSON), the search box queries only features **already loaded in the current viewport** rather than the full dataset. This means:
+
+- Search works for POIs visible on screen at the current zoom level
+- Zoom in or pan to the relevant area before searching
+- GeoJSON sources are searched across the full cached dataset
+
+### Layer Control
+
+The layer control panel shows the source type next to each layer name (`GEOJSON` or `PMTILES`), so users can understand what kind of data they are toggling.
 
 ## Layer Control
 
@@ -528,24 +597,62 @@ poiSources: [
     id: "skateparks",
     name: "Skateparks",
     apiUrl: "https://api.example.com/skateparks.geojson",
+    color: "#cc0000",
     enabled: true,
   },
   {
     id: "skateshops",
     name: "Skate Shops",
     apiUrl: "https://api.example.com/skateshops.geojson",
+    color: "#0066cc",
     enabled: true,
   },
   {
     id: "events",
     name: "Skate Events",
     apiUrl: "https://api.example.com/events.geojson",
+    color: "#ff9900",
     enabled: false, // Hidden by default
   },
 ]
 ```
 
-Users can toggle each layer independently using the layer control panel.
+Users can toggle each layer independently using the layer control panel. The panel shows the source type label (`GEOJSON` or `PMTILES`) next to each layer name.
+
+### Example 5: Mixed GeoJSON and PMTiles Sources
+
+Combine small dynamic datasets (GeoJSON) with large static datasets (PMTiles):
+
+```typescript
+poiSources: [
+  // GeoJSON: your Strapi API — small, frequently updated dataset
+  {
+    id: "skatespots",
+    name: "Skatespots",
+    apiUrl: "https://your-strapi.com/api/skatespots/geojson",
+    color: "#cc0000",
+    enabled: true,
+  },
+  // GeoJSON: another API source
+  {
+    id: "skateshops",
+    name: "Skateshops",
+    apiUrl: "https://your-strapi.com/api/skateshops/geojson",
+    color: "#0066cc",
+    enabled: true,
+  },
+  // PMTiles: worldwide dataset with millions of points, served as vector tiles
+  {
+    id: "skateparks-world",
+    name: "Skateparks (World)",
+    apiUrl: "https://cdn.example.com/pmtiles/skateparks-world.pmtiles",
+    type: "pmtiles",
+    sourceLayer: "skateparks",
+    color: "#1dbff0",
+    enabled: false, // Off by default — large dataset
+  },
+]
+```
 
 ## Troubleshooting
 
@@ -584,6 +691,25 @@ Users can toggle each layer independently using the layer control panel.
 - Verify GeoJSON has valid `name` property
 - Name cannot be empty string or null
 - Search is case-insensitive
+
+### PMTiles POIs Don't Appear
+
+**Check `sourceLayer` name**:
+- The `sourceLayer` value must exactly match the layer name encoded in the `.pmtiles` file
+- If you used `tippecanoe`, the layer name defaults to the input filename (without extension)
+- Inspect the file with [PMTiles Viewer](https://protomaps.github.io/PMTiles/) to verify layer names
+
+**Check CORS headers**:
+- Your object storage bucket must allow cross-origin range requests
+- Required headers: `Access-Control-Allow-Origin: *` and `Access-Control-Allow-Headers: Range`
+
+**Check zoom level**:
+- PMTiles sources respect `poiMinZoom` — zoom in if markers are not visible
+- The tiles must have been generated with sufficient max zoom (at least `poiMinZoom`)
+
+**PMTiles search returns no results**:
+- PMTiles search only works on features visible in the current viewport
+- Zoom in to the relevant area, then search
 
 ### Double-Click Doesn't Snap to POI
 

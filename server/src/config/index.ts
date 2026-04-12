@@ -70,6 +70,21 @@ function validator(config: MapLibreConfig): void {
       if (!source.apiUrl || typeof source.apiUrl !== 'string') {
         throw new Error(`[maplibre-field] poiSources[${index}].apiUrl must be a non-empty string`);
       }
+      if (source.type !== undefined && source.type !== 'geojson' && source.type !== 'pmtiles') {
+        throw new Error(
+          `[maplibre-field] poiSources[${index}].type must be "geojson" or "pmtiles"`
+        );
+      }
+      if (source.type === 'pmtiles' && !source.sourceLayer) {
+        throw new Error(
+          `[maplibre-field] poiSources[${index}].sourceLayer is required when type is "pmtiles"`
+        );
+      }
+      if (source.type === 'pmtiles' && !source.apiUrl.endsWith('.pmtiles')) {
+        console.warn(
+          `[maplibre-field] poiSources[${index}].apiUrl does not end with .pmtiles — verify the URL is correct`
+        );
+      }
     });
   }
 

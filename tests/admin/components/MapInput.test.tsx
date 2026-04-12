@@ -200,4 +200,51 @@ describe('MapInput Component', () => {
     expect(screen.getByDisplayValue('45.464')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Milano, Italia')).toBeInTheDocument();
   });
+
+  test('shows Address label and no Full Address field when value has no sourceId', () => {
+    const value = JSON.stringify({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [9.195, 45.464] },
+      properties: { name: 'Via Roma, Milano' },
+    });
+
+    render(<MockMapInput {...defaultProps} value={value} />);
+    expect(screen.getByText('Address')).toBeInTheDocument();
+    expect(screen.queryByText('Full Address')).not.toBeInTheDocument();
+    expect(screen.queryByText('POI Name')).not.toBeInTheDocument();
+  });
+
+  test('shows POI Name and Full Address fields when value has sourceId', () => {
+    const value = JSON.stringify({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [9.195, 45.464] },
+      properties: {
+        name: 'Skatespot Centro',
+        sourceId: 'SM-skatespots:123',
+        address: 'Via Roma 1, Milano',
+      },
+    });
+
+    render(<MockMapInput {...defaultProps} value={value} />);
+    expect(screen.getByText('POI Name')).toBeInTheDocument();
+    expect(screen.getByText('Full Address')).toBeInTheDocument();
+    expect(screen.queryByText('Address')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('Skatespot Centro')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Via Roma 1, Milano')).toBeInTheDocument();
+  });
+
+  test('does not show Full Address field when POI has no address property', () => {
+    const value = JSON.stringify({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [9.195, 45.464] },
+      properties: {
+        name: 'Skatespot Centro',
+        sourceId: 'SM-skatespots:123',
+      },
+    });
+
+    render(<MockMapInput {...defaultProps} value={value} />);
+    expect(screen.getByText('POI Name')).toBeInTheDocument();
+    expect(screen.queryByText('Full Address')).not.toBeInTheDocument();
+  });
 });

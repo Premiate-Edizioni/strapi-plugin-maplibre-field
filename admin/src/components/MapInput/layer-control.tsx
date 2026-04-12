@@ -7,6 +7,7 @@ export interface LayerConfig {
   name: string;
   enabled: boolean;
   color?: string; // Color for the layer indicator
+  sourceType?: string; // Source type (e.g. 'geojson', 'pmtiles')
 }
 
 interface LayerControlProps {
@@ -20,6 +21,11 @@ interface LayerControlProps {
  * Follows MapLibre GL JS IControl interface standard
  */
 class LayerControlImpl implements IControl {
+  private _isPanelOpen = false;
+  private _panel?: HTMLDivElement;
+  private _listContainer?: HTMLDivElement;
+  private _outsideClickHandler?: (e: MouseEvent) => void;
+
   constructor(
     private _layers: LayerConfig[],
     private _onToggle: (layerId: string, enabled: boolean) => void,
@@ -33,25 +39,7 @@ class LayerControlImpl implements IControl {
     this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
     this._container.style.padding = '0';
 
-    this._render();
-
-    return this._container;
-  }
-
-  onRemove(): void {
-    if (this._container && this._container.parentNode) {
-      this._container.parentNode.removeChild(this._container);
-    }
-    this._map = undefined;
-  }
-
-  private _render(): void {
-    if (!this._container) return;
-
-    // Clear existing content
-    this._container.innerHTML = '';
-
-    // Create toggle button
+    // Create toggle button (once)
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'maplibregl-ctrl-icon';
@@ -73,22 +61,22 @@ class LayerControlImpl implements IControl {
     button.style.alignItems = 'center';
     button.style.justifyContent = 'center';
 
-    // Create layer panel (hidden by default)
-    const panel = document.createElement('div');
-    panel.className = 'maplibregl-ctrl-layers-panel';
-    panel.style.display = 'none';
-    panel.style.position = 'absolute';
-    panel.style.top = '0';
-    panel.style.right = '40px';
-    panel.style.background = 'white';
-    panel.style.borderRadius = '4px';
-    panel.style.boxShadow = '0 0 0 2px rgba(0, 0, 0, 0.1)';
-    panel.style.padding = '8px';
-    panel.style.minWidth = '180px';
-    panel.style.maxHeight = '300px';
-    panel.style.overflowY = 'auto';
+    // Create panel (once)
+    this._panel = document.createElement('div');
+    this._panel.className = 'maplibregl-ctrl-layers-panel';
+    this._panel.style.display = 'none';
+    this._panel.style.position = 'absolute';
+    this._panel.style.top = '0';
+    this._panel.style.right = '40px';
+    this._panel.style.background = 'white';
+    this._panel.style.borderRadius = '4px';
+    this._panel.style.boxShadow = '0 0 0 2px rgba(0, 0, 0, 0.1)';
+    this._panel.style.padding = '8px';
+    this._panel.style.minWidth = '180px';
+    this._panel.style.maxHeight = '300px';
+    this._panel.style.overflowY = 'auto';
 
-    // Add title
+    // Add title (once)
     const title = document.createElement('div');
     title.textContent = 'POI Layers';
     title.style.fontSize = '12px';
@@ -96,9 +84,52 @@ class LayerControlImpl implements IControl {
     title.style.marginBottom = '8px';
     title.style.color = '#333';
     title.style.fontFamily = 'system-ui, -apple-system, sans-serif';
-    panel.appendChild(title);
+    this._panel.appendChild(title);
 
-    // Add layer items with custom circle indicators
+    // Container for layer list items (updated on each render)
+    this._listContainer = document.createElement('div');
+    this._panel.appendChild(this._listContainer);
+
+    // Toggle button handler (once)
+    button.addEventListener('click', () => {
+      this._isPanelOpen = !this._isPanelOpen;
+      this._panel!.style.display = this._isPanelOpen ? 'block' : 'none';
+    });
+
+    // Outside click handler using mousedown (fires before click, more reliable)
+    // Uses contains() instead of stopPropagation — avoids interference with inner clicks
+    this._outsideClickHandler = (e: MouseEvent) => {
+      if (this._isPanelOpen && this._container && !this._container.contains(e.target as Node)) {
+        this._isPanelOpen = false;
+        this._panel!.style.display = 'none';
+      }
+    };
+    document.addEventListener('mousedown', this._outsideClickHandler);
+
+    this._container.appendChild(button);
+    this._container.appendChild(this._panel);
+
+    this._renderList();
+
+    return this._container;
+  }
+
+  onRemove(): void {
+    if (this._outsideClickHandler) {
+      document.removeEventListener('mousedown', this._outsideClickHandler);
+    }
+    if (this._container && this._container.parentNode) {
+      this._container.parentNode.removeChild(this._container);
+    }
+    this._map = undefined;
+  }
+
+  private _renderList(): void {
+    if (!this._listContainer) return;
+
+    // Only rebuild the layer list items, not the whole panel
+    this._listContainer.innerHTML = '';
+
     this._layers.forEach((layer) => {
       const layerItem = document.createElement('div');
       layerItem.style.display = 'flex';
@@ -109,7 +140,6 @@ class LayerControlImpl implements IControl {
       layerItem.style.color = '#333';
       layerItem.style.fontFamily = 'system-ui, -apple-system, sans-serif';
 
-      // Create custom circle indicator
       const circle = document.createElement('div');
       circle.style.width = '12px';
       circle.style.height = '12px';
@@ -119,50 +149,39 @@ class LayerControlImpl implements IControl {
       circle.style.flexShrink = '0';
       circle.style.transition = 'all 0.2s ease';
 
-      // Set circle style based on enabled state
       if (layer.enabled && layer.color) {
-        // Enabled: filled circle with layer color, no border
         circle.style.backgroundColor = layer.color;
         circle.style.border = 'none';
       } else {
-        // Disabled: empty circle with gray outline
         circle.style.backgroundColor = 'transparent';
         circle.style.border = '2px solid #999';
       }
 
-      // Toggle functionality
-      layerItem.addEventListener('click', (e) => {
-        e.stopPropagation();
+      layerItem.addEventListener('click', () => {
         this._onToggle(layer.id, !layer.enabled);
       });
 
       const labelText = document.createElement('span');
       labelText.textContent = layer.name;
       labelText.style.userSelect = 'none';
+      labelText.style.flex = '1';
 
       layerItem.appendChild(circle);
       layerItem.appendChild(labelText);
-      panel.appendChild(layerItem);
-    });
 
-    // Toggle panel visibility
-    let isPanelOpen = false;
-    button.addEventListener('click', (e) => {
-      e.stopPropagation();
-      isPanelOpen = !isPanelOpen;
-      panel.style.display = isPanelOpen ? 'block' : 'none';
-    });
-
-    // Close panel when clicking outside
-    document.addEventListener('click', (e) => {
-      if (isPanelOpen && this._container && !this._container.contains(e.target as Node)) {
-        isPanelOpen = false;
-        panel.style.display = 'none';
+      if (layer.sourceType) {
+        const typeLabel = document.createElement('span');
+        typeLabel.textContent = layer.sourceType.toUpperCase();
+        typeLabel.style.userSelect = 'none';
+        typeLabel.style.color = '#999';
+        typeLabel.style.marginLeft = '8px';
+        typeLabel.style.fontSize = '10px';
+        typeLabel.style.flexShrink = '0';
+        layerItem.appendChild(typeLabel);
       }
-    });
 
-    this._container.appendChild(button);
-    this._container.appendChild(panel);
+      this._listContainer!.appendChild(layerItem);
+    });
   }
 
   /**
@@ -170,7 +189,7 @@ class LayerControlImpl implements IControl {
    */
   updateLayers(layers: LayerConfig[]): void {
     this._layers = layers;
-    this._render();
+    this._renderList();
   }
 }
 

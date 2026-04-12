@@ -414,29 +414,49 @@ poiSources: [
 
 ```typescript
 interface POISource {
-  id: string;         // Unique identifier for the layer
-  name: string;       // Display name in layer control
-  apiUrl: string;     // GeoJSON API endpoint URL
-  enabled?: boolean;  // Initial layer visibility (default: true)
+  id: string;                    // Unique identifier for the layer
+  name: string;                  // Display name in layer control
+  apiUrl: string;                // GeoJSON API endpoint URL or PMTiles file URL
+  type?: 'geojson' | 'pmtiles'; // Source type (default: 'geojson')
+  sourceLayer?: string;          // Vector layer name inside the PMTiles file (required for type: 'pmtiles')
+  color?: string;                // Marker/circle color (CSS color, e.g. '#cc0000')
+  enabled?: boolean;             // Initial layer visibility (default: true)
 }
 ```
+
+**Source types**:
+- `'geojson'` (default) — fetches a GeoJSON FeatureCollection from `apiUrl`. Works with static files, REST APIs, or any URL returning GeoJSON.
+- `'pmtiles'` — loads a PMTiles vector tile archive from `apiUrl`. Tiles are rendered natively by MapLibre without an API request per viewport. Requires `sourceLayer` to identify which layer inside the archive to display.
 
 ### Example POI Configuration
 
 ```typescript
-// Working example with static GeoJSON files
+// Working example with mixed GeoJSON and PMTiles sources
 poiSources: [
+  // GeoJSON source: fetched via HTTP, filtered and cached client-side
   {
     id: "skatespots",
     name: "My Skatespots",
     apiUrl: "https://fotta-maps.it-mil-1.linodeobjects.com/samples/skatespots.geojson",
+    color: "#cc0000",
     enabled: true,
   },
   {
     id: "skateshops",
     name: "My Skateshops",
     apiUrl: "https://fotta-maps.it-mil-1.linodeobjects.com/samples/skateshops.geojson",
+    color: "#0066cc",
     enabled: false, // Initially hidden
+  },
+  // PMTiles source: served as vector tiles, efficient for large datasets
+  {
+    id: "skateparks",
+    name: "Skateparks",
+    apiUrl: "https://cdn.example.com/pmtiles/skateparks-world.pmtiles",
+    type: "pmtiles",
+    sourceLayer: "skateparks", // layer name inside the .pmtiles file
+    color: "#1dbff0",
+    enabled: true,
   },
 ]
 ```
@@ -539,13 +559,25 @@ module.exports = ({ env }) => ({
           id: "skatespots",
           name: "My Skatespots",
           apiUrl: env('SKATESPOTS_API_URL'),
+          color: "#cc0000",
           enabled: true,
         },
         {
           id: "skateshops",
           name: "My Skateshops",
           apiUrl: env('SKATESHOPS_API_URL'),
+          color: "#0066cc",
           enabled: false,
+        },
+        // PMTiles source for large datasets — no per-request API calls
+        {
+          id: "skateparks",
+          name: "Skateparks",
+          apiUrl: env('SKATEPARKS_PMTILES_URL'),
+          type: "pmtiles",
+          sourceLayer: "skateparks",
+          color: "#1dbff0",
+          enabled: true,
         },
       ],
     },
@@ -559,4 +591,5 @@ MAPTILER_API_KEY=your_maptiler_key
 NOMINATIM_URL=https://nominatim.example.com
 SKATESPOTS_API_URL=https://fotta-maps.it-mil-1.linodeobjects.com/samples/skatespots.geojson
 SKATESHOPS_API_URL=https://fotta-maps.it-mil-1.linodeobjects.com/samples/skateshops.geojson
+SKATEPARKS_PMTILES_URL=https://cdn.example.com/pmtiles/skateparks-world.pmtiles
 ```

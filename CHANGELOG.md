@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-04-12
+
+### Added
+
+- **PMTiles POI sources** - `poiSources` now supports `type: 'pmtiles'` in addition to `'geojson'`. PMTiles sources are rendered natively by MapLibre via HTTP range requests — no tile server required. Requires `sourceLayer` to identify the vector layer inside the archive.
+- **Source type label in layer legend** - The layer control panel now shows `GEOJSON` or `PMTILES` next to each layer name so editors know what kind of data they are toggling.
+- **Improved field layout below map** - Fields below the map use a native CSS flex layout: Address/POI Name (50%) + Longitude (25%) + Latitude (25%) on the first row; Full Address (100%) on a second row when a POI with address is selected.
+
+### Fixed
+
+- **Layer control panel closes on toggle** - Clicking a layer item to show/hide it no longer closes the panel. Root cause was a combination of `document.addEventListener('click')` accumulating across re-renders, an unstable `handleLayerToggle` reference causing the control to be recreated on every toggle, and `stopPropagation()` interfering with MapLibre's event system. Fixed by: registering the outside-click listener once in `onAdd()` using `mousedown` instead of `click`; wrapping `handleLayerToggle` in `useCallback`; removing all `stopPropagation()` calls.
+
+### Changed
+
+- **Field layout uses native flex** - Replaced Strapi `Grid.Root`/`Grid.Item` with a plain `div` flex container to avoid `gridCols` sizing inconsistencies inside the edit view.
+
 ## [1.2.2] - 2026-03-20
 
 ### Fixed
