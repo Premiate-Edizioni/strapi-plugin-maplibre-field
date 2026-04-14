@@ -129,7 +129,7 @@ See the [Configuration Guide](docs/CONFIGURATION.md) for detailed setup instruct
 
 ## 🏢 POI Support
 
-Integrate custom Points of Interest from your own GeoJSON API:
+Integrate custom Points of Interest from a GeoJSON URL (static file or API) or a PMTiles vector tile archive:
 
 - Display POI markers on the map
 - Click to select and save complete POI data

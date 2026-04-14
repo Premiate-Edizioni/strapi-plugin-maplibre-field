@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **maplibre-gl** - Updated from `^5.21.0` to `^5.23.0`
+- **react-map-gl** - Updated from `^8.1.0` to `^8.1.1`
+
+### Documentation
+
+- **README POI section** - Clarified that POI sources support both GeoJSON URLs (static file or API endpoint) and PMTiles vector tile archives
+
 ## [1.3.0] - 2026-04-12
 
 ### Added
