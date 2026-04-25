@@ -1,116 +1,116 @@
 {
-	"name": "@premiate/strapi-plugin-maplibre-field",
-	"version": "1.3.0",
-	"description": "Strapi plugin that provides a MapLibre custom field",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field.git"
-	},
-	"bugs": {
-		"url": "https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/issues"
-	},
-	"homepage": "https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field",
-	"strapi": {
-		"name": "maplibre-field",
-		"description": "Add a MapLibre custom field to your Strapi content types",
-		"kind": "plugin",
-		"displayName": "MapLibre Field"
-	},
-	"files": [
-		"dist/",
-		"LICENSE",
-		"README.md",
-		"CHANGELOG.md",
-		"logo.png"
-	],
-	"types": "./dist/server/src/index.d.ts",
-	"exports": {
-		"./package.json": "./package.json",
-		"./strapi-admin": {
-			"types": "./dist/admin/src/index.d.ts",
-			"source": "./admin/src/index.tsx",
-			"import": "./dist/admin/index.mjs",
-			"require": "./dist/admin/index.js",
-			"default": "./dist/admin/index.js"
-		},
-		"./strapi-server": {
-			"types": "./dist/server/src/index.d.ts",
-			"source": "./server/src/index.ts",
-			"import": "./dist/server/index.mjs",
-			"require": "./dist/server/index.js",
-			"default": "./dist/server/index.js"
-		}
-	},
-	"scripts": {
-		"build": "strapi-plugin build",
-		"watch": "tsc --watch --preserveWatchOutput",
-		"verify": "strapi-plugin verify",
-		"test": "jest",
-		"lint": "eslint admin/src server/src --ext .ts,.tsx",
-		"lint:fix": "eslint admin/src server/src --ext .ts,.tsx --fix",
-		"format": "prettier --write \"admin/src/**/*.{ts,tsx}\" \"server/src/**/*.ts\"",
-		"format:check": "prettier --check \"admin/src/**/*.{ts,tsx}\" \"server/src/**/*.ts\"",
-		"prepublishOnly": "npm run build && npm run verify && npm test"
-	},
-	"dependencies": {
-		"maplibre-gl": "^5.23.0",
-		"pmtiles": "^4.4.0",
-		"react-map-gl": "^8.1.1"
-	},
-	"devDependencies": {
-		"@strapi/sdk-plugin": "^6.0.1",
-		"@strapi/typescript-utils": "^5.0.0",
-		"@testing-library/jest-dom": "^6.0.0",
-		"@testing-library/react": "^14.0.0",
-		"@types/jest": "^30.0.0",
-		"@types/react": "^18.0.0",
-		"@types/react-dom": "^18.0.0",
-		"@typescript-eslint/eslint-plugin": "^7.0.0",
-		"@typescript-eslint/parser": "^7.0.0",
-		"eslint": "^8.57.0",
-		"eslint-config-prettier": "^10.1.8",
-		"eslint-plugin-prettier": "^5.5.5",
-		"identity-obj-proxy": "^3.0.0",
-		"jest": "^30.2.0",
-		"jest-environment-jsdom": "^30.2.0",
-		"ts-jest": "^29.0.0",
-		"ts-node": "^10.9.2",
-		"typescript": "^5.5.0"
-	},
-	"author": {
-		"name": "Claudio Bernardini",
-		"email": "claudiob@premiate.org",
-		"url": "https://premiate.org"
-	},
-	"peerDependencies": {
-		"@strapi/design-system": "^2.0.0",
-		"@strapi/icons": "^2.0.0",
-		"@strapi/strapi": "^5.0.0",
-		"react": "^17.0.0 || ^18.0.0",
-		"react-dom": "^17.0.0 || ^18.0.0",
-		"react-router-dom": "^6.0.0",
-		"styled-components": "^6.0.0"
-	},
-	"publishConfig": {
-		"access": "public",
-		"registry": "https://registry.npmjs.org/"
-	},
-	"overrides": {
-		"@microsoft/api-extractor": "7.56.3"
-	},
-	"engines": {
-		"node": ">=20.0.0 <=24.x.x",
-		"npm": ">=6.0.0"
-	},
-	"license": "MIT",
-	"keywords": [
-		"strapi",
-		"strapi-plugin",
-		"plugin",
-		"maplibre",
-		"nominatim",
-		"protomaps",
-		"pmtiles",
-		"strapi5"
-	]
+  "name": "@premiate/strapi-plugin-maplibre-field",
+  "version": "1.3.0",
+  "description": "Strapi plugin that provides a MapLibre custom field",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/issues"
+  },
+  "homepage": "https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field",
+  "strapi": {
+    "name": "maplibre-field",
+    "description": "Add a MapLibre custom field to your Strapi content types",
+    "kind": "plugin",
+    "displayName": "MapLibre Field"
+  },
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md",
+    "logo.png"
+  ],
+  "types": "./dist/server/src/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    "./strapi-admin": {
+      "types": "./dist/admin/src/index.d.ts",
+      "source": "./admin/src/index.tsx",
+      "import": "./dist/admin/index.mjs",
+      "require": "./dist/admin/index.js",
+      "default": "./dist/admin/index.js"
+    },
+    "./strapi-server": {
+      "types": "./dist/server/src/index.d.ts",
+      "source": "./server/src/index.ts",
+      "import": "./dist/server/index.mjs",
+      "require": "./dist/server/index.js",
+      "default": "./dist/server/index.js"
+    }
+  },
+  "scripts": {
+    "build": "strapi-plugin build",
+    "watch": "tsc --watch --preserveWatchOutput",
+    "verify": "strapi-plugin verify",
+    "test": "jest",
+    "lint": "eslint admin/src server/src --ext .ts,.tsx",
+    "lint:fix": "eslint admin/src server/src --ext .ts,.tsx --fix",
+    "format": "prettier --write \"admin/src/**/*.{ts,tsx}\" \"server/src/**/*.ts\"",
+    "format:check": "prettier --check \"admin/src/**/*.{ts,tsx}\" \"server/src/**/*.ts\"",
+    "prepublishOnly": "npm run build && npm run verify && npm test"
+  },
+  "dependencies": {
+    "maplibre-gl": "^5.24.0",
+    "pmtiles": "^4.4.0",
+    "react-map-gl": "^8.1.1"
+  },
+  "devDependencies": {
+    "@strapi/sdk-plugin": "^6.1.0",
+    "@strapi/typescript-utils": "^5.0.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^14.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "ts-jest": "^29.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.0"
+  },
+  "author": {
+    "name": "Claudio Bernardini",
+    "email": "claudiob@premiate.org",
+    "url": "https://premiate.org"
+  },
+  "peerDependencies": {
+    "@strapi/design-system": "^2.0.0",
+    "@strapi/icons": "^2.0.0",
+    "@strapi/strapi": "^5.0.0",
+    "react": "^17.0.0 || ^18.0.0",
+    "react-dom": "^17.0.0 || ^18.0.0",
+    "react-router-dom": "^6.0.0",
+    "styled-components": "^6.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "overrides": {
+    "@microsoft/api-extractor": "7.56.3"
+  },
+  "engines": {
+    "node": ">=20.0.0 <=24.x.x",
+    "npm": ">=6.0.0"
+  },
+  "license": "MIT",
+  "keywords": [
+    "strapi",
+    "strapi-plugin",
+    "plugin",
+    "maplibre",
+    "nominatim",
+    "protomaps",
+    "pmtiles",
+    "strapi5"
+  ]
 }
