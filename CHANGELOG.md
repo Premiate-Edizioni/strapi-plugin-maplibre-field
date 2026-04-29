@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **maplibre-gl** - Updated from `^5.21.0` to `^5.24.0`
 - **react-map-gl** - Updated from `^8.1.0` to `^8.1.1`
+- **Improved typography** - Map layer controls with cleaner text
+- **Update dependencies toolchain**
 
 ### Documentation
 
