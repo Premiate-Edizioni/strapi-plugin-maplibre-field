@@ -172,10 +172,11 @@ class LayerControlImpl implements IControl {
       if (layer.sourceType) {
         const typeLabel = document.createElement('span');
         typeLabel.textContent = layer.sourceType.toUpperCase();
+        typeLabel.style.letterSpacing = '1.2px';
         typeLabel.style.userSelect = 'none';
         typeLabel.style.color = '#999';
         typeLabel.style.marginLeft = '8px';
-        typeLabel.style.fontSize = '10px';
+        typeLabel.style.fontSize = '9px';
         typeLabel.style.flexShrink = '0';
         layerItem.appendChild(typeLabel);
       }
