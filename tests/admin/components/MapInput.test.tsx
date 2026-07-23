@@ -140,11 +140,9 @@ jest.mock('pmtiles', () => ({
 
 // Mock maplibre-gl
 jest.mock('maplibre-gl', () => ({
-  __esModule: true,
-  default: {
-    addProtocol: jest.fn(),
-    removeProtocol: jest.fn(),
-  },
+  addProtocol: jest.fn(),
+  removeProtocol: jest.fn(),
+  setWorkerUrl: jest.fn(),
 }));
 
 const MockMapInput = (props: any) => (

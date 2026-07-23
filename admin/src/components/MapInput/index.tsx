@@ -17,7 +17,8 @@ import Map, {
 } from 'react-map-gl/maplibre';
 import getTranslation from '../../utils/getTrad';
 import { Protocol } from 'pmtiles';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import { setWorkerUrl } from 'maplibre-gl';
 
 import { usePluginConfig } from '../../hooks/usePluginConfig';
 import {
@@ -31,6 +32,7 @@ import {
 } from '../../services/poi-service';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
+setWorkerUrl('https://cdn.jsdelivr.net/npm/maplibre-gl@6/dist/maplibre-gl-worker.mjs');
 const protocol = new Protocol();
 maplibregl.addProtocol('pmtiles', protocol.tile);
 

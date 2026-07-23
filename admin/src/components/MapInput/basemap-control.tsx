@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useControl } from 'react-map-gl/maplibre';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import type { MapStyle } from '../../../../server/src/types/config';
 
 interface BasemapControlProps {

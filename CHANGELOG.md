@@ -7,12 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-07-23
+
 ### Changed
 
 - **maplibre-gl** - Updated from `^5.21.0` to `^5.24.0`
 - **react-map-gl** - Updated from `^8.1.0` to `^8.1.1`
 - **Improved typography** - Map layer controls with cleaner text
 - **Update dependencies toolchain**
+
+### Added
+
+- **maplibre-gl v6 support** - Upgraded to maplibre-gl v6.0.0 (ESM-only). Updated imports to namespace form (`import * as maplibregl`) for v6 compatibility. Added `setWorkerUrl()` call for correct web worker resolution in Vite/Rollup bundler environments.
 
 ### Documentation
 
