@@ -18,7 +18,7 @@ import Map, {
 import getTranslation from '../../utils/getTrad';
 import { Protocol } from 'pmtiles';
 import * as maplibregl from 'maplibre-gl';
-import { setWorkerUrl } from 'maplibre-gl';
+import { getVersion, setWorkerUrl } from 'maplibre-gl';
 
 import { usePluginConfig } from '../../hooks/usePluginConfig';
 import {
@@ -32,7 +32,12 @@ import {
 } from '../../services/poi-service';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-setWorkerUrl('https://cdn.jsdelivr.net/npm/maplibre-gl@6/dist/maplibre-gl-worker.mjs');
+// v6+ is ESM-only and the worker isn't auto-resolved by the Strapi Plugin SDK's Vite bundler;
+// v5 inlines its worker as a blob URL internally and must not be overridden.
+const mlVersion = getVersion();
+if (parseInt(mlVersion, 10) >= 6) {
+  setWorkerUrl(`https://cdn.jsdelivr.net/npm/maplibre-gl@${mlVersion}/dist/maplibre-gl-worker.mjs`);
+}
 const protocol = new Protocol();
 maplibregl.addProtocol('pmtiles', protocol.tile);
 
