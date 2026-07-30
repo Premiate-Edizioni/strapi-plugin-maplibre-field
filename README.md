@@ -6,7 +6,7 @@
 
 A [Strapi](https://strapi.io/) plugin providing a [MapLibre](https://www.maplibre.org/) map custom field with POI support, geocoding and multi base maps.
 
-![Map Field](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/add-or-pin-on-map.png)
+![Map Field](https://raw.githubusercontent.com/Premiate-Edizioni/strapi-plugin-maplibre-field/main/add-or-pin-on-map.png)
 
 ## ✨ Key Features
 
@@ -96,7 +96,7 @@ In the Strapi Content-Type Builder pick up your Collection Type, Single Type or 
 4. Type a name for the field
 5. Click **Finish**
 
-![Add map field](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/add-maplibre-custom-field.png)
+![Add map field](https://raw.githubusercontent.com/Premiate-Edizioni/strapi-plugin-maplibre-field/main/add-maplibre-custom-field.png)
 
 ## 🎯 How to Select a Location
 

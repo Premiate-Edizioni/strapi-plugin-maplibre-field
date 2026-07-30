@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-07-30
+
+### Fixed
+
+- **README screenshots not rendering on Strapi Marketplace** - Image links used GitHub `/blob/` URLs, which resolve to an HTML page rather than the raw image outside GitHub's own UI. Switched to `raw.githubusercontent.com`.
+
 ## [1.4.0] - 2026-07-30
 
 ### Changed
