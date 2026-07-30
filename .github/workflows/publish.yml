@@ -35,21 +35,15 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
+      # Node 24, not 22: several reports on npm/cli#8730 show the OIDC token exchange failing on
+      # Node 22 even with npm upgraded past the 11.5.1 minimum, and succeeding on 24.
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
-      # Node 22 bundles an npm older than the 11.5.1 minimum Trusted Publishing needs; without
-      # this, npm publish falls back to a plain unauthenticated request (404 from the registry).
       - run: npm install -g npm@latest
       - run: npm --version
-      # Diagnostic: confirm the runner actually received an OIDC token request before assuming
-      # the registry side is the problem.
-      - run: |
-          if [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
-            echo "OIDC request token/URL: present"
-          else
-            echo "OIDC request token/URL: MISSING"
-          fi
-      - run: npm publish --loglevel silly
+      # --provenance is required the first time a package is published from a given repository
+      # (npm/cli#8730); without it the token exchange answers "package not found".
+      - run: npm publish --provenance --access public
