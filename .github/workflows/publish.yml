@@ -35,13 +35,17 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
+      # No registry-url here: actions/setup-node writes an (empty) NODE_AUTH_TOKEN-based
+      # .npmrc entry whenever it's set, which npm tries before falling back to OIDC and
+      # turns into a bare 404 once that empty token is rejected.
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
-          registry-url: 'https://registry.npmjs.org'
       - run: npm ci
       # Node 22 bundles an npm older than the 11.5.1 minimum Trusted Publishing needs; without
       # this, npm publish falls back to a plain unauthenticated request (404 from the registry).
       - run: npm install -g npm@latest
       - run: npm --version
-      - run: npm publish
+      # --provenance is what makes npm negotiate the OIDC exchange for Trusted Publishing;
+      # --access public is required the first time a scoped package is published.
+      - run: npm publish --provenance --access public
