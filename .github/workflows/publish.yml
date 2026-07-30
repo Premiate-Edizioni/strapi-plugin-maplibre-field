@@ -40,4 +40,8 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
+      # Node 22 bundles an npm older than the 11.5.1 minimum Trusted Publishing needs; without
+      # this, npm publish falls back to a plain unauthenticated request (404 from the registry).
+      - run: npm install -g npm@latest
+      - run: npm --version
       - run: npm publish
