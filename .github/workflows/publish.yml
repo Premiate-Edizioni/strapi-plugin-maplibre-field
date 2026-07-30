@@ -1,0 +1,43 @@
+name: Publish to npm
+
+# Runs on every version tag (e.g. v1.4.0). Publishing uses npm Trusted Publishing (OIDC):
+# no npm token or 2FA prompt involved, only what's configured for this workflow on npmjs.com
+# (Package settings -> Trusted Publisher). See docs/CONTRIBUTING for the release process.
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['22', '24']
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - run: npm run build
+      - run: npm run verify
+      - run: npm test
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required to mint the OIDC token for Trusted Publishing
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm ci
+      - run: npm publish
