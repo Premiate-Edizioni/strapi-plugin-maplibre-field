@@ -44,4 +44,12 @@ jobs:
       # this, npm publish falls back to a plain unauthenticated request (404 from the registry).
       - run: npm install -g npm@latest
       - run: npm --version
-      - run: npm publish
+      # Diagnostic: confirm the runner actually received an OIDC token request before assuming
+      # the registry side is the problem.
+      - run: |
+          if [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
+            echo "OIDC request token/URL: present"
+          else
+            echo "OIDC request token/URL: MISSING"
+          fi
+      - run: npm publish --loglevel silly
