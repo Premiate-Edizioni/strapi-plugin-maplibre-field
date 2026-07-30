@@ -11,10 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **maplibre-gl** - Updated from `^5.21.0` to `^6.0.0` (ESM-only). Updated imports to namespace form (`import * as maplibregl`) for v6 compatibility. Added a version-guarded `setWorkerUrl()` call for correct web worker resolution in Vite/Rollup bundler environments (only applies to maplibre-gl v6+; v5 bootstraps its own worker internally).
+- **Minimum Node.js version raised to 22** - `engines.node` is now `>=22.0.0 <=24.x.x` (was `>=20.0.0`). Node 20 (LTS "Iron") reached end-of-life in April 2026. **Installing on Node 20 will fail** — upgrade Node before upgrading the plugin.
+- **maplibre-gl** - Updated from `^5.21.0` to `^6.0.0` (ESM-only); imports switched to namespace form (`import * as maplibregl`). v6 no longer inlines its web worker, so the plugin now points `setWorkerUrl()` at its own same-origin endpoint (see _Added_). **No action required in your app**: neither the `contentSecurityPolicy` settings in `config/middlewares.ts` nor any Vite configuration need to change. The call is version-guarded and is skipped on maplibre-gl v5, which bootstraps its own worker internally.
 - **react-map-gl** - Updated from `^8.1.0` to `^8.1.2`. Versions `8.1.0`/`8.1.1` crashed at runtime against maplibre-gl v6 due to an [upstream bug](https://github.com/visgl/react-map-gl/issues/2597) (`map.transform` removed in v6); fixed in `8.1.2`.
-- **Improved typography** - Map layer controls with cleaner text
-- **Update dependencies toolchain**
+- **pmtiles** - Updated from `^4.4.0` to `^4.4.1` (patch release, no API change).
+- **Source type label in the layer panel** - The `GEOJSON`/`PMTILES` label now uses a 9px font (was 10px) with wider letter spacing, so it reads as a tag rather than competing with the layer name.
+- **Development toolchain** - Updated `@strapi/sdk-plugin`, `typescript`, `@typescript-eslint/*`, `@testing-library/react` (`^14.0.0` → `^16.3.2`) and `@testing-library/jest-dom` (`^6.0.0` → `^7.0.0`, requires Node ≥22). Development dependencies only — no effect on the published bundle.
+
+### Added
+
+- **Same-origin worker endpoint** - The plugin server exposes `GET /maplibre-field/worker/:file`, serving maplibre-gl's `maplibre-gl-worker.mjs` and `maplibre-gl-shared.mjs` from the copy your app has installed. Note for security reviews and reverse-proxy allowlists: the route is **unauthenticated**, because the browser's `Worker` loader cannot send admin credentials. It serves only those two public maplibre-gl files, and no other path.
 
 ### Documentation
 

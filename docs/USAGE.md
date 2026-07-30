@@ -283,7 +283,7 @@ The layer control lets you toggle POI layers on and off:
 
 **Problem**: Map doesn't display / shows white box
 
-**Solution**: Check that you've updated the security middleware with `worker-src: ["blob:"]`. See [Configuration Guide](CONFIGURATION.md#security-middleware).
+**Solution**: Check that you've updated the security middleware with `worker-src: ["'self'", "blob:"]`. A `worker-src` listing only `blob:` blocks the map, since the maplibre-gl worker is served by your own Strapi instance. See [Configuration Guide](CONFIGURATION.md#security-middleware).
 
 ---
 

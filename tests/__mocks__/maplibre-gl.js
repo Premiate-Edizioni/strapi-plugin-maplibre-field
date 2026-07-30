@@ -2,5 +2,5 @@ module.exports = {
   addProtocol: () => {},
   removeProtocol: () => {},
   setWorkerUrl: () => {},
-  getVersion: () => '5.24.0',
+  getVersion: () => '6.0.0',
 };

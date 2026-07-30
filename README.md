@@ -23,7 +23,7 @@ A [Strapi](https://strapi.io/) plugin providing a [MapLibre](https://www.maplibr
 ### Requirements
 
 - Strapi v5.0.0 or higher
-- Node.js 20.0.0 or higher
+- Node.js 22.0.0 or higher
 
 ### Install
 
@@ -63,7 +63,7 @@ export default {
 
 ### 2. Update security middleware
 
-Open `config/middlewares.ts` and add `'worker-src': ['blob:']`:
+Open `config/middlewares.ts` and add `'worker-src': ["'self'", 'blob:']`:
 
 ```typescript
 export default [
@@ -76,7 +76,7 @@ export default [
         directives: {
           "connect-src": ["'self'", "https:"],
           "img-src": ["'self'", "data:", "blob:"],
-          "worker-src": ["blob:"], // Required for MapLibre
+          "worker-src": ["'self'", "blob:"], // Required for MapLibre
           upgradeInsecureRequests: null,
         },
       },

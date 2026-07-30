@@ -26,7 +26,7 @@ Before contributing, please:
 
 ### Prerequisites
 
-- Node.js 20.0.0 or higher
+- Node.js 22.0.0 or higher (up to 24.x)
 - npm or yarn
 - Git
 - A Strapi v5 project for testing (optional but recommended)

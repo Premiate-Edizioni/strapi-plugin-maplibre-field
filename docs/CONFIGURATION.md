@@ -68,6 +68,24 @@ export default {
 | `poiSearchEnabled` | `boolean` | `true` | Include custom API in search |
 | `poiSnapRadius` | `number` | `5` | Snap radius in meters for POI detection |
 | `poiSources` | `POISource[]` | `[]` | Array of custom POI sources |
+| `useFullscreenPseudo` | `boolean` | `true` | Fullscreen mode for the map control (see below) |
+
+#### `useFullscreenPseudo`
+
+Controls how the map's fullscreen button expands the map:
+
+- `true` (default) - CSS-based fullscreen. The map fills the browser viewport without leaving the page. Generally smoother, and the recommended setting on mobile.
+- `false` - Native [Fullscreen API](https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API). The map takes over the whole screen, including outside the browser window.
+
+```typescript
+"maplibre-field": {
+  enabled: true,
+  config: {
+    mapStyles: [/* ... */],
+    useFullscreenPseudo: false, // opt into the native Fullscreen API
+  },
+},
+```
 
 ### MapStyle Interface
 
@@ -485,7 +503,7 @@ export default [
           "script-src": ["'self'", "'unsafe-inline'"],
           "img-src": ["'self'", "data:", "blob:"],
           "media-src": ["'self'", "data:", "blob:"],
-          "worker-src": ["blob:"], // Required for MapLibre workers
+          "worker-src": ["'self'", "blob:"], // Required for MapLibre workers
           upgradeInsecureRequests: null,
         },
       },
@@ -504,11 +522,25 @@ export default [
 
 ### Why These Directives?
 
-- `worker-src: ["blob:"]` - MapLibre uses Web Workers for performance
+- `worker-src: ["'self'", "blob:"]` - MapLibre does its tile parsing in Web Workers. `'self'` is required because the plugin serves the maplibre-gl worker from your own Strapi instance (`/maplibre-field/worker/...`); `blob:` covers the worker maplibre-gl builds at runtime in some setups. Listing only `blob:` will block the map on maplibre-gl v6.
 - `img-src: ["data:", "blob:"]` - Map tiles and markers use data URIs
 - `connect-src: ["https:"]` - Allows fetching tiles from external servers
 
 **Without these directives, the map will not display or function correctly.**
+
+### The Worker Endpoint
+
+maplibre-gl v6 no longer inlines its Web Worker, so it has to be loaded from a URL. Rather than pull it from a third-party CDN, the plugin serves it from your own instance:
+
+```text
+GET /maplibre-field/worker/maplibre-gl-worker.mjs
+GET /maplibre-field/worker/maplibre-gl-shared.mjs
+```
+
+The files are read from the `maplibre-gl` package your app has installed, so worker and map are always the same version. Two things to know if you audit your Strapi surface or run it behind a reverse proxy:
+
+- **The route is unauthenticated.** The browser's `Worker` loader cannot attach admin credentials, so it cannot require a session. It serves only the two public maplibre-gl files listed above and rejects any other filename.
+- **It must stay reachable from the admin panel.** If a proxy or firewall only exposes `/admin` and `/api`, add `/maplibre-field` too, or the map will fail to start.
 
 ## Complete Configuration Example
 

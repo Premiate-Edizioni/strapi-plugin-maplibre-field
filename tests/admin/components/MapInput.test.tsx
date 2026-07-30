@@ -143,7 +143,7 @@ jest.mock('maplibre-gl', () => ({
   addProtocol: jest.fn(),
   removeProtocol: jest.fn(),
   setWorkerUrl: jest.fn(),
-  getVersion: jest.fn(() => '5.24.0'),
+  getVersion: jest.fn(() => '6.0.0'),
 }));
 
 const MockMapInput = (props: any) => (
