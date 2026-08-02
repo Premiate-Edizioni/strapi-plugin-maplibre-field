@@ -119,7 +119,7 @@ strapi-plugin-maplibre-field/
 ├── docs/                     # Documentation
 ├── package.json
 ├── tsconfig.json
-├── .eslintrc.js
+├── eslint.config.js
 └── README.md
 ```
 
@@ -239,7 +239,7 @@ npm run lint:fix
 ```
 
 **Configuration files**:
-- `.eslintrc.js` - ESLint rules
+- `eslint.config.js` - ESLint rules (flat config, ESLint 10+)
 - `.prettierrc` - Prettier formatting
 
 ### React/JSX
