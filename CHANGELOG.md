@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **ESLint** - Updated from `^8.57.0` to `^10.8.0`. Migrated `.eslintrc.js` to flat config (`eslint.config.js`), required by ESLint 10 (legacy config format was removed with no opt-out). `@typescript-eslint/parser` and `@typescript-eslint/eslint-plugin` replaced by the unified `typescript-eslint` package. Dev-only change — not part of the published package.
+
 ## [1.4.1] - 2026-07-30
 
 ### Fixed
