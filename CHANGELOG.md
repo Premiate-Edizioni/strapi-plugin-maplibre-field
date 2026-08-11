@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **maplibre-gl** - Updated from `^6.0.0` to `^6.2.0`. Non-breaking patch/minor release (rendering fixes, new opt-in `fill-extrusion-rounded-corner-distance` layout property); no code changes required.
+- **maplibre-gl** - Updated from `^6.0.0` to `^6.3.0`. Non-breaking minor releases; no code changes required. The floor was raised to `6.3.0` (rather than left at `6.2.0`) for one fix that affects a path this plugin depends on: `map.queryRenderedFeatures()` could throw an _"Out of bounds"_ error due to a race condition while tile data was still loading — the plugin calls it on every map click and when snapping to PMTiles POI sources, i.e. exactly while the user is panning and tiles are in flight. 6.3.0 also types the map event emitter (`map.on`/`once`/`listens`), which the plugin's `moveend`/`zoomend`/`mouseenter`/`mouseleave` handlers already satisfy. Remaining changes (GPU texture leak on `ImageSource`/`VideoSource`/`CanvasSource`, terrain gesture and globe zoom fixes, `fill-extrusion-rounded-corner-distance`) do not touch features used here.
+- **pmtiles** - Updated from `^4.4.0` to `^4.5.0`. No API change; 4.5.0 aborts pending directory requests once all dependent tile requests are cancelled, which trims orphaned network traffic when panning quickly over PMTiles POI sources.
 - **ESLint** - Updated from `^8.57.0` to `^10.8.0`. Migrated `.eslintrc.js` to flat config (`eslint.config.js`), required by ESLint 10 (legacy config format was removed with no opt-out). `@typescript-eslint/parser` and `@typescript-eslint/eslint-plugin` replaced by the unified `typescript-eslint` package. Dev-only change — not part of the published package.
 
 ## [1.4.1] - 2026-07-30

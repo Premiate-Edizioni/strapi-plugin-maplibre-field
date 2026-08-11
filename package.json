@@ -53,8 +53,8 @@
     "prepublishOnly": "npm run build && npm run verify && npm test"
   },
   "dependencies": {
-    "maplibre-gl": "^6.2.0",
-    "pmtiles": "^4.4.1",
+    "maplibre-gl": "^6.3.0",
+    "pmtiles": "^4.5.0",
     "react-map-gl": "^8.1.2"
   },
   "devDependencies": {
@@ -76,7 +76,7 @@
     "ts-jest": "^29.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.0",
-    "typescript-eslint": "^8.65.0"
+    "typescript-eslint": "^8.67.0"
   },
   "author": {
     "name": "Claudio Bernardini",
