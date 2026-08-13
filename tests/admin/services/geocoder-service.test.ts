@@ -61,15 +61,24 @@ afterEach(() => {
 
 describe('performSearch', () => {
   describe('Nominatim results', () => {
-    test('identifies the plugin and asks for at most five hits', async () => {
+    test('escapes the query and asks for at most five hits', async () => {
       const fetchMock = stubFetch({ [NOMINATIM_URL]: [] });
 
       await performSearch('piazza velasca', config());
 
       expect(fetchMock).toHaveBeenCalledWith(
-        `${NOMINATIM_URL}/search?q=piazza%20velasca&format=json&addressdetails=1&limit=5`,
-        { headers: { 'User-Agent': 'strapi-plugin-maplibre-field/1.0.0 (Strapi CMS)' } }
+        `${NOMINATIM_URL}/search?q=piazza%20velasca&format=json&addressdetails=1&limit=5`
       );
+    });
+
+    test('sends no custom headers, which would force a CORS preflight on every keystroke', async () => {
+      // See the note in poi-service.ts: a `User-Agent` is dropped by Chromium, and elsewhere costs
+      // an extra OPTIONS round-trip per search against a service capped at 1 req/s.
+      const fetchMock = stubFetch({ [NOMINATIM_URL]: [] });
+
+      await performSearch('piazza velasca', config());
+
+      expect(fetchMock.mock.calls[0]).toHaveLength(1);
     });
 
     test('maps a hit onto a LocationFeature marked as searched', async () => {

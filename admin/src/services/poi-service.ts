@@ -5,8 +5,18 @@
  * Provides distance calculations, viewport filtering, and data transformation
  */
 
-// User-Agent for Nominatim API compliance
-const USER_AGENT = 'strapi-plugin-maplibre-field (Strapi CMS)';
+/**
+ * Nominatim requests deliberately send no custom headers — in particular no `User-Agent`.
+ *
+ * This code runs in the browser, where a `User-Agent` set on fetch() is silently dropped by
+ * Chromium (crbug.com/571722) and, in the browsers that do honour it, is not CORS-safelisted: it
+ * turns every call into a preflight OPTIONS plus the GET, doubling the load on a service whose
+ * usage policy caps clients at 1 request per second.
+ *
+ * The policy asks for "a valid HTTP Referer *or* User-Agent identifying the application", and the
+ * browser already sends the CMS origin as `Referer`, so the requirement is met without the header.
+ * Adding one back would cost a round-trip and buy nothing.
+ */
 
 // =============================================================================
 // GeoJSON Feature Interface (RFC 7946) - Used for storing location data
@@ -203,11 +213,8 @@ export async function queryNominatim(
     // zoom 3: country, zoom 10: city, zoom 18: building
     const url = `${nominatimUrl}/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
 
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': USER_AGENT,
-      },
-    });
+    // No custom headers: see the note on Nominatim requests at the top of this file.
+    const response = await fetch(url);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

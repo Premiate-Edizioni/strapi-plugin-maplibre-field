@@ -278,15 +278,26 @@ describe('queryNominatim', () => {
     ...overrides,
   });
 
-  test('identifies the plugin to Nominatim, whose usage policy requires it', async () => {
+  test('asks for POI-level detail at the given coordinates', async () => {
     const fetchMock = stubFetch({ [NOMINATIM_URL]: reverseResult() });
 
     await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL);
 
+    // zoom=18 is building/POI level; anything lower snaps to city or country.
     expect(fetchMock).toHaveBeenCalledWith(
-      `${NOMINATIM_URL}/reverse?format=jsonv2&lat=45.4601&lon=9.1901&zoom=18&addressdetails=1`,
-      { headers: { 'User-Agent': 'strapi-plugin-maplibre-field (Strapi CMS)' } }
+      `${NOMINATIM_URL}/reverse?format=jsonv2&lat=45.4601&lon=9.1901&zoom=18&addressdetails=1`
     );
+  });
+
+  test('sends no custom headers, which would force a CORS preflight on every call', async () => {
+    // A `User-Agent` here is dropped by Chromium and is not CORS-safelisted elsewhere, so setting
+    // one turns each request into OPTIONS + GET against a service capped at 1 req/s. The browser's
+    // `Referer` already satisfies Nominatim's identification requirement.
+    const fetchMock = stubFetch({ [NOMINATIM_URL]: reverseResult() });
+
+    await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL);
+
+    expect(fetchMock.mock.calls[0]).toHaveLength(1);
   });
 
   test('maps a reverse-geocoding hit onto a POI', async () => {

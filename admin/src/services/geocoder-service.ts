@@ -7,8 +7,7 @@
 import { searchPOIsForGeocoder, type POI } from './poi-service';
 import type { LocationFeature } from './poi-service';
 
-// User-Agent for Nominatim API compliance
-const USER_AGENT = 'strapi-plugin-maplibre-field/1.0.0 (Strapi CMS)';
+// Nominatim requests send no custom headers, `User-Agent` included — see the note in poi-service.ts.
 
 // Minimal GeoJSON Feature type for map feature queries
 interface MapFeature {
@@ -147,12 +146,7 @@ export async function performSearch(query: string, config: SearchConfig): Promis
   // 2. Search Nominatim for global address search
   try {
     const response = await fetch(
-      `${config.nominatimUrl}/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5`,
-      {
-        headers: {
-          'User-Agent': USER_AGENT,
-        },
-      }
+      `${config.nominatimUrl}/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5`
     );
 
     if (response.ok) {
