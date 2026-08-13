@@ -331,7 +331,7 @@ Currently, the plugin has basic test setup:
 npm test
 
 # Run tests in watch mode
-npm test -- --watch
+npm run test:watch
 ```
 
 **We welcome contributions to improve test coverage!**

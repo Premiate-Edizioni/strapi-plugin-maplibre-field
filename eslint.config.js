@@ -36,7 +36,9 @@ module.exports = tseslint.config(
     files: ['tests/**/*.ts', 'tests/**/*.tsx', '**/*.test.ts', '**/*.test.tsx'],
     languageOptions: {
       globals: {
+        // Vitest runs with `globals: true`; its API matches the Jest global surface.
         ...globals.jest,
+        vi: 'readonly',
       },
     },
     rules: {

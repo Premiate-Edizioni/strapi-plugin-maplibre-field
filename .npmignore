@@ -10,8 +10,7 @@
 # Test files
 tests/
 coverage/
-jest.config.ts
-jest.config.js
+vitest.config.ts
 *.test.ts
 *.test.tsx
 *.test.js

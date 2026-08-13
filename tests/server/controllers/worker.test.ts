@@ -1,19 +1,23 @@
 /**
- * @jest-environment node
+ * @vitest-environment node
  */
+import { createRequire } from 'node:module';
 import * as fs from 'node:fs/promises';
+import { describe, expect, test, vi, type Mock } from 'vitest';
 import createWorkerController from '../../../server/src/controllers/worker';
 
 // Properties of built-in modules are not configurable, so spyOn cannot be used on readFile.
 // The mock delegates to the real implementation unless a test overrides it.
-jest.mock('node:fs/promises', () => {
-  const actual = jest.requireActual('node:fs/promises');
-  return { ...actual, readFile: jest.fn(actual.readFile) };
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+  return { ...actual, readFile: vi.fn(actual.readFile) };
 });
 
-const mockedReadFile = fs.readFile as unknown as jest.Mock;
+const require = createRequire(import.meta.url);
 
-const strapi = { log: { error: jest.fn() } } as never;
+const mockedReadFile = fs.readFile as unknown as Mock;
+
+const strapi = { log: { error: vi.fn() } } as never;
 
 class HttpError extends Error {
   constructor(readonly status: number) {
@@ -95,11 +99,11 @@ describe('worker controller', () => {
   describe('when maplibre-gl cannot be read', () => {
     test('answers 500 and logs instead of crashing', async () => {
       mockedReadFile.mockRejectedValueOnce(new Error('ENOENT: no such file or directory'));
-      (strapi as unknown as { log: { error: jest.Mock } }).log.error.mockClear();
+      (strapi as unknown as { log: { error: Mock } }).log.error.mockClear();
 
       const { run } = getWorker('maplibre-gl-worker.mjs');
       await expect(run()).rejects.toMatchObject({ status: 500 });
-      expect((strapi as unknown as { log: { error: jest.Mock } }).log.error).toHaveBeenCalled();
+      expect((strapi as unknown as { log: { error: Mock } }).log.error).toHaveBeenCalled();
     });
   });
 });
