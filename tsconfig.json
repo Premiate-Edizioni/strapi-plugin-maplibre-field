@@ -2,10 +2,15 @@
   "compilerOptions": {
     "baseUrl": ".",
     "jsx": "react-jsx",
+    // Match how the code is actually bundled (Vite for the build, Vitest for the tests): ESM with
+    // package `exports` honoured, which is also what makes `import.meta` legal in the test files.
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "types": ["jest", "@testing-library/jest-dom"],
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
     "lib": ["ES2020", "DOM"]
   },
   "include": ["./admin/src/**/*", "./server/src/**/*", "./tests/**/*"],

@@ -25,7 +25,7 @@ export const usePluginConfig = (): MapLibreConfig => {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const response = await get('/maplibre-field/config');
+        const response = await get<Partial<MapLibreConfig>>('/maplibre-field/config');
         if (response.data) {
           setConfig({ ...DEFAULT_CONFIG, ...response.data });
         }

@@ -1,149 +1,138 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import MapInput from '../../../admin/src/components/MapInput';
 import { IntlProvider } from 'react-intl';
 import { DesignSystemProvider } from '@strapi/design-system';
 
+// vi.mock factories run before the module body, so anything they close over has to be hoisted too.
+const { mockPluginConfig, mockMapInstance } = vi.hoisted(() => ({
+  // Stable config object: a new reference on every render would retrigger the map effects.
+  mockPluginConfig: {
+    mapStyles: [
+      {
+        id: 'test',
+        name: 'Test Style',
+        url: 'https://test-map-style.com/style.json',
+        isDefault: true,
+      },
+    ],
+    defaultZoom: 5,
+    defaultCenter: [10, 45] as [number, number],
+    geocodingProvider: 'nominatim',
+    nominatimUrl: 'https://nominatim.test.com',
+  },
+  // Map instance with all the methods MapInput calls
+  mockMapInstance: {
+    on: vi.fn(),
+    off: vi.fn(),
+    once: vi.fn((event: string, callback: () => void) => {
+      // Fire 'load' event immediately for tests
+      if (event === 'load') {
+        setTimeout(callback, 0);
+      }
+    }),
+    getZoom: vi.fn(() => 5),
+    getBounds: vi.fn(() => ({
+      getNorth: () => 46,
+      getSouth: () => 44,
+      getEast: () => 11,
+      getWest: () => 9,
+    })),
+    getCenter: vi.fn(() => ({ lng: 10, lat: 45 })),
+    getLayer: vi.fn(() => null), // POI layer doesn't exist in tests
+    queryRenderedFeatures: vi.fn(() => []),
+    getCanvas: vi.fn(() => ({ style: {} })),
+    setStyle: vi.fn(),
+    setCenter: vi.fn(),
+    setZoom: vi.fn(),
+    flyTo: vi.fn(),
+    addControl: vi.fn(),
+    removeControl: vi.fn(),
+    getContainer: vi.fn(() => document.createElement('div')),
+  },
+}));
+
 // Mock useStrapiApp and useNotification hooks
-jest.mock('@strapi/strapi/admin', () => ({
+vi.mock('@strapi/strapi/admin', () => ({
   useStrapiApp: () => ({
     plugins: {
       'maplibre-field': {
-        config: {
-          mapStyles: [
-            {
-              id: 'test',
-              name: 'Test Style',
-              url: 'https://test-map-style.com/style.json',
-              isDefault: true,
-            },
-          ],
-          defaultZoom: 5,
-          defaultCenter: [10, 45],
-          nominatimUrl: 'https://nominatim.test.com',
-        },
+        config: mockPluginConfig,
       },
     },
   }),
   useNotification: () => ({
-    toggleNotification: jest.fn(),
+    toggleNotification: vi.fn(),
   }),
 }));
 
-// Stable mock config object (must be outside jest.mock to avoid re-creation)
-const mockPluginConfig = {
-  mapStyles: [
-    {
-      id: 'test',
-      name: 'Test Style',
-      url: 'https://test-map-style.com/style.json',
-      isDefault: true,
-    },
-  ],
-  defaultZoom: 5,
-  defaultCenter: [10, 45] as [number, number],
-  geocodingProvider: 'nominatim',
-  nominatimUrl: 'https://nominatim.test.com',
-};
-
 // Mock usePluginConfig hook with stable reference
-jest.mock('../../../admin/src/hooks/usePluginConfig', () => ({
+vi.mock('../../../admin/src/hooks/usePluginConfig', () => ({
   usePluginConfig: () => mockPluginConfig,
 }));
 
-// Mock map instance with all required methods
-const mockMapInstance = {
-  on: jest.fn(),
-  off: jest.fn(),
-  once: jest.fn((event: string, callback: () => void) => {
-    // Fire 'load' event immediately for tests
-    if (event === 'load') {
-      setTimeout(callback, 0);
-    }
-  }),
-  getZoom: jest.fn(() => 5),
-  getBounds: jest.fn(() => ({
-    getNorth: () => 46,
-    getSouth: () => 44,
-    getEast: () => 11,
-    getWest: () => 9,
-  })),
-  getCenter: jest.fn(() => ({ lng: 10, lat: 45 })),
-  getLayer: jest.fn(() => null), // POI layer doesn't exist in tests
-  queryRenderedFeatures: jest.fn(() => []),
-  getCanvas: jest.fn(() => ({ style: {} })),
-  setStyle: jest.fn(),
-  setCenter: jest.fn(),
-  setZoom: jest.fn(),
-  flyTo: jest.fn(),
-  addControl: jest.fn(),
-  removeControl: jest.fn(),
-  getContainer: jest.fn(() => document.createElement('div')),
-};
-
 // Mock react-map-gl with ref forwarding
-jest.mock('react-map-gl/maplibre', () => {
-  const React = require('react');
-  return {
-    __esModule: true,
-    default: React.forwardRef(({ children }: any, ref: any) => {
-      React.useImperativeHandle(ref, () => ({
-        getMap: () => mockMapInstance,
-      }));
-      return <div data-testid="mock-map">{children}</div>;
-    }),
-    FullscreenControl: () => <div>FullscreenControl</div>,
-    GeolocateControl: () => <div>GeolocateControl</div>,
-    Marker: () => <div>Marker</div>,
-    NavigationControl: () => <div>NavigationControl</div>,
-    Source: ({ children }: any) => <div>{children}</div>,
-    Layer: () => null,
-  };
-});
+vi.mock('react-map-gl/maplibre', () => ({
+  __esModule: true,
+  default: React.forwardRef(({ children }: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      getMap: () => mockMapInstance,
+    }));
+    return <div data-testid="mock-map">{children}</div>;
+  }),
+  FullscreenControl: () => <div>FullscreenControl</div>,
+  GeolocateControl: () => <div>GeolocateControl</div>,
+  Marker: () => <div>Marker</div>,
+  NavigationControl: () => <div>NavigationControl</div>,
+  Source: ({ children }: any) => <div>{children}</div>,
+  Layer: () => null,
+}));
 
 // Mock SearchBox component
-jest.mock('../../../admin/src/components/MapInput/SearchBox', () => ({
+vi.mock('../../../admin/src/components/MapInput/SearchBox', () => ({
   __esModule: true,
   default: () => <div>SearchBox</div>,
 }));
 
 // Mock other MapInput components
-jest.mock('../../../admin/src/components/MapInput/basemap-control', () => ({
+vi.mock('../../../admin/src/components/MapInput/basemap-control', () => ({
   __esModule: true,
   default: () => <div>BasemapControl</div>,
 }));
 
-jest.mock('../../../admin/src/components/MapInput/layer-control', () => ({
+vi.mock('../../../admin/src/components/MapInput/layer-control', () => ({
   __esModule: true,
   default: () => <div>LayerControl</div>,
 }));
 
 // Mock POI service
-jest.mock('../../../admin/src/services/poi-service', () => ({
+vi.mock('../../../admin/src/services/poi-service', () => ({
   __esModule: true,
-  createLocationFeature: jest.fn((coords: [number, number], address?: string) => ({
+  createLocationFeature: vi.fn((coords: [number, number], address?: string) => ({
     type: 'Feature',
     geometry: { type: 'Point', coordinates: coords },
     properties: { name: address || '', address: address || '' },
   })),
-  queryPOIsForViewport: jest.fn(() => Promise.resolve([])),
-  searchNearbyPOIsForSnap: jest.fn(() => []),
-  findNearestPOI: jest.fn(() => null),
+  queryPOIsForViewport: vi.fn(() => Promise.resolve([])),
+  searchNearbyPOIsForSnap: vi.fn(() => []),
+  findNearestPOI: vi.fn(() => null),
 }));
 
 // Mock pmtiles
-jest.mock('pmtiles', () => ({
-  Protocol: jest.fn(() => ({
-    tile: jest.fn(),
-  })),
+// MapInput calls `new Protocol()`, so the mock has to be constructible.
+vi.mock('pmtiles', () => ({
+  Protocol: class {
+    tile = vi.fn();
+  },
 }));
 
 // Mock maplibre-gl
-jest.mock('maplibre-gl', () => ({
-  addProtocol: jest.fn(),
-  removeProtocol: jest.fn(),
-  setWorkerUrl: jest.fn(),
-  getVersion: jest.fn(() => '6.0.0'),
+vi.mock('maplibre-gl', () => ({
+  addProtocol: vi.fn(),
+  removeProtocol: vi.fn(),
+  setWorkerUrl: vi.fn(),
+  getVersion: vi.fn(() => '6.0.0'),
 }));
 
 const MockMapInput = (props: any) => (
@@ -155,7 +144,7 @@ const MockMapInput = (props: any) => (
 );
 
 describe('MapInput Component', () => {
-  const mockOnChange = jest.fn();
+  const mockOnChange = vi.fn();
   const defaultProps = {
     intlLabel: { id: 'test.label', defaultMessage: 'Map' },
     name: 'testMap',
