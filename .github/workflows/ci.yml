@@ -1,0 +1,56 @@
+name: CI
+
+# Runs on every push to main and on every PR. publish.yml also runs the test matrix, but only
+# on version tags: without this workflow a breakage is discovered during a release, not before.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Lint and formatting are version-independent, so they run once instead of per Node version.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Supported range declared in package.json engines (>=22 <=24).
+        node-version: ['22', '24']
+        experimental: [false]
+        include:
+          # Node 26 is Current now and becomes LTS in October 2026. It is outside the engines
+          # range and outside what Strapi 5 declares, so it runs as an early warning only and
+          # must not fail the build. Promote it into node-version above once both support it.
+          - node-version: '26'
+            experimental: true
+    continue-on-error: ${{ matrix.experimental }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run verify
+      - run: npm test
