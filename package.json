@@ -93,9 +93,6 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "overrides": {
-    "@microsoft/api-extractor": "7.56.3"
-  },
   "engines": {
     "node": ">=22.0.0 <=24.x.x",
     "npm": ">=6.0.0"
