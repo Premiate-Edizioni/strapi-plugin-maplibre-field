@@ -15,6 +15,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      # Narrower than package.json engines and than ci.yml, on purpose: publish needs this job,
+      # so a failure here blocks the release itself. Node 26 stays out until it becomes LTS in
+      # October 2026 — while it is Current, an upstream regression in a minor would block a
+      # publish rather than a PR. ci.yml already runs 26 as a blocking job on every push and PR,
+      # so the same commit is covered before it ever reaches a tag. Add '26' here once it is LTS.
       matrix:
         node-version: ['22', '24']
     steps:
