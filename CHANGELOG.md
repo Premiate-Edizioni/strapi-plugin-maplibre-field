@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-08-21
+
 ### Added
 
 - **Draggable main marker** - The location marker can now be dragged to a new position directly on the map, instead of only being repositioned via search, POI click, or double-click. Dropping the marker snaps to a nearby POI within the configured `poiSnapRadius`, same as double-clicking the map; otherwise only the new coordinates are saved (`inputMethod: "marker_drag"`).
