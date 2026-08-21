@@ -11,6 +11,7 @@ A [Strapi](https://strapi.io/) plugin providing a [MapLibre](https://www.maplibr
 ## ✨ Key Features
 
 - **Interactive MapLibre GL map** with smooth zoom and pan
+- **Draggable marker** to reposition a location directly on the map
 - **Multiple basemap styles** support (MapTiler, Stadia, PMTiles, custom)
 - **OpenStreetMap geocoding** via Nominatim (forward & reverse)
 - **Custom POI layers** with GeoJSON API or PMTiles vector tiles
