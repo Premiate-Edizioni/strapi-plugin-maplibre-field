@@ -1,6 +1,6 @@
 {
   "name": "@premiate/strapi-plugin-maplibre-field",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Strapi plugin that provides a MapLibre custom field",
   "repository": {
     "type": "git",
