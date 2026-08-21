@@ -38,8 +38,8 @@ export interface LocationProperties {
   sourceLayer?: string;
   /** POI category/type: "skating_spot", "bus_stop", etc. */
   category?: string;
-  /** How the location was created: "search" | "poi_click" | "map_click" */
-  inputMethod?: 'search' | 'poi_click' | 'map_click';
+  /** How the location was created: "search" | "poi_click" | "map_click" | "marker_drag" */
+  inputMethod?: 'search' | 'poi_click' | 'map_click' | 'marker_drag';
   /** Original metadata preserved from the source */
   metadata?: Record<string, unknown>;
 }

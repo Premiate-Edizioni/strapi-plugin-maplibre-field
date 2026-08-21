@@ -1,7 +1,8 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import MapInput from '../../../admin/src/components/MapInput';
+import { findNearestPOI } from '../../../admin/src/services/poi-service';
 import { IntlProvider } from 'react-intl';
 import { DesignSystemProvider } from '@strapi/design-system';
 
@@ -83,7 +84,18 @@ vi.mock('react-map-gl/maplibre', () => ({
   }),
   FullscreenControl: () => <div>FullscreenControl</div>,
   GeolocateControl: () => <div>GeolocateControl</div>,
-  Marker: () => <div>Marker</div>,
+  Marker: ({ draggable, onClick, onDragEnd }: any) => (
+    <div
+      data-testid="main-marker"
+      data-draggable={draggable ? 'true' : 'false'}
+      onClick={onClick}
+      // `dragEnd` has no DOM equivalent; use blur as a distinct trigger so the
+      // test can fire the marker's drag path without going through onClick.
+      onBlur={() => onDragEnd?.({ lngLat: { lng: 9.19, lat: 45.4642 } })}
+    >
+      Marker
+    </div>
+  ),
   NavigationControl: () => <div>NavigationControl</div>,
   Source: ({ children }: any) => <div>{children}</div>,
   Layer: () => null,
@@ -109,14 +121,17 @@ vi.mock('../../../admin/src/components/MapInput/layer-control', () => ({
 // Mock POI service
 vi.mock('../../../admin/src/services/poi-service', () => ({
   __esModule: true,
-  createLocationFeature: vi.fn((coords: [number, number], address?: string) => ({
+  createLocationFeature: vi.fn((coords: [number, number], properties: Record<string, any> = {}) => ({
     type: 'Feature',
     geometry: { type: 'Point', coordinates: coords },
-    properties: { name: address || '', address: address || '' },
+    properties: Object.fromEntries(
+      Object.entries(properties).filter(([, v]) => v != null && v !== '')
+    ),
   })),
   queryPOIsForViewport: vi.fn(() => Promise.resolve([])),
   searchNearbyPOIsForSnap: vi.fn(() => []),
   findNearestPOI: vi.fn(() => null),
+  calculateDistance: vi.fn(() => 0),
 }));
 
 // Mock pmtiles
@@ -234,5 +249,56 @@ describe('MapInput Component', () => {
     render(<MockMapInput {...defaultProps} value={value} />);
     expect(screen.getByText('POI Name')).toBeInTheDocument();
     expect(screen.queryByText('Full Address')).not.toBeInTheDocument();
+  });
+
+  test('main marker is draggable', () => {
+    render(<MockMapInput {...defaultProps} />);
+    expect(screen.getByTestId('main-marker')).toHaveAttribute('data-draggable', 'true');
+  });
+
+  test('dragging the main marker updates coordinates when no POI is nearby', async () => {
+    // findNearestPOI is mocked to return null, i.e. nothing within snap radius
+    render(<MockMapInput {...defaultProps} />);
+
+    // The mocked Marker fires onDragEnd with [9.19, 45.4642] on blur
+    fireEvent.blur(screen.getByTestId('main-marker'));
+
+    await waitFor(() => expect(mockOnChange).toHaveBeenCalledTimes(1));
+
+    const { name, value, type } = mockOnChange.mock.calls[0][0].target;
+    expect(name).toBe('testMap');
+    expect(type).toBe('json');
+
+    const feature = JSON.parse(value);
+    expect(feature.geometry.coordinates).toEqual([9.19, 45.4642]);
+    expect(feature.properties.inputMethod).toBe('marker_drag');
+
+    // Coordinate fields reflect the dragged position
+    expect(screen.getByDisplayValue('9.19')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('45.4642')).toBeInTheDocument();
+  });
+
+  test('dragging the main marker snaps to a nearby POI', async () => {
+    // A POI sits within the snap radius of the drop point
+    vi.mocked(findNearestPOI).mockReturnValueOnce({
+      id: 'poi-1',
+      name: 'Skatespot Centro',
+      type: 'skating_spot',
+      coordinates: [9.2, 45.47],
+      address: 'Via Roma 1, Milano',
+      distance: 3,
+    } as any);
+
+    render(<MockMapInput {...defaultProps} />);
+
+    fireEvent.blur(screen.getByTestId('main-marker'));
+
+    await waitFor(() => expect(mockOnChange).toHaveBeenCalledTimes(1));
+
+    const feature = JSON.parse(mockOnChange.mock.calls[0][0].target.value);
+    // Snapped to the POI's coordinates, not the raw drop point
+    expect(feature.geometry.coordinates).toEqual([9.2, 45.47]);
+    expect(feature.properties.name).toBe('Skatespot Centro');
+    expect(feature.properties.inputMethod).toBe('poi_click');
   });
 });

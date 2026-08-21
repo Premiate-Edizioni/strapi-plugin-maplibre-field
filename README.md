@@ -105,6 +105,7 @@ There are multiple ways to select a location:
 - **Search box** - Type an address or place name
 - **Click POI marker** - Select pre-defined points of interest
 - **Double-click map** - Place marker at exact coordinates
+- **Drag the marker** - Reposition an existing point directly on the map
 
 The selected location is saved as a GeoJSON Feature with coordinates, name, address, and metadata.
 

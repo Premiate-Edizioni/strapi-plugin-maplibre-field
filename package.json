@@ -54,7 +54,7 @@
     "prepublishOnly": "npm run build && npm run verify && npm test"
   },
   "dependencies": {
-    "maplibre-gl": "^6.3.0",
+    "maplibre-gl": "^6.4.0",
     "pmtiles": "^4.5.0",
     "react-map-gl": "^8.1.2"
   },

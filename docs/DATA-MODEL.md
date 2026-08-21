@@ -210,12 +210,14 @@ All other fields in `properties` are optional and only included when available.
 - `"search"` - Selected from search box results
 - `"poi_click"` - Clicked on POI marker
 - `"map_click"` - Double-clicked on map
+- `"marker_drag"` - Dragged the main marker to a new position
 
 **Examples**:
 ```json
 "inputMethod": "search"
 "inputMethod": "poi_click"
 "inputMethod": "map_click"
+"inputMethod": "marker_drag"
 ```
 
 **Notes**:
@@ -355,7 +357,7 @@ All other fields in `properties` are optional and only included when available.
 }
 ```
 
-**Note**: When snapping to POI, `inputMethod` is still `"poi_click"` even though user double-clicked.
+**Note**: When snapping to POI, `inputMethod` is still `"poi_click"` even though the user double-clicked or dragged the marker.
 
 ---
 

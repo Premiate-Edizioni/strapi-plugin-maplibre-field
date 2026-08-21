@@ -138,11 +138,23 @@ For precise coordinate selection or when no POI exists:
 
 **Tip**: The snap radius is configurable in plugin settings (`poiSnapRadius` option, default: 5 meters).
 
+### 4. Dragging the Marker
+
+To reposition an already-placed marker without re-searching:
+
+1. **Click and hold** the marker (blue pin)
+2. **Drag** it to the new position
+3. **Release** to drop it
+
+Dragging uses the same snap behavior as double-clicking the map: if you drop the marker within the
+snap radius of a POI, that POI's full data is saved (`inputMethod: "poi_click"`); otherwise only the
+new coordinates are saved (`inputMethod: "marker_drag"`).
+
 ## Editing Locations
 
 ### Changing a Location
 
-Simply select a new location using any of the three methods above. The new location data will replace the existing data.
+Simply select a new location using any of the four methods above. The new location data will replace the existing data.
 
 ### Clearing a Location
 

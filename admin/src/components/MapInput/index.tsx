@@ -14,6 +14,7 @@ import Map, {
   Layer,
   type MapLayerMouseEvent,
   type MapRef,
+  type MarkerDragEvent,
 } from 'react-map-gl/maplibre';
 import getTranslation from '../../utils/getTrad';
 import { Protocol } from 'pmtiles';
@@ -366,6 +367,12 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     });
   };
 
+  // Handle main marker drag - reposition the point directly on the map.
+  // Snaps to a nearby POI just like double-clicking the map does.
+  const handleMainMarkerDragEnd = async (evt: MarkerDragEvent) => {
+    await setLocationWithPOISnap([evt.lngLat.lng, evt.lngLat.lat], 'marker_drag');
+  };
+
   const handlePOIClick = async (poi: POI) => {
     setSelectedPOI(poi);
 
@@ -454,8 +461,19 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   // Double-click handler - searches for nearby POI or saves coordinates only
   const handleMapDoubleClick = async (evt: MapLayerMouseEvent) => {
     evt.preventDefault();
-    const clickCoords: [number, number] = [evt.lngLat.lng, evt.lngLat.lat];
+    await setLocationWithPOISnap([evt.lngLat.lng, evt.lngLat.lat], 'map_click');
+  };
 
+  /**
+   * Place the location at the given coordinates, snapping to the nearest POI
+   * within the configured radius. Falls back to plain coordinates when no POI
+   * is close enough. Shared by the double-click and marker-drag handlers so
+   * both gestures behave identically.
+   */
+  const setLocationWithPOISnap = async (
+    clickCoords: [number, number],
+    inputMethod: 'map_click' | 'marker_drag'
+  ) => {
     // Get snap radius from config (default: 5 meters)
     const snapRadius = typeof config.poiSnapRadius === 'number' ? config.poiSnapRadius : 5;
 
@@ -548,7 +566,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         // No POI found nearby - save coordinates only as minimal GeoJSON Feature
         updateValues(
           createLocationFeature(clickCoords, {
-            inputMethod: 'map_click',
+            inputMethod,
           })
         );
 
@@ -566,7 +584,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       // Fallback: save coordinates only as minimal GeoJSON Feature
       updateValues(
         createLocationFeature(clickCoords, {
-          inputMethod: 'map_click',
+          inputMethod,
         })
       );
 
@@ -897,7 +915,9 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
             longitude={longitude}
             latitude={latitude}
             color="#4945ff" /* primary600 */
+            draggable
             onClick={handleMainMarkerClick}
+            onDragEnd={handleMainMarkerDragEnd}
           />
         </Map>
       </Flex>
