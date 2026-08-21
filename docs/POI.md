@@ -375,7 +375,7 @@ When a user selects a POI, all data is preserved:
 - `sourceId` - Original ID from your API
 - `sourceLayer` - Human-readable source name (e.g., "Skatespots")
 - `category` - Inferred from properties (customizable)
-- `inputMethod` - How it was selected ("poi_click", "search", "map_click")
+- `inputMethod` - How it was selected ("poi_click", "search", "map_click", "marker_drag")
 - `metadata` - All original properties from your GeoJSON
 
 ## Performance Optimization

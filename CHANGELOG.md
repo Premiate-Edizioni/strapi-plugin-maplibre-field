@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Draggable main marker** - The location marker can now be dragged to a new position directly on the map, instead of only being repositioned via search, POI click, or double-click. Dropping the marker snaps to a nearby POI within the configured `poiSnapRadius`, same as double-clicking the map; otherwise only the new coordinates are saved (`inputMethod: "marker_drag"`).
+
 ### Fixed
 
 - **Redundant `User-Agent` header on Nominatim requests** - Both geocoding services set a `User-Agent` on their `fetch()` calls, with two values that had drifted apart (one still pinned at a hardcoded `1.0.0`). The header was doing no good and some harm: this code runs in the browser, where Chromium silently drops a `User-Agent` set on `fetch()` ([crbug 571722](https://crbug.com/571722)), and where it _is_ honoured it is not CORS-safelisted — turning every geocoding call into a preflight `OPTIONS` plus the `GET`, against a service whose usage policy caps clients at 1 request per second. That policy asks for "a valid HTTP Referer **or** User-Agent identifying the application", and the browser already sends the CMS origin as `Referer`, so dropping the header keeps the plugin compliant while halving the request count on Firefox and Safari. The reasoning is recorded next to the code, and pinned by tests, so it is not reintroduced.
