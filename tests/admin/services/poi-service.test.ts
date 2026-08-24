@@ -8,6 +8,7 @@ import {
   filterByDistance,
   findNearestPOI,
   formatAddress,
+  formatName,
   geoJSONFeatureToPOI,
   queryCustomAPI,
   queryNominatim,
@@ -267,6 +268,43 @@ describe('queryCustomAPI', () => {
   });
 });
 
+describe('formatName', () => {
+  test('uses the place name when there is one', () => {
+    expect(
+      formatName({ type: 'house', name: 'Buckingham Palace', street: 'Buckingham Gate' })
+    ).toBe('Buckingham Palace');
+  });
+
+  test('falls back to street and housenumber on an unnamed feature', () => {
+    // An unnamed node (a bin, a bench, a plain house) carries no `name`: without this the whole
+    // formatted address would be repeated as the name.
+    expect(
+      formatName({
+        type: 'house',
+        osm_key: 'amenity',
+        osm_value: 'waste_basket',
+        housenumber: '24',
+        street: 'Via Enrico Noë',
+        postcode: '20133',
+        city: 'Milano',
+        country: 'Italia',
+      })
+    ).toBe('Via Enrico Noë 24');
+  });
+
+  test('falls back to the city when there is no street either', () => {
+    expect(
+      formatName({ type: 'city', city: 'Milano', state: 'Lombardia', country: 'Italia' })
+    ).toBe('Milano');
+  });
+
+  test('returns an empty string when nothing is usable', () => {
+    expect(formatName(null)).toBe('');
+    expect(formatName({})).toBe('');
+    expect(formatName({ name: '  ', street: '', city: null })).toBe('');
+  });
+});
+
 describe('formatAddress', () => {
   // Every fixture below is a verbatim `properties.geocoding` object returned by
   // nominatim.openstreetmap.org, trimmed only of members this function ignores.
@@ -432,12 +470,13 @@ describe('queryNominatim', () => {
     expect(await queryNominatim(45.4601, 9.1901, 100, NOMINATIM_URL)).toEqual([]);
   });
 
-  test('falls back to the formatted address when the place has no name', async () => {
+  test('names an unnamed place after its street, not its whole address', async () => {
     stubFetch({ [NOMINATIM_URL]: reverseResult({ name: null }) });
 
     const [poi] = await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL);
 
-    expect(poi.name).toBe('Piazza Velasca, 20122 Milano, Lombardia, Italia');
+    expect(poi.name).toBe('Piazza Velasca');
+    expect(poi.address).toBe('Piazza Velasca, 20122 Milano, Lombardia, Italia');
   });
 
   test('degrades to an empty list when the response carries no feature', async () => {

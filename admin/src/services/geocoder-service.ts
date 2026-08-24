@@ -4,7 +4,7 @@
  * Combines Nominatim geocoding and custom POI search into a unified search interface
  */
 
-import { formatAddress, searchPOIsForGeocoder, type POI } from './poi-service';
+import { formatAddress, formatName, searchPOIsForGeocoder, type POI } from './poi-service';
 import type { LocationFeature, NominatimGeocoding } from './poi-service';
 
 // Nominatim requests send no custom headers, `User-Agent` included — see the note in poi-service.ts.
@@ -168,7 +168,7 @@ export async function performSearch(query: string, config: SearchConfig): Promis
         ...(data?.features ?? []).map((result: NominatimFeature, idx: number) => {
           const geocoding = result.properties.geocoding;
           const address = formatAddress(geocoding);
-          const name = geocoding.name || address;
+          const name = formatName(geocoding);
 
           return {
             id: `nominatim-${idx}`,

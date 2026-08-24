@@ -214,6 +214,35 @@ export function formatAddress(geocoding: NominatimGeocoding | null | undefined):
 }
 
 /**
+ * Pick a short name for a reverse-geocoding hit.
+ *
+ * Named places carry `name`. Unnamed features — a bin, a bench, a plain house — do not, and there
+ * the whole formatted address would end up repeated verbatim in the name. Fall back to the street
+ * (with its housenumber when there is one), then to the city: enough to identify the point without
+ * restating the address.
+ *
+ * @param geocoding The `properties.geocoding` object, or null/undefined
+ * @returns A short name, or an empty string when no usable field is present
+ */
+export function formatName(geocoding: NominatimGeocoding | null | undefined): string {
+  if (!geocoding) {
+    return '';
+  }
+
+  const clean = (value: unknown): string =>
+    typeof value === 'string' && value.trim() !== '' ? value.trim() : '';
+
+  const name = clean(geocoding.name);
+  if (name) {
+    return name;
+  }
+
+  const street = [clean(geocoding.street), clean(geocoding.housenumber)].filter(Boolean).join(' ');
+
+  return street || clean(geocoding.city) || clean(geocoding.locality);
+}
+
+/**
  * Calculate distance between two coordinates using Haversine formula
  * @param coord1 First coordinate [lng, lat]
  * @param coord2 Second coordinate [lng, lat]
@@ -340,7 +369,7 @@ export async function queryNominatim(
     // Convert Nominatim response to POI
     const poi: POI = {
       id: `nominatim-${geocoding.place_id || Date.now()}`,
-      name: geocoding.name || address || 'Unknown Location',
+      name: formatName(geocoding) || 'Unknown Location',
       type: geocoding.osm_value || geocoding.osm_key || 'address',
       coordinates,
       address,
