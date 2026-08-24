@@ -10,6 +10,7 @@ Technical reference for the GeoJSON Feature structure used by the MapLibre Field
 - [Examples by Input Method](#examples-by-input-method)
 - [Usage in Code](#usage-in-code)
 - [Validation](#validation)
+- [Best Practices](#best-practices)
 
 ## Overview
 
@@ -164,6 +165,10 @@ repeats the city (city-states such as Berlin, city-provinces such as New York).
 - Nominatim: `"nominatim-{place_id}"` (e.g., `"nominatim-68428992"`)
 - Custom POI: Feature ID from GeoJSON (e.g., `"019ac1b6-5823-7808-9be6-62733b3d0a0a"`)
 
+Set when a POI was picked — clicked, or snapped onto by a double-click or marker drop. A location
+chosen from the **search** results has no `sourceId`, because the plugin keeps only the name and the
+composed address from a geocoding response.
+
 **Examples**:
 ```json
 "sourceId": "nominatim-68428992"
@@ -205,8 +210,9 @@ repeats the city (city-states such as Berlin, city-provinces such as New York).
 **Description**: Type or category of the POI
 
 **Source**:
-- Nominatim: `addresstype` or POI type from OSM
-- Custom POI: Inferred from properties (customizable)
+- Nominatim (a snapped basemap POI): the OSM value, falling back to the OSM key — `bus_stop`, `hotel`, `amenity`
+- Custom POI: the source feature's own `type` property
+- Search results: not included
 
 **Examples**:
 ```json
@@ -253,8 +259,9 @@ repeats the city (city-states such as Berlin, city-provinces such as New York).
 **Description**: Additional custom data from the source
 
 **Source**:
-- Nominatim: OSM tags and metadata (osm_id, osm_type, place_id, etc.)
+- Nominatim (a snapped basemap POI): OSM identifiers (`osm_id`, `osm_type`, `place_id`, `addresstype`, `class`, `category`)
 - Custom POI: All properties from GeoJSON feature (except name)
+- Search results: not included
 
 **Examples**:
 
@@ -302,19 +309,15 @@ repeats the city (city-states such as Berlin, city-provinces such as New York).
     "name": "Piazza Velasca",
     "address": "Piazza Velasca, 20122 Milano, Lombardia, Italia",
     "source": "nominatim",
-    "sourceId": "nominatim-68428992",
-    "category": "bus_stop",
-    "inputMethod": "search",
-    "metadata": {
-      "osm_id": 4843517235,
-      "osm_type": "node",
-      "place_id": 68428992,
-      "addresstype": "highway",
-      "boundingbox": ["45.459568", "45.460568", "9.1896019", "9.1906019"]
-    }
+    "inputMethod": "search"
   }
 }
 ```
+
+A search result carries these four properties and no others. `sourceId`, `category` and `metadata`
+are not set: the plugin reads the GeocodeJSON response for the name and the postal fields it
+composes `address` from, and keeps nothing else. A result picked from one of your own POI layers
+does carry `sourceId`, `sourceLayer` and `category` — see Example 2.
 
 ---
 

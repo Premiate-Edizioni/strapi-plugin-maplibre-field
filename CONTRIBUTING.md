@@ -494,27 +494,49 @@ map.setCenter([lng, lat]);
 
 **API endpoint**:
 ```
-https://nominatim.openstreetmap.org/search?format=json&q=milano
+https://nominatim.openstreetmap.org/search?format=geocodejson&addressdetails=1&limit=5&q=milano
 ```
 
-**Rate limiting**: 
+`format=geocodejson`, not `json` or `jsonv2`: it is the only one of Nominatim's formats that
+normalises the address keys across countries (`street`, `housenumber`, `city` rather than the raw
+OSM `road`/`house_number` and the `city|town|village` variance). Requests also carry the admin
+panel's locale as `accept-language`.
+
+**Rate limiting**:
 - Max 1 request per second
 - Use self-hosted instance for development
 
 **Response format**:
 ```json
-[
-  {
-    "place_id": 123,
-    "osm_type": "node",
-    "osm_id": 456,
-    "lat": "45.4642",
-    "lon": "9.1900",
-    "display_name": "Milano, Lombardia, Italia",
-    "type": "city"
-  }
-]
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [9.19, 45.4642] },
+      "properties": {
+        "geocoding": {
+          "place_id": 123,
+          "osm_type": "node",
+          "osm_id": 456,
+          "osm_key": "place",
+          "osm_value": "city",
+          "name": "Milano",
+          "city": "Milano",
+          "state": "Lombardia",
+          "country": "Italia",
+          "label": "Milano, Lombardia, Italia"
+        }
+      }
+    }
+  ]
+}
 ```
+
+Everything the plugin reads lives under `properties.geocoding`. Note that `label` is **not** used as
+the stored address: it concatenates every administrative level Nominatim holds, so `address` is
+composed from a whitelist of postal fields instead — see `formatAddress()` in
+[poi-service.ts](admin/src/services/poi-service.ts).
 
 ## Getting Help
 

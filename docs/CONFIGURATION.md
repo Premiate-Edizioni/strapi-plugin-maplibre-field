@@ -10,6 +10,7 @@ Complete configuration reference for the MapLibre Field plugin.
 - [Geocoding Configuration](#geocoding-configuration)
 - [POI Configuration](#poi-configuration)
 - [Security Middleware](#security-middleware)
+- [Complete Configuration Example](#complete-configuration-example)
 
 ## Plugin Configuration
 
@@ -57,7 +58,7 @@ export default {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `mapStyles` | `MapStyle[]` | Demo tiles | Array of map style configurations |
+| `mapStyles` | `MapStyle[]` | OpenFreeMap Liberty | Array of map style configurations |
 | `defaultCenter` | `[number, number]` | `[0, 0]` | Initial map center [longitude, latitude] |
 | `defaultZoom` | `number` | `4.5` | Initial zoom level (0-20) |
 | `geocodingProvider` | `string` | `'nominatim'` | Geocoding service provider |
@@ -102,9 +103,30 @@ interface MapStyle {
 
 The plugin uses **MapLibre GL JS** and supports any style following the [MapLibre Style Specification](https://maplibre.org/maplibre-style-spec/).
 
+### OpenFreeMap (Free, and the built-in default)
+
+This is what you get with no `mapStyles` at all — a complete street-level basemap built from
+OpenStreetMap data, with no API key and no account:
+
+```typescript
+mapStyles: [
+  {
+    id: "ofm",
+    name: "OpenFreeMap",
+    url: "https://tiles.openfreemap.org/styles/liberty",
+    isDefault: true,
+  },
+]
+```
+
+Configure it explicitly when you want to name it in the basemap switcher alongside other styles.
+[OpenFreeMap](https://openfreemap.org/) is donation-funded and asks no registration; read its own
+page before relying on it for a high-traffic production instance.
+
 ### MapLibre Demo Tiles (Free)
 
-Public demo tiles - no API key required:
+MapLibre's own demo style — countries and borders only, **no streets, no place names at
+city scale**:
 
 ```typescript
 mapStyles: [
@@ -117,7 +139,9 @@ mapStyles: [
 ]
 ```
 
-**Note**: Demo tiles are for testing only. For production, use a commercial provider or self-hosted solution.
+**Note**: it exists to prove a map renders at all. Since picking a location means recognising a
+street or a building, this style is not usable for the plugin's actual job — use the default above
+instead.
 
 ### MapTiler (Commercial)
 

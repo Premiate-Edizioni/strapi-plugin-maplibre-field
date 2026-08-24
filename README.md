@@ -1,7 +1,7 @@
 # MapLibre Field - Strapi v5 Plugin
 
 [![npm version](https://img.shields.io/npm/v/@premiate/strapi-plugin-maplibre-field)](https://www.npmjs.com/package/@premiate/strapi-plugin-maplibre-field)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/LICENSE)
 [![Strapi v5](https://img.shields.io/badge/Strapi-v5-blue)](https://strapi.io)
 
 A [Strapi](https://strapi.io/) plugin providing a [MapLibre](https://www.maplibre.org/) map custom field with POI support, geocoding and multi base maps.
@@ -10,13 +10,16 @@ A [Strapi](https://strapi.io/) plugin providing a [MapLibre](https://www.maplibr
 
 ## ✨ Key Features
 
-- **Interactive MapLibre GL map** with smooth zoom and pan
-- **Draggable marker** to reposition a location directly on the map
+- **Works with no configuration** - falls back to OpenFreeMap tiles; no API key, no account
+- **Interactive MapLibre GL map** with fullscreen, zoom, compass and geolocate controls
+- **Four ways to place a point** - search, POI click, double-click, or drag the marker
 - **Multiple basemap styles** support (MapTiler, Stadia, PMTiles, custom)
-- **OpenStreetMap geocoding** via Nominatim (forward & reverse)
+- **OpenStreetMap geocoding** via Nominatim, in the language of the admin panel
+- **Keyboard-accessible search** built on Strapi's Combobox (WAI-ARIA combobox pattern)
 - **Custom POI layers** with GeoJSON API or PMTiles vector tiles
 - **Layer control panel** for toggling POI sources
 - **GeoJSON Feature** storage (RFC 7946 compliant)
+- **Five UI languages** - English, German, Spanish, French, Italian
 - **TypeScript** support with full type definitions
 
 ## 📦 Installation
@@ -77,7 +80,9 @@ export default [
         directives: {
           "connect-src": ["'self'", "https:"],
           "img-src": ["'self'", "data:", "blob:"],
-          "worker-src": ["'self'", "blob:"], // Required for MapLibre
+          // MapLibre parses tiles in a Web Worker. `'self'` is the part that matters: the
+          // plugin serves that worker from your own Strapi instance.
+          "worker-src": ["'self'", "blob:"],
           upgradeInsecureRequests: null,
         },
       },
@@ -101,9 +106,9 @@ In the Strapi Content-Type Builder pick up your Collection Type, Single Type or 
 
 ## 🎯 How to Select a Location
 
-There are multiple ways to select a location:
+There are four ways to select a location:
 
-- **Search box** - Type an address or place name
+- **Search box** - Type an address or place name, then press **Enter**
 - **Click POI marker** - Select pre-defined points of interest
 - **Double-click map** - Place marker at exact coordinates
 - **Drag the marker** - Reposition an existing point directly on the map
@@ -112,10 +117,10 @@ The selected location is saved as a GeoJSON Feature with coordinates, name, addr
 
 ## 📚 Documentation
 
-- **[Configuration Guide](docs/CONFIGURATION.md)** - Map styles, geocoding, POI setup, all options
-- **[Usage Guide](docs/USAGE.md)** - Adding fields, selecting locations, localization
-- **[POI Integration](docs/POI.md)** - Custom POI sources, layer control, GeoJSON API
-- **[Data Model](docs/DATA-MODEL.md)** - GeoJSON structure, properties reference
+- **[Configuration Guide](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/docs/CONFIGURATION.md)** - Map styles, geocoding, POI setup, all options
+- **[Usage Guide](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/docs/USAGE.md)** - Adding fields, selecting locations, localization
+- **[POI Integration](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/docs/POI.md)** - Custom POI sources, layer control, GeoJSON API
+- **[Data Model](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/docs/DATA-MODEL.md)** - GeoJSON structure, properties reference
 
 ## 🗺️ Map Providers
 
@@ -127,7 +132,7 @@ The plugin supports any [MapLibre Style Specification](https://maplibre.org/mapl
 - **PMTiles** - Self-hosted tiles, no tile server required
 - **Custom styles** - Create your own with [Maputnik](https://maputnik.github.io/)
 
-See the [Configuration Guide](docs/CONFIGURATION.md) for detailed setup instructions.
+See the [Configuration Guide](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/docs/CONFIGURATION.md) for detailed setup instructions.
 
 ## 🏢 POI Support
 
@@ -139,7 +144,7 @@ Integrate custom Points of Interest from a GeoJSON URL (static file or API) or a
 - Search integration (queries both Nominatim and custom APIs)
 - Configurable zoom levels and display limits
 
-See the [POI Integration Guide](docs/POI.md) for setup and examples.
+See the [POI Integration Guide](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/docs/POI.md) for setup and examples.
 
 ## 🔧 Data Structure
 
@@ -150,25 +155,24 @@ Locations are stored as GeoJSON Features:
   "type": "Feature",
   "geometry": {
     "type": "Point",
-    "coordinates": [9.1901, 45.4601]
+    "coordinates": [9.1877, 45.4596]
   },
   "properties": {
-    "name": "Piazza Velasca",
-    "address": "Piazza Velasca, Milano, 20122, Italia",
+    "name": "Torre Velasca",
+    "address": "Piazza Velasca 5, 20122 Milano, Lombardia, Italia",
     "source": "nominatim",
-    "category": "bus_stop",
     "inputMethod": "search"
   }
 }
 ```
 
-See the [Data Model Guide](docs/DATA-MODEL.md) for complete property reference.
+See the [Data Model Guide](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/docs/DATA-MODEL.md) for complete property reference.
 
 ## 🤝 Contributing
 
 Bug reports and pull requests are welcome on [GitHub](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field).
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+See [CONTRIBUTING.md](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/CONTRIBUTING.md) for development setup and guidelines.
 
 ## 📝 Credits
 
@@ -178,4 +182,4 @@ Thanks to [Enzo Brunii](https://github.com/enzobrunii) for initial contributions
 
 ## 📄 License
 
-[MIT](LICENSE) © Claudio Bernardini / Dipartimento di Cartografia Esistenzialista in Fotta, Premiate Edizioni
+[MIT](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/LICENSE) © Claudio Bernardini / Dipartimento di Cartografia Esistenzialista in Fotta, Premiate Edizioni

@@ -7,10 +7,12 @@ Complete guide to integrating custom Points of Interest (POI) sources with the M
 - [Overview](#overview)
 - [Configuration](#configuration)
 - [Custom POI API](#custom-poi-api)
+- [PMTiles POI Sources](#pmtiles-poi-sources)
 - [Layer Control](#layer-control)
 - [User Interaction](#user-interaction)
 - [Performance Optimization](#performance-optimization)
 - [Examples](#examples)
+- [Troubleshooting](#troubleshooting)
 
 ## Overview
 
@@ -282,7 +284,7 @@ Because PMTiles data is rendered as vector tiles (not fetched as a single JSON),
 - Zoom in or pan to the relevant area before searching
 - GeoJSON sources are searched across the full cached dataset
 
-### Layer Control
+### Source Type Badge
 
 The layer control panel shows the source type next to each layer name (`GEOJSON` or `PMTILES`), so users can understand what kind of data they are toggling.
 
@@ -293,7 +295,8 @@ When you configure multiple `poiSources`, a layer control panel appears on the m
 ### Features
 
 **Toggle Layers On/Off**:
-- Click the **eye icon** next to each layer name
+- Click a row to show or hide that layer
+- Its **coloured dot** is filled while the layer is shown and an empty outline once hidden — the same colour you gave the source in `poiSources`
 - POI markers appear/disappear immediately
 - Changes apply in real-time
 
@@ -326,21 +329,23 @@ The layer control panel appears in the **top-right corner** of the map (customiz
 
 **2. Search Integration**:
 - When `poiSearchEnabled: true`, search box queries both Nominatim AND custom APIs
-- Results from both sources appear in dropdown
-- Custom POI results show: `POI Name`
-- Nominatim results show: `Address Name`
+- Results from both sources appear in the dropdown, each on two lines: the name, and below it the
+  source in words plus the address — `Skatespots · Via Sammartini, Milano` for one of yours,
+  `OpenStreetMap · Ladakh, India` for a geocoded hit
+- A coloured dot repeats the source: your configured `color` for a custom layer, grey for
+  OpenStreetMap. It is a redundant cue, never the only way to tell them apart
 
 **3. Click to Select**:
 - Click any POI marker to select it
-- Selected marker turns **orange** (#ff5200)
+- The selected marker grows slightly and turns semi-transparent, keeping its layer's colour
 - Complete POI data is saved automatically
-- Success notification shows: "POI Name (source: Source Layer)"
+- A success notification names both: *Selected Bump al Monumentale from Skatespots*
 
 **4. Double-Click Snap**:
 - Double-click on a POI (within `poiSnapRadius`, default 5m)
 - Automatically selects the nearest POI, from your custom sources **or** from the basemap's own
   OpenStreetMap POIs — the latter need no `poiSources` configuration
-- Shows distance in notification: "POI Name (3m)"
+- The notification adds how far the POI was from where you pointed: *Selected Skatepark Milano from Skatespots (3m away)*
 - If no POI within radius, saves coordinates only
 
 ### What Gets Saved

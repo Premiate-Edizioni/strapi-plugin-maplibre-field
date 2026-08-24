@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Search results name their source** - Each result is now two lines: the name, and below it the source in words plus the address (`Skatespots · Via Sammartini, Milano`, `OpenStreetMap · Ladakh, India`). The coloured dot remains as a redundant cue rather than the only way to tell a custom layer from OpenStreetMap, which also makes the distinction available to colour-blind editors. For Nominatim hits this splits information that used to be concatenated into a single label.
 
+- **Geocoding follows the admin panel locale** - Nominatim requests now carry the editor's admin locale as `accept-language`, so search results and reverse-geocoded addresses come back in the language the editor is already working in (`Mailand, Italien` for a German panel, `Milano, Italia` for an Italian one, same point). Previously no language was requested at all and Nominatim answered in the local language of the place. Note that `properties.address` is therefore stored in whichever language the editor who saved it was using — it is a human-readable label, not a stable key; the coordinates remain the stable value. Documented in [docs/CONFIGURATION.md](docs/CONFIGURATION.md#geocoding-language).
+
+- **The POI layer control speaks the admin panel's language** - Its panel title and its button were hardcoded English (`POI Layers`, `Toggle Layers`) — the last piece of this plugin's UI that did not follow the editor's locale, in a release that translated everything else. The control builds raw DOM as a MapLibre `IControl`, so it cannot format its own messages; the two strings it owns are now translated by its React wrapper and passed in, the way its layer list already was. New keys `layers.title` and `layers.toggle` in all five languages, with a test asserting both reach the rendered panel.
+
 ### Changed
 
 - **The read-only fields below the map have a fixed shape** - They were one slot whose label *and* meaning changed between "Address" and "POI Name" depending on the value, with a second row appearing and disappearing beneath it — so the layout shifted under the pointer and no position had a stable meaning. There are now always four fields: `Name`, `Longitude`, `Latitude` on one row and `Address` on the next. Each holds exactly one property and stays empty (`—`) when the location has none. Laid out with the design system's `Grid` instead of a hand-rolled flex `div`, so spacing comes from the theme rather than hardcoded pixels. `Null Island` moved from the address field to the name field, where a place name belongs.
@@ -24,6 +28,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The map's controls have a declared order** - MapLibre has no ordering API — `addControl` appends in call order — so while each control was its own React component the on-screen order was decided by whichever mounted first. The three top-right controls are now declared together: fullscreen, which acts on the container, above zoom, compass and geolocate, which act on the view.
 
 - **Clicking the location marker no longer raises a notification** - It reported the coordinates, which are shown permanently in the fields below the map: a transient channel repeating a persistent one.
+
+- **Lint and format now cover `tests/`** - `npm run lint` and `npm run format:check` only looked at `admin/src` and `server/src`, so nothing ever checked the test suite — which is how a Prettier violation sat on `main` from the draggable-marker commit until it was noticed by hand. `eslint.config.js` already carried a dedicated `tests/**` block (Vitest globals, `no-explicit-any` relaxed), so the rules were written but never applied; only the script's path list was missing. Verified by reintroducing that exact violation and confirming `npm run lint` now exits 1. Root config files stay out: `vitest.config.ts` is clean but `eslint.config.js` is legitimately CommonJS and trips `no-require-imports`. Dev-only change — not part of the published package.
+
+- **`searchNearbyPOIsForSnap()` split into `searchNearbyCustomPOIs()`** - The old function queried Nominatim *and* one custom source, which is what tied the two together above. It now queries the custom source only; the Nominatim call moved to the caller. Internal to the admin bundle — not part of the plugin's public API.
+
+- **Nominatim response format** - Requests moved from `format=jsonv2` (reverse) and `format=json` (search) to `format=geocodejson`. Of the four formats Nominatim offers, only GeocodeJSON normalises the address keys across countries — `street`/`housenumber`/`city` — where `jsonv2` and `geojson` return the raw OSM tags (`road`, `house_number`) plus the `city|town|village` variance that every consumer would otherwise have to unpick. The same field names are emitted by [Photon](https://github.com/komoot/photon) and Addok, so a different geocoding backend can be substituted without changing how responses are read. `format=geojson` was considered and rejected: its RFC 7946 envelope is of no use here, since the plugin builds its own single `Feature` rather than storing Nominatim's `FeatureCollection`, while its `address` dictionary is the unnormalised one. Self-hosted instances need no change — GeocodeJSON is built in and enabled by default.
+
+- **Dead `namedetails` branch removed** - `queryNominatim()` preferred `namedetails.name` over the plain name, but `namedetails` is only returned with `namedetails=1`, which the plugin never sent. The branch had never executed.
+
+- **Documentation brought back in line with the code** - Every guide had drifted from what the plugin does:
+
+  - **Both screenshots retaken.** The one at the top of the README predated the whole of this release: it showed the old two-slot read-only strip, the old plain search input, and no POI layer panel. Both are now also a third of their former weight (1.1 MB → 317 KB, 55 KB → 23 KB) at unchanged resolution.
+  - **The search runs on Enter, and no document said so.** The single most useful thing to tell a new editor about a field that deliberately does not autocomplete. Added to the README and to [docs/USAGE.md](docs/USAGE.md).
+  - **"The selected POI marker turns orange (#ff5200)"** — in [docs/USAGE.md](docs/USAGE.md) and [docs/POI.md](docs/POI.md), and never true in this code: the marker grows from 10px to 12px and drops to 0.8 opacity, keeping its layer's colour. Likewise the layer panel's "eye icon", which is a coloured dot — filled when shown, an outline when hidden — on a row that is itself the click target.
+  - **Notification strings** quoted in three places (`"POI Name (3m)"`, `"POI Name (source: Source Layer)"`, `"Location saved (coordinates only)"`) had all been reworded by the translation work above.
+  - **`mapStyles`' documented default was MapLibre's demo tiles**, which is not what [config/schema.ts](server/src/config/schema.ts) has ever set: the default is OpenFreeMap Liberty, a full street-level basemap. The demo style draws countries and borders only — no streets, no city-scale place names — so it cannot support the one task this field exists for. OpenFreeMap now leads that section as the built-in default.
+  - **Stored-value examples** showed the pre-`geocodejson` address shape, and attributed `sourceId`, `category` and `metadata` to search results — properties only a POI pick sets. A geocoded result carries exactly `name`, `address`, `source` and `inputMethod`.
+  - **[CONTRIBUTING.md](CONTRIBUTING.md) documented the wrong Nominatim contract** to anyone extending the geocoder: a `format=json` endpoint and a flat `display_name` response, two formats out of date. Replaced with the GeocodeJSON envelope the code actually reads, and a note that `label` is deliberately not what gets stored.
+  - **Four tables of contents were missing entries** (`PMTiles POI Sources`, `Troubleshooting`, `Complete Configuration Example`, `Best Practices`), and POI.md carried two headings called "Layer Control" — so the table of contents's own `#layer-control` link landed on a PMTiles subsection instead of the section it named.
+  - **Localisation** was described as returning addresses "in the local language of the region"; they follow the admin panel's locale.
+
+- **Five unused translation keys removed** - `search`, `search.button`, `geocoding.success`, `geocoding.error` and `geocoding.no-results` were read by nothing in `admin/src`, in all five locales. `search.button` dated from the search field's own button, gone since the Combobox rework; the `geocoding.*` trio described a notification flow this plugin does not have.
 
 ### Fixed
 
@@ -37,27 +63,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A search that found nothing gave no feedback** - The "no results" message was unreachable code: the dropdown was only opened when there was at least one result, and the message rendered only when the dropdown was open with none. The tracked loading state was likewise never rendered, leaving the interface unchanged for the seconds a Nominatim call can take. Both are now shown, and the message — previously hardcoded English — is translated.
 
-- **Five missing Spanish translations** - `es.json` was missing `search.placeholder`, `search.button` and `search.clear`, which fell back to their message ids.
-
-### Changed
-
-- **Lint and format now cover `tests/`** - `npm run lint` and `npm run format:check` only looked at `admin/src` and `server/src`, so nothing ever checked the test suite — which is how a Prettier violation sat on `main` from the draggable-marker commit until it was noticed by hand. `eslint.config.js` already carried a dedicated `tests/**` block (Vitest globals, `no-explicit-any` relaxed), so the rules were written but never applied; only the script's path list was missing. Verified by reintroducing that exact violation and confirming `npm run lint` now exits 1. Root config files stay out: `vitest.config.ts` is clean but `eslint.config.js` is legitimately CommonJS and trips `no-require-imports`. Dev-only change — not part of the published package.
-
-### Fixed
+- **Missing Spanish translations** - `es.json` was missing `search.placeholder` and `search.clear`, which fell back to their message ids.
 
 - **Double-click never produced an address without custom POI sources** - The Nominatim lookup that resolves the basemap's own POIs ran *inside* the loop over enabled custom POI layers, so it inherited that loop's conditions. With no `poiSources` configured, `poiLayers` was empty, the loop body never executed, and a double-click — even landing exactly on a hotel or a shop drawn by the map style — saved bare coordinates with no name and no address. Nominatim covers the basemap and has nothing to do with the custom sources, so it is now queried once per gesture, outside that loop. As a side effect this also stops repeating an identical reverse-geocoding request once per configured source: an app with three custom layers issued three of them for a single double-click, against a service whose usage policy caps clients at 1 request per second.
 
   The snap threshold is unchanged at `poiSnapRadius` (default 5m) and no configuration option was added. Clicking away from any POI still saves coordinates only — deliberately, since OpenStreetMap answers a reverse-geocoding query with its nearest match at *any* distance (39m for a point in central Milan, 366km in unmapped terrain), so accepting it unconditionally would attach a wildly wrong address.
-
-### Changed
-
-- **`searchNearbyPOIsForSnap()` split into `searchNearbyCustomPOIs()`** - The old function queried Nominatim *and* one custom source, which is what tied the two together above. It now queries the custom source only; the Nominatim call moved to the caller. Internal to the admin bundle — not part of the plugin's public API.
-
-### Added
-
-- **Geocoding follows the admin panel locale** - Nominatim requests now carry the editor's admin locale as `accept-language`, so search results and reverse-geocoded addresses come back in the language the editor is already working in (`Mailand, Italien` for a German panel, `Milano, Italia` for an Italian one, same point). Previously no language was requested at all and Nominatim answered in the local language of the place. Note that `properties.address` is therefore stored in whichever language the editor who saved it was using — it is a human-readable label, not a stable key; the coordinates remain the stable value. Documented in [docs/CONFIGURATION.md](docs/CONFIGURATION.md#geocoding-language).
-
-### Fixed
 
 - **Unreadable addresses saved from Nominatim** - `properties.address` was Nominatim's `display_name` verbatim, which is not a postal address: it concatenates every administrative level the service holds for a place, in the same order for every country. A hotel in Milan was stored as `21 House of Stories - Milano Città Studi, 24, Via Enrico Noë, Buenos Aires - Venezia, Municipio 3, Milano, Rodano, Milano, Lombardia, 20133, Italia` — the POI name repeated in front of its own address, two administrative subdivisions nobody writes on an envelope, and the city three times over.
 
@@ -66,11 +76,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The field order is deliberately the same for every country: a US address reads `5th Avenue 350`, not `350 5th Avenue`. Rendering an address per local postal convention needs a template set per country and is left to consumers, who have the coordinates and `name` as stable inputs.
 
   The same applies to search results, where `display_name` had been used as both the name *and* the address of every hit.
-
-### Changed
-
-- **Nominatim response format** - Requests moved from `format=jsonv2` (reverse) and `format=json` (search) to `format=geocodejson`. Of the four formats Nominatim offers, only GeocodeJSON normalises the address keys across countries — `street`/`housenumber`/`city` — where `jsonv2` and `geojson` return the raw OSM tags (`road`, `house_number`) plus the `city|town|village` variance that every consumer would otherwise have to unpick. The same field names are emitted by [Photon](https://github.com/komoot/photon) and Addok, so a different geocoding backend can be substituted without changing how responses are read. `format=geojson` was considered and rejected: its RFC 7946 envelope is of no use here, since the plugin builds its own single `Feature` rather than storing Nominatim's `FeatureCollection`, while its `address` dictionary is the unnormalised one. Self-hosted instances need no change — GeocodeJSON is built in and enabled by default.
-- **Dead `namedetails` branch removed** - `queryNominatim()` preferred `namedetails.name` over the plain name, but `namedetails` is only returned with `namedetails=1`, which the plugin never sent. The branch had never executed.
 
 ## [1.5.0] - 2026-08-21
 

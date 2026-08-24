@@ -55,16 +55,22 @@ You can also add the field programmatically by editing your content type's schem
 
 ## Selecting Locations
 
-There are three ways to select a location on the map:
+There are four ways to select a location on the map:
 
 ### 1. Using the Search Box
 
 The easiest way to find and select a location:
 
 1. Type an address or place name in the **search box** at the top of the map
-2. Select a result from the dropdown
-3. The map will zoom to the location and place a marker
-4. The location data (name, address, coordinates) is automatically saved
+2. Press **Enter** (or click the chevron on the right) to run the search
+3. Pick a result — with the mouse, or with the arrow keys and Enter
+4. The map flies to the location and places a marker
+5. The location data (name, address, coordinates) is automatically saved
+
+**The search does not run while you type.** Nominatim's
+[usage policy](https://operations.osmfoundation.org/policies/nominatim/) rules out
+autocomplete-style querying, so results are fetched only when you ask for them. Each result names
+its source on a second line — `OpenStreetMap`, or the name of one of your own POI layers.
 
 **What's saved**:
 - Place name
@@ -97,9 +103,9 @@ If custom POI layers are configured (see [POI Integration](POI.md)), you can cli
 - Source: your custom API identifier
 
 **Visual feedback**:
-- Selected POI marker turns orange (#ff5200)
-- Success notification shows POI name
-- Readonly fields display coordinates and address
+- The selected POI's circle grows slightly and becomes semi-transparent; it keeps its layer's colour
+- A success notification names the POI and the layer it came from — *Selected Bump al Monumentale from Skatespots*
+- The readonly fields below the map fill in with the name, address and coordinates
 
 ### 3. Double-Clicking on the Map
 
@@ -113,8 +119,8 @@ For precise coordinate selection or when no POI exists:
 **A) On a POI (within snap radius - default 5 meters)**:
 - Automatically selects the nearest POI
 - Saves complete POI data (same as clicking the POI marker)
-- Notification shows: "POI Name (distance)"
-- Example: "Skatepark Milano (3m)"
+- Notification names the POI and how far it was from where you pointed
+- Example: *Selected Skatepark Milano from Skatespots (3m away)*
 
 Both kinds of POI count here:
 - **Basemap POIs** — the shops, hotels and stations drawn by the map style itself. These are looked
@@ -125,7 +131,7 @@ Both kinds of POI count here:
 - Places marker at exact click coordinates
 - Saves **only coordinates** (no name or address)
 - Useful for marking locations without existing POI data
-- Notification shows: "Location saved (coordinates only)"
+- Notification shows: *Coordinates set*
 
 **Why an address is not always produced**
 
@@ -217,7 +223,7 @@ Now each language version of your content can have a different location.
 
 ### Important Notes
 
-- **Addresses automatically translate**: When using Nominatim geocoding, addresses are returned in the local language of the region
+- **Addresses follow the admin panel language**: Nominatim requests carry the locale you are working in, so the same point is stored as `Mailand, Italien` from a German panel and `Milano, Italia` from an Italian one. The stored `address` is therefore a human-readable label in whichever language its editor used — not a stable key. The coordinates are the stable value. See [Geocoding language](CONFIGURATION.md#geocoding-language)
 - **Coordinates don't change**: If the same physical location applies to all languages, keep localization disabled
 - **Don't use for translations**: Localization is for different physical locations, not for translating the same location's name/address
 
@@ -231,8 +237,8 @@ The layer control lets you toggle POI layers on and off:
 
 1. Look for the **layer icon** (usually in the top-right of the map)
 2. Click to open the layer control panel
-3. Each POI source has an **colored dot** next to its name
-4. Click the dot icon to show/hide that layer's POI markers
+3. Each POI source has a **coloured dot** next to its name — filled when the layer is shown, an empty outline when it is hidden
+4. Click a row to show or hide that layer's POI markers
 
 ### Features
 
