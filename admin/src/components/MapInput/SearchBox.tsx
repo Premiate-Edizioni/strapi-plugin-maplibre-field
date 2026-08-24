@@ -3,11 +3,21 @@
  *
  * Provides a search interface for geocoding (Nominatim) and custom POI search.
  * Displays results in a dropdown and calls onSelectResult when user selects a location.
+ *
+ * Built on the design system's Combobox, which implements the WAI-ARIA combobox pattern for us:
+ * arrow-key navigation, Enter to pick, Escape to dismiss, the listbox/option roles and the live
+ * announcements. The previous hand-rolled dropdown was a list of clickable <div>s — reachable with
+ * a mouse only, and invisible to a screen reader.
+ *
+ * `autocomplete="none"` is essential: results come from a server, so the labels need not contain
+ * what the user typed (searching "duomo" can legitimately return "Piazza del Duomo, Milano" or a
+ * POI named something else entirely). Any client-side filtering would hide valid results.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Flex, Box, Typography, Searchbar, SearchForm } from '@strapi/design-system';
+import { Box, Combobox, ComboboxOption, Flex, Typography } from '@strapi/design-system';
+import { Search } from '@strapi/icons';
 import { performSearch, type SearchResult } from '../../services/geocoder-service';
 import type { LocationFeature } from '../../services/poi-service';
 import getTranslation from '../../utils/getTrad';
@@ -47,25 +57,55 @@ const SearchBox: React.FC<SearchBoxProps> = ({
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Whether the results on screen answer the text currently in the box. Editing the text
+  // invalidates them, which is what puts Enter back in "run a search" mode.
+  const [hasSearched, setHasSearched] = useState(false);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
+  // Backspace opens the list inside the primitive, and that is an editing keystroke, not a request
+  // to see the options — it must not be allowed to fire a search.
+  const isEditingKeyRef = useRef(false);
+  // Whether the open request being handled is someone asking for the options — the chevron, or the
+  // arrow keys. Clicking anywhere in the field also asks the primitive to open, and that one is
+  // just "put the cursor here".
+  const wantsOptionsRef = useRef(false);
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
+  const handleTextChange = (value: string) => {
+    setQuery(value);
+    setResults([]);
+    setHasSearched(false);
+    setIsOpen(false);
+  };
+
+  /**
+   * The chevron is the standard "show me the options" affordance, so it has to do something. With
+   * text in the box and no results yet, the options are whatever the search returns — so run it,
+   * exactly as Enter does. With an empty box there is nothing to search, so open on the empty-state
+   * message, the way Strapi's own relation picker does.
+   *
+   * Requests to open never come from typing: `isPrintableCharacter` below switches that off, both
+   * because Nominatim's usage policy rules out autocomplete-style querying and because an open list
+   * is the state in which Enter picks an option instead of searching.
+   */
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setIsOpen(false);
+      return;
     }
-  }, [isOpen]);
+
+    if (isEditingKeyRef.current) return;
+
+    // Merely clicking into the box is not a request for options: with nothing to show it would
+    // greet the user with an empty popup. Once a search has produced results, reopening them on
+    // click is the ordinary combobox behaviour and worth keeping.
+    if (!wantsOptionsRef.current && results.length === 0) return;
+
+    if (query.trim() && !hasSearched && !isLoading) {
+      handleSearch();
+      return;
+    }
+
+    setIsOpen(true);
+  };
 
   const handleSearch = async () => {
     if (!query.trim()) {
@@ -75,6 +115,9 @@ const SearchBox: React.FC<SearchBoxProps> = ({
     }
 
     setIsLoading(true);
+    // Open before the request resolves so the combobox can show its loading message, and stay open
+    // on an empty result so the "no results" message is reachable at all.
+    setIsOpen(true);
 
     try {
       const searchResults = await performSearch(query, {
@@ -86,43 +129,52 @@ const SearchBox: React.FC<SearchBoxProps> = ({
       });
 
       setResults(searchResults);
-      setIsOpen(searchResults.length > 0);
     } catch (error) {
       console.error('Search error:', error);
       setResults([]);
-      setIsOpen(false);
     } finally {
+      setHasSearched(true);
       setIsLoading(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault(); // Prevent form submission
+    isEditingKeyRef.current = e.key === 'Backspace';
+    wantsOptionsRef.current = e.key === 'ArrowDown' || e.key === 'ArrowUp';
+
+    // Enter runs the search while the list is closed, and picks the highlighted result while it is
+    // open — the combobox handles the latter.
+    if (e.key === 'Enter' && !isOpen) {
+      e.preventDefault();
       handleSearch();
-    } else if (e.key === 'Escape') {
-      setIsOpen(false);
-      setQuery('');
     }
   };
 
   const handleClear = () => {
     setQuery('');
     setResults([]);
+    setHasSearched(false);
     setIsOpen(false);
   };
 
-  const handleSelectResult = (result: SearchResult) => {
+  const handleSelectResult = (id: string) => {
+    const result = results.find((r) => r.id === id);
+    if (!result) return;
+
     onSelectResult(result.feature);
     setIsOpen(false);
     setQuery('');
     setResults([]);
+    setHasSearched(false);
   };
 
   /**
    * Get the indicator color for a search result
    * - Nominatim results: gray (#6c757d)
    * - Custom POI results: color from configuration (or red fallback)
+   *
+   * The colour repeats what the second line of each result says in words — it is a redundant cue,
+   * never the only way to tell the sources apart.
    */
   const getResultColor = (result: SearchResult): string => {
     if (result.source === 'nominatim') {
@@ -142,110 +194,105 @@ const SearchBox: React.FC<SearchBoxProps> = ({
     return '#cc0000'; // Red fallback
   };
 
+  /** Where a result came from, named rather than merely coloured. */
+  const getSourceLabel = (result: SearchResult): string =>
+    result.source === 'nominatim'
+      ? formatMessage({
+          id: getTranslation('search.source-osm'),
+          defaultMessage: 'OpenStreetMap',
+        })
+      : result.feature.properties?.sourceLayer ||
+        formatMessage({ id: getTranslation('search.source-poi'), defaultMessage: 'Custom layer' });
+
   return (
-    <Box ref={containerRef} style={{ position: 'relative', width: '100%' }}>
-      <SearchForm onSubmit={(e) => e.preventDefault()}>
-        <Searchbar
-          name="location-search"
-          placeholder={formatMessage({ id: getTranslation('search.placeholder') })}
-          value={query}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onClear={handleClear}
-          clearLabel={formatMessage({ id: getTranslation('search.clear') })}
-        >
-          {formatMessage({ id: getTranslation('search.placeholder') })}
-        </Searchbar>
-      </SearchForm>
+    <Box
+      width="100%"
+      // The chevron is the only part of the field that means "show me the options"; it is the one
+      // element carrying aria-expanded. Capture runs before the primitive's own handler, which is
+      // what lets handleOpenChange tell a chevron press from a click into the text.
+      onPointerDownCapture={(e: React.PointerEvent) => {
+        wantsOptionsRef.current = Boolean(
+          (e.target as HTMLElement)?.closest?.('button[aria-expanded]')
+        );
+      }}
+    >
+      <Combobox
+        name="location-search"
+        autocomplete="none"
+        // On blur a combobox reverts the text to the selected option's label, and having none it
+        // empties the box — wiping the search the moment focus moves to another field in the edit
+        // view. `allowCustomValue` tells it the typed text is a legitimate value of its own, so it
+        // survives losing focus and the results stay available when the user comes back.
+        allowCustomValue
+        placeholder={formatMessage({
+          id: getTranslation('search.placeholder'),
+          defaultMessage: 'Search for a location...',
+        })}
+        startIcon={<Search />}
+        textValue={query}
+        onTextValueChange={handleTextChange}
+        open={isOpen}
+        onOpenChange={handleOpenChange}
+        onKeyDown={handleKeyDown}
+        loading={isLoading}
+        loadingMessage={formatMessage({
+          id: getTranslation('search.loading'),
+          defaultMessage: 'Searching…',
+        })}
+        isPrintableCharacter={() => false}
+        noOptionsMessage={(value) =>
+          hasSearched
+            ? formatMessage(
+                {
+                  id: getTranslation('search.no-results'),
+                  defaultMessage: 'No results found for “{query}”',
+                },
+                { query: value || query }
+              )
+            : formatMessage({
+                id: getTranslation('search.no-results-yet'),
+                defaultMessage: 'No results available',
+              })
+        }
+        value=""
+        onChange={handleSelectResult}
+        onClear={handleClear}
+        clearLabel={formatMessage({ id: getTranslation('search.clear'), defaultMessage: 'Clear' })}
+      >
+        {results.map((result) => {
+          const name = result.feature.properties?.name || result.place_name;
+          const address = result.feature.properties?.address;
+          const context = [getSourceLabel(result), address].filter(Boolean).join(' · ');
 
-      {/* Results Dropdown */}
-      {isOpen && results.length > 0 && (
-        <Box
-          ref={dropdownRef}
-          background="neutral0"
-          shadow="filterShadow"
-          borderColor="neutral150"
-          hasRadius
-          padding={2}
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 4px)',
-            left: 0,
-            right: 0,
-            zIndex: 1000,
-            maxHeight: '300px',
-            overflowY: 'auto',
-          }}
-        >
-          {results.map((result) => {
-            const dotColor = getResultColor(result);
-
-            return (
-              <Box
-                key={result.id}
-                paddingTop={2}
-                paddingBottom={2}
-                paddingLeft={3}
-                paddingRight={3}
-                hasRadius
-                background={hoveredId === result.id ? 'primary100' : 'neutral0'}
-                onMouseEnter={() => setHoveredId(result.id)}
-                onMouseLeave={() => setHoveredId(null)}
-                onClick={() => handleSelectResult(result)}
-                style={{
-                  cursor: 'pointer',
-                }}
-              >
-                <Flex gap={2} alignItems="center">
-                  {/* Source indicator dot */}
-                  <div
-                    style={{
-                      width: '10px',
-                      height: '10px',
-                      borderRadius: '50%',
-                      backgroundColor: dotColor,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <Typography
-                    variant="omega"
-                    textColor="neutral800"
-                    style={{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {result.place_name}
+          return (
+            <ComboboxOption key={result.id} value={result.id} textValue={result.place_name}>
+              <Flex gap={2} alignItems="center">
+                <div
+                  aria-hidden
+                  style={{
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    backgroundColor: getResultColor(result),
+                    flexShrink: 0,
+                  }}
+                />
+                <Flex direction="column" alignItems="flex-start" gap={0} overflow="hidden">
+                  {/* No textColor: Typography defaults to currentcolor, so the name picks up the
+                      primary600 the design system paints on a highlighted option — the same cue
+                      Strapi's relation picker gives. Pinning it to neutral800 suppressed it. */}
+                  <Typography variant="omega" ellipsis>
+                    {name}
+                  </Typography>
+                  <Typography variant="pi" textColor="neutral600" ellipsis>
+                    {context}
                   </Typography>
                 </Flex>
-              </Box>
-            );
-          })}
-        </Box>
-      )}
-
-      {/* No results message */}
-      {isOpen && results.length === 0 && !isLoading && query.trim() && (
-        <Box
-          background="neutral0"
-          shadow="filterShadow"
-          borderColor="neutral150"
-          hasRadius
-          padding={4}
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 4px)',
-            left: 0,
-            right: 0,
-            zIndex: 1000,
-          }}
-        >
-          <Typography variant="omega" textColor="neutral600">
-            No results found for "{query}"
-          </Typography>
-        </Box>
-      )}
+              </Flex>
+            </ComboboxOption>
+          );
+        })}
+      </Combobox>
     </Box>
   );
 };

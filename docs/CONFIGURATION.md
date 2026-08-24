@@ -75,7 +75,7 @@ export default {
 Controls how the map's fullscreen button expands the map:
 
 - `true` (default) - CSS-based fullscreen. The map fills the browser viewport without leaving the page. Generally smoother, and the recommended setting on mobile.
-- `false` - Native [Fullscreen API](https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API). The map takes over the whole screen, including outside the browser window.
+- `false` - Native [Fullscreen API](https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API). The map takes over the whole screen, including outside the browser window. Some browser/GPU combinations (Firefox on Linux in particular) lose the WebGL context across the transition and leave the map full-screen but frozen — if that happens, keep the default.
 
 ```typescript
 "maplibre-field": {

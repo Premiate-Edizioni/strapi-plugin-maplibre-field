@@ -7,8 +7,16 @@ import { IntlProvider } from 'react-intl';
 import { DesignSystemProvider } from '@strapi/design-system';
 
 // vi.mock factories run before the module body, so anything they close over has to be hoisted too.
-const { mockPluginConfig, mockMapInstance, mockSearchBoxProps } = vi.hoisted(() => ({
+const {
+  mockPluginConfig,
+  mockMapInstance,
+  mockSearchBoxProps,
+  mockToggleNotification,
+  mockUseControl,
+} = vi.hoisted(() => ({
   mockSearchBoxProps: vi.fn(),
+  mockToggleNotification: vi.fn(),
+  mockUseControl: vi.fn(),
   // Stable config object: a new reference on every render would retrigger the map effects.
   mockPluginConfig: {
     mapStyles: [
@@ -26,8 +34,7 @@ const { mockPluginConfig, mockMapInstance, mockSearchBoxProps } = vi.hoisted(() 
     poiDisplayEnabled: undefined as boolean | undefined,
     poiSearchEnabled: undefined as boolean | undefined,
     poiSources: undefined as
-      | { id: string; name: string; apiUrl: string; enabled?: boolean }[]
-      | undefined,
+      { id: string; name: string; apiUrl: string; enabled?: boolean }[] | undefined,
   },
   // Map instance with all the methods MapInput calls
   mockMapInstance: {
@@ -56,6 +63,7 @@ const { mockPluginConfig, mockMapInstance, mockSearchBoxProps } = vi.hoisted(() 
     setCenter: vi.fn(),
     setZoom: vi.fn(),
     flyTo: vi.fn(),
+    easeTo: vi.fn(),
     addControl: vi.fn(),
     removeControl: vi.fn(),
     getContainer: vi.fn(() => document.createElement('div')),
@@ -72,7 +80,7 @@ vi.mock('@strapi/strapi/admin', () => ({
     },
   }),
   useNotification: () => ({
-    toggleNotification: vi.fn(),
+    toggleNotification: mockToggleNotification,
   }),
 }));
 
@@ -87,18 +95,20 @@ vi.mock('react-map-gl/maplibre', () => ({
   default: React.forwardRef(({ children }: any, ref: any) => {
     React.useImperativeHandle(ref, () => ({
       getMap: () => mockMapInstance,
+      // MapRef proxies the map's camera methods; handleSearchResult calls flyTo through it.
+      flyTo: mockMapInstance.flyTo,
     }));
     return <div data-testid="mock-map">{children}</div>;
   }),
-  FullscreenControl: () => <div>FullscreenControl</div>,
+  // MapInput builds its own FullscreenControl on top of useControl (see index.tsx)
+  useControl: mockUseControl,
   GeolocateControl: () => <div>GeolocateControl</div>,
-  Marker: ({ draggable, onClick, onDragEnd }: any) => (
+  Marker: ({ draggable, onDragEnd }: any) => (
     <div
       data-testid="main-marker"
       data-draggable={draggable ? 'true' : 'false'}
-      onClick={onClick}
-      // `dragEnd` has no DOM equivalent; use blur as a distinct trigger so the
-      // test can fire the marker's drag path without going through onClick.
+      // `dragEnd` has no DOM equivalent; blur stands in for it so the test can
+      // fire the marker's drag path.
       onBlur={() => onDragEnd?.({ lngLat: { lng: 9.19, lat: 45.4642 } })}
     >
       Marker
@@ -131,10 +141,7 @@ vi.mock('../../../admin/src/components/MapInput/layer-control', () => ({
     <div>
       LayerControl
       {layers.map((layer: any) => (
-        <button
-          key={layer.id}
-          onClick={() => onLayerToggle(layer.id, !layer.enabled)}
-        >
+        <button key={layer.id} onClick={() => onLayerToggle(layer.id, !layer.enabled)}>
           toggle-{layer.id}
         </button>
       ))}
@@ -196,6 +203,7 @@ describe('MapInput Component', () => {
 
   beforeEach(() => {
     mockOnChange.mockClear();
+    mockToggleNotification.mockClear();
   });
 
   test('renders without crashing', () => {
@@ -213,8 +221,8 @@ describe('MapInput Component', () => {
     // With our mocked config, defaultCenter is [10, 45]
     expect(screen.getByDisplayValue('10')).toBeInTheDocument();
     expect(screen.getByDisplayValue('45')).toBeInTheDocument();
-    // When no address is defined and coordinates are not [0, 0], the field should be empty
-    expect(screen.getByDisplayValue('')).toBeInTheDocument();
+    // With no location picked yet, Name and Address are both there but empty
+    expect(screen.getAllByDisplayValue('')).toHaveLength(2);
   });
 
   test('displays coordinates from value prop', () => {
@@ -231,34 +239,13 @@ describe('MapInput Component', () => {
     expect(screen.getByDisplayValue('Milano, Italia')).toBeInTheDocument();
   });
 
-  test('shows Address label and no Full Address field when value has no sourceId', () => {
-    const value = JSON.stringify({
+  test('shows the same Name and Address fields whether or not the value is a POI', () => {
+    const plain = JSON.stringify({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [9.195, 45.464] },
-      properties: { name: 'Via Roma, Milano' },
+      properties: { address: 'Via Roma, Milano' },
     });
-
-    render(<MockMapInput {...defaultProps} value={value} />);
-    expect(screen.getByText('Address')).toBeInTheDocument();
-    expect(screen.queryByText('Full Address')).not.toBeInTheDocument();
-    expect(screen.queryByText('POI Name')).not.toBeInTheDocument();
-  });
-
-  test('the Address field holds the address, not the short name', () => {
-    // Without a POI this is the only field of the two, so it has to carry the address its
-    // label promises — the name alone ("Rivoli") is not one.
-    const value = JSON.stringify({
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [7.5176764, 45.0697151] },
-      properties: { name: 'Rivoli', address: '10098 Rivoli, Piemonte, Italia' },
-    });
-
-    render(<MockMapInput {...defaultProps} value={value} />);
-    expect(screen.getByDisplayValue('10098 Rivoli, Piemonte, Italia')).toBeInTheDocument();
-  });
-
-  test('shows POI Name and Full Address fields when value has sourceId', () => {
-    const value = JSON.stringify({
+    const poi = JSON.stringify({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [9.195, 45.464] },
       properties: {
@@ -268,15 +255,41 @@ describe('MapInput Component', () => {
       },
     });
 
-    render(<MockMapInput {...defaultProps} value={value} />);
-    expect(screen.getByText('POI Name')).toBeInTheDocument();
-    expect(screen.getByText('Full Address')).toBeInTheDocument();
-    expect(screen.queryByText('Address')).not.toBeInTheDocument();
-    expect(screen.getByDisplayValue('Skatespot Centro')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Via Roma 1, Milano')).toBeInTheDocument();
+    const { rerender } = render(<MockMapInput {...defaultProps} value={plain} />);
+    expect(screen.getByText('Name')).toBeInTheDocument();
+    expect(screen.getByText('Address')).toBeInTheDocument();
+
+    rerender(<MockMapInput {...defaultProps} value={poi} />);
+    expect(screen.getByText('Name')).toBeInTheDocument();
+    expect(screen.getByText('Address')).toBeInTheDocument();
   });
 
-  test('does not show Full Address field when POI has no address property', () => {
+  test('the Address field holds the address and the Name field the short name', () => {
+    const value = JSON.stringify({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [7.5176764, 45.0697151] },
+      properties: { name: 'Rivoli', address: '10098 Rivoli, Piemonte, Italia' },
+    });
+
+    render(<MockMapInput {...defaultProps} value={value} />);
+    expect(screen.getByDisplayValue('Rivoli')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('10098 Rivoli, Piemonte, Italia')).toBeInTheDocument();
+  });
+
+  test('names [0, 0] "Null Island" instead of giving it an address', () => {
+    const value = JSON.stringify({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [0, 0] },
+      properties: {},
+    });
+
+    render(<MockMapInput {...defaultProps} value={value} />);
+    // The joke belongs in Name — it is a place name, not a postal address.
+    expect(screen.getByDisplayValue('Null Island')).toBeInTheDocument();
+    expect(screen.getByLabelText('Address')).toHaveValue('');
+  });
+
+  test('keeps the Address field when the value has no address', () => {
     const value = JSON.stringify({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [9.195, 45.464] },
@@ -287,8 +300,88 @@ describe('MapInput Component', () => {
     });
 
     render(<MockMapInput {...defaultProps} value={value} />);
-    expect(screen.getByText('POI Name')).toBeInTheDocument();
-    expect(screen.queryByText('Full Address')).not.toBeInTheDocument();
+    expect(screen.getByText('Address')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Skatespot Centro')).toBeInTheDocument();
+  });
+
+  test('map controls are built in a fixed order, with the configured fullscreen mode', () => {
+    // MapLibre appends controls in addControl order, so this order is the on-screen stack order:
+    // fullscreen (acts on the container) above zoom/compass/geolocate (act on the view).
+    const built: string[] = [];
+    // `new` is used on these, so they have to be constructible — no arrow functions.
+    const record = (name: string) =>
+      function () {
+        built.push(name);
+        return { _setupUI: () => {}, _container: document.createElement('div') };
+      };
+    const mapLib = {
+      FullscreenControl: vi.fn(record('fullscreen')),
+      NavigationControl: vi.fn(record('navigation')),
+      GeolocateControl: vi.fn(record('geolocate')),
+    };
+    mockUseControl.mockClear();
+
+    render(<MockMapInput {...defaultProps} />);
+
+    // useControl is mocked, so it records one call per control per render; the real hook memoizes.
+    // The first render's three calls are the ones that define the stack order.
+    for (const [onCreate] of mockUseControl.mock.calls.slice(0, 3)) {
+      onCreate({ mapLib });
+    }
+
+    expect(built).toEqual(['fullscreen', 'navigation', 'geolocate']);
+    // react-map-gl's own FullscreenControl silently drops `pseudo`; ours must not.
+    expect(mapLib.FullscreenControl).toHaveBeenCalledWith({ pseudo: true });
+    // Without tracking, the geolocate button only re-centres and the user can never switch the
+    // location overlay back off.
+    expect(mapLib.GeolocateControl).toHaveBeenCalledWith({ trackUserLocation: true });
+  });
+
+  test('placing a point recentres the map without changing the zoom', async () => {
+    // The recentre only applies to a field that already holds a value (isDefaultViewState).
+    const value = JSON.stringify({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [9.195, 45.464] },
+      properties: { address: 'Via Roma, Milano' },
+    });
+    mockMapInstance.easeTo.mockClear();
+
+    render(<MockMapInput {...defaultProps} value={value} />);
+    fireEvent.blur(screen.getByTestId('main-marker'));
+
+    await waitFor(() => expect(mockMapInstance.easeTo).toHaveBeenCalled());
+    // The zoom is the user's working context — choosing a point must not throw them back out.
+    for (const [options] of mockMapInstance.easeTo.mock.calls) {
+      expect(options).not.toHaveProperty('zoom');
+    }
+  });
+
+  test('a search result flies the camera, and nothing cancels the flight', async () => {
+    mockMapInstance.flyTo.mockClear();
+    mockMapInstance.easeTo.mockClear();
+
+    render(<MockMapInput {...defaultProps} />);
+    const { onSelectResult } =
+      mockSearchBoxProps.mock.calls[mockSearchBoxProps.mock.calls.length - 1][0];
+
+    onSelectResult({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [9.19, 45.46] },
+      properties: { name: 'Duomo', address: 'Piazza del Duomo, Milano' },
+    });
+
+    await waitFor(() => expect(mockMapInstance.flyTo).toHaveBeenCalledTimes(1));
+    // An easeTo here would cut the flight short a frame after it starts.
+    expect(mockMapInstance.easeTo).not.toHaveBeenCalled();
+  });
+
+  test('the geolocate accuracy circle is made click-through', () => {
+    // Without this the circle — often kilometres wide on desktop — covers the location pin and
+    // swallows the mousedown that starts a drag.
+    const injected = document.getElementById('maplibre-field-overrides');
+    expect(injected?.textContent).toContain(
+      '.maplibregl-user-location-accuracy-circle{pointer-events:none}'
+    );
   });
 
   test('main marker is draggable', () => {
@@ -342,6 +435,27 @@ describe('MapInput Component', () => {
     expect(feature.properties.inputMethod).toBe('poi_click');
   });
 
+  test('a snapped POI raises one localized notification, not two', async () => {
+    vi.mocked(findNearestPOI).mockReturnValueOnce({
+      id: 'poi-1',
+      name: 'Skatespot Centro',
+      type: 'skating_spot',
+      coordinates: [9.2, 45.47],
+      mapName: 'Skatespots',
+      distance: 3,
+    } as any);
+
+    render(<MockMapInput {...defaultProps} />);
+
+    fireEvent.blur(screen.getByTestId('main-marker'));
+
+    await waitFor(() => expect(mockToggleNotification).toHaveBeenCalledTimes(1));
+    expect(mockToggleNotification).toHaveBeenCalledWith({
+      type: 'success',
+      message: 'Selected Skatespot Centro from Skatespots (3m away)',
+    });
+  });
+
   describe('search sees the live layer-control toggle, not just the config default', () => {
     const originalPoiSources = mockPluginConfig.poiSources;
     const originalPoiDisplayEnabled = mockPluginConfig.poiDisplayEnabled;
@@ -353,7 +467,12 @@ describe('MapInput Component', () => {
       mockPluginConfig.poiSearchEnabled = true;
       // Disabled by default in config...
       mockPluginConfig.poiSources = [
-        { id: 'skatespots', name: 'Skatespots', apiUrl: 'https://poi.test/skatespots.geojson', enabled: false },
+        {
+          id: 'skatespots',
+          name: 'Skatespots',
+          apiUrl: 'https://poi.test/skatespots.geojson',
+          enabled: false,
+        },
       ];
     });
 

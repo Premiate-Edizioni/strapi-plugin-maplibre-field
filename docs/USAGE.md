@@ -184,9 +184,12 @@ Simply select a new location using any of the four methods above. The new locati
 
 Below the map, you'll see readonly fields displaying:
 
+- **Name**: The place name (empty for a point that has none, e.g. a plain map double-click)
 - **Longitude**: The X coordinate (-180 to 180)
 - **Latitude**: The Y coordinate (-90 to 90)
 - **Address**: Full formatted address (if available)
+
+All four are always shown, in the same place, so the layout never shifts as you pick different kinds of location; a field is simply empty when the selected location has no value for it.
 
 These fields are for reference only and cannot be edited directly. To change values, select a new location on the map.
 

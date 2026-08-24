@@ -4,14 +4,12 @@ import { useNotification } from '@strapi/strapi/admin';
 import SearchBox from './SearchBox';
 import BasemapControlComponent from './basemap-control';
 import LayerControl, { LayerConfig } from './layer-control';
-import { Flex, Typography, Field } from '@strapi/design-system';
+import { Flex, Grid, Typography, Field } from '@strapi/design-system';
 import Map, {
-  FullscreenControl,
-  GeolocateControl,
   Marker,
-  NavigationControl,
   Source,
   Layer,
+  useControl,
   type MapLayerMouseEvent,
   type MapRef,
   type MarkerDragEvent,
@@ -40,6 +38,25 @@ configureMaplibreWorker();
 const protocol = new Protocol();
 maplibregl.addProtocol('pmtiles', protocol.tile);
 
+/**
+ * MapLibre sizes the geolocate accuracy circle to the reported accuracy —
+ * `diameter = 2 * accuracy / metresPerPixel` (GeolocateControl._updateCircleRadiusIfNeeded).
+ * Desktop browsers locate by Wi-Fi or IP, so accuracy is routinely kilometres and the circle covers
+ * the whole viewport. It ships without `pointer-events: none`, so it then swallows the mousedown
+ * meant for the location pin underneath and the pin can no longer be dragged. The circle is
+ * decorative — nothing listens to it — so it has no business capturing the pointer.
+ *
+ * Injected rather than kept in a .css file: the plugin build extracts stylesheets to
+ * dist/admin/*.css and emits no import for them, so a plain CSS import never reaches the browser.
+ */
+const OVERRIDES_STYLE_ID = 'maplibre-field-overrides';
+if (typeof document !== 'undefined' && !document.getElementById(OVERRIDES_STYLE_ID)) {
+  const style = document.createElement('style');
+  style.id = OVERRIDES_STYLE_ID;
+  style.textContent = '.maplibregl-user-location-accuracy-circle{pointer-events:none}';
+  document.head.appendChild(style);
+}
+
 interface MapFieldProps {
   intlLabel: {
     id: string;
@@ -51,13 +68,72 @@ interface MapFieldProps {
 }
 
 /**
- * Text for the first read-only field, which is labelled "POI Name" for a POI and "Address"
- * otherwise. A POI shows its name there and its address in the "Full Address" field below;
- * everything else has that one field only, so it has to hold the address.
+ * The read-only fields below the map always show the same slots in the same places: "Name" and
+ * "Address" each hold one property and stay empty when the selected location has no value for it,
+ * so neither the labels nor the layout change as the user picks different kinds of location.
  */
-const primaryFieldValue = (feature: LocationFeature): string => {
-  const { name, address, sourceId } = feature.properties;
-  return (sourceId ? name || address : address || name) || '';
+const placeName = (feature: LocationFeature): string => feature.properties.name || '';
+const placeAddress = (feature: LocationFeature): string => feature.properties.address || '';
+
+/**
+ * "You picked this" notifications, one per combination of what we know about the pick. Full
+ * sentences rather than a name joined to its layer by an arrow: an arrow is a symbol standing in
+ * for a preposition, and prepositions differ per language.
+ */
+const SELECTION_MESSAGES = {
+  'notification.selected': 'Selected {name}',
+  'notification.selected-from-layer': 'Selected {name} from {layer}',
+  'notification.snapped': 'Selected {name} ({distance}m away)',
+  'notification.snapped-from-layer': 'Selected {name} from {layer} ({distance}m away)',
+} as const;
+
+/**
+ * The map's top-right controls, in the order users expect them: the one that acts on the container
+ * (fullscreen) above the ones that act on the view (zoom, compass, geolocate). Basemap and layer
+ * controls add themselves later and land below, which is where controls that change *what* is shown
+ * belong.
+ *
+ * They live in one component on purpose. MapLibre has no ordering API — `addControl` appends in call
+ * order — so as long as each control is its own React component the stack order is decided by which
+ * one happens to mount first. Declaring the three `useControl` calls together makes the order
+ * explicit in the source instead of a side effect of mount timing.
+ *
+ * Fullscreen is built by hand rather than with react-map-gl's <FullscreenControl>, whose prop types
+ * accept `pseudo` but which only ever constructs `new FullscreenControl({ container })` — the option
+ * is silently dropped. That left `useFullscreenPseudo` dead and every map on the native Fullscreen
+ * API, which on Firefox/Linux returns a full-screen but frozen, uninteractive map.
+ */
+const MapControls: React.FC<{ pseudo: boolean }> = ({ pseudo }) => {
+  useControl(({ mapLib }) => new mapLib.FullscreenControl({ pseudo }), { position: 'top-right' });
+  useControl(({ mapLib }) => new mapLib.NavigationControl({}), { position: 'top-right' });
+  useControl(
+    ({ mapLib }) => {
+      // `trackUserLocation` makes the button a switch rather than a one-shot action, the way
+      // openstreetmap.org's locate control behaves: pressing it again turns location off and takes
+      // the dot and the accuracy circle off the map. Without it MapLibre only ever re-centres, and
+      // the user has no way to dismiss the overlay short of reloading the page. It costs a
+      // `watchPosition` while active — but only while the user has chosen to keep it on.
+      const geolocate = new mapLib.GeolocateControl({ trackUserLocation: true });
+      // Ported from react-map-gl's own GeolocateControl: StrictMode adds the control twice, and
+      // its UI setup is async, so without this guard the button's contents are created twice.
+      const control = geolocate as unknown as { _setupUI: () => void; _container: HTMLElement };
+      const setupUI = control._setupUI;
+      control._setupUI = () => {
+        if (!control._container.hasChildNodes()) setupUI();
+      };
+      return geolocate;
+    },
+    { position: 'top-right' }
+  );
+  return null;
+};
+
+const selectionMessageId = (
+  hasLayer: boolean,
+  hasDistance: boolean
+): keyof typeof SELECTION_MESSAGES => {
+  if (hasDistance) return hasLayer ? 'notification.snapped-from-layer' : 'notification.snapped';
+  return hasLayer ? 'notification.selected-from-layer' : 'notification.selected';
 };
 
 const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value }) => {
@@ -95,14 +171,18 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     }
   }
 
-  // Show "Null Island" when coordinates are [0, 0] and no address is defined
+  // [0, 0] is Null Island: name the point rather than inventing an address it does not have
   const isNullIsland = initialCoordinates[0] === 0 && initialCoordinates[1] === 0;
-  const initialAddress =
-    (result && primaryFieldValue(result)) || (isNullIsland ? 'Null Island' : '');
+  const initialName = (result && placeName(result)) || (isNullIsland ? 'Null Island' : '');
+
+  // Set when the search has already flown the camera to the new point, so the recentring effect
+  // below leaves that animation alone.
+  const cameraMovedBySearchRef = useRef(false);
 
   const [longitude, setLongitude] = useState(initialCoordinates[0]);
   const [latitude, setLatitude] = useState(initialCoordinates[1]);
-  const [address, setAddress] = useState(initialAddress);
+  const [locationName, setLocationName] = useState(initialName);
+  const [address, setAddress] = useState(result ? placeAddress(result) : '');
 
   const [viewState, setViewState] = useState({
     longitude: initialCoordinates[0],
@@ -168,7 +248,8 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       const isNullIsland = lng === 0 && lat === 0;
       setLongitude(lng);
       setLatitude(lat);
-      setAddress(isNullIsland ? 'Null Island' : '');
+      setLocationName(isNullIsland ? 'Null Island' : '');
+      setAddress('');
       setViewState((prev) => ({
         ...prev,
         longitude: lng,
@@ -380,22 +461,17 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
 
   // Handle POI marker click
   // Handle main marker click (MapLibre v5.18.0+ feature)
-  const handleMainMarkerClick = () => {
-    // Provide user feedback when main marker is clicked
-    // Shows current coordinates in a notification
-    toggleNotification({
-      type: 'info',
-      message: `Marker: [${longitude.toFixed(4)}, ${latitude.toFixed(4)}]`,
-    });
-  };
-
   // Handle main marker drag - reposition the point directly on the map.
   // Snaps to a nearby POI just like double-clicking the map does.
   const handleMainMarkerDragEnd = async (evt: MarkerDragEvent) => {
     await setLocationWithPOISnap([evt.lngLat.lng, evt.lngLat.lat], 'marker_drag');
   };
 
-  const handlePOIClick = async (poi: POI) => {
+  /**
+   * `distance` is set when the POI was snapped to rather than clicked directly, so the notification
+   * can say how far the picked point ended up from where the user actually pointed.
+   */
+  const handlePOIClick = async (poi: POI, distance?: number) => {
     setSelectedPOI(poi);
 
     // Use existing address from POI (NO additional reverse geocoding)
@@ -415,9 +491,17 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       })
     );
 
+    const messageId = selectionMessageId(Boolean(poi.mapName), distance !== undefined);
     toggleNotification({
       type: 'success',
-      message: poi.mapName ? `${poi.mapName} ➙ ${poi.name}` : `Selected ${poi.name}`,
+      message: formatMessage(
+        { id: getTranslation(messageId), defaultMessage: SELECTION_MESSAGES[messageId] },
+        {
+          name: poi.name,
+          layer: poi.mapName,
+          distance: distance === undefined ? undefined : Math.round(distance),
+        }
+      ),
     });
   };
 
@@ -590,13 +674,8 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       const nearestPOI = findNearestPOI(clickCoords, allNearbyPOIs);
 
       if (nearestPOI && nearestPOI.distance !== undefined && nearestPOI.distance <= snapRadius) {
-        // Found a POI within snap radius - use handlePOIClick for complete processing
-        await handlePOIClick(nearestPOI);
-
-        toggleNotification({
-          type: 'success',
-          message: `${nearestPOI.name} (${Math.round(nearestPOI.distance)}m)`,
-        });
+        // Found a POI within snap radius - handlePOIClick does the processing and the notification
+        await handlePOIClick(nearestPOI, nearestPOI.distance);
       } else {
         // No POI found nearby - save coordinates only as minimal GeoJSON Feature
         updateValues(
@@ -636,7 +715,8 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   const updateValues = (feature: LocationFeature) => {
     if (!feature) return;
     const value = JSON.stringify(feature);
-    setAddress(primaryFieldValue(feature));
+    setLocationName(placeName(feature));
+    setAddress(placeAddress(feature));
     setLongitude(feature.geometry.coordinates[0]);
     setLatitude(feature.geometry.coordinates[1]);
     onChange({ target: { name, value, type: 'json' } });
@@ -646,10 +726,16 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   const handleSearchResult = (feature: LocationFeature) => {
     // Update map position
     if (feature.geometry?.coordinates) {
+      // The flyTo below is the camera move for this change; tell the recentring effect to stand
+      // down, or its easeTo would cancel the flight a frame later and the arc would be lost.
+      cameraMovedBySearchRef.current = true;
       const [lng, lat] = feature.geometry.coordinates;
       mapRef.current?.flyTo({
+        // Zoom 15, not 16: flyTo derives both the duration and the height of its arc from the
+        // length of the flight path, and the extra level made the camera climb higher and take
+        // noticeably longer. 15 is also what the map opens at for a saved value.
         center: [lng, lat],
-        zoom: 16,
+        zoom: 15,
         essential: true,
       });
     }
@@ -660,14 +746,28 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     // Show notification
     toggleNotification({
       type: 'success',
-      message: `Location set to: ${feature.properties.name || feature.properties.address}`,
+      message: formatMessage(
+        {
+          id: getTranslation('notification.selected'),
+          defaultMessage: SELECTION_MESSAGES['notification.selected'],
+        },
+        { name: placeName(feature) || placeAddress(feature) }
+      ),
     });
   };
 
+  // Keep the picked point centred when it moves — but never touch the zoom. This used to fly to a
+  // hardcoded zoom 15, which threw the user back out whenever they placed a point while zoomed in,
+  // and silently undid the search's own flyTo to 16. The zoom is the user's working context;
+  // choosing a point is not a request to change it.
   useEffect(() => {
+    if (cameraMovedBySearchRef.current) {
+      cameraMovedBySearchRef.current = false;
+      return;
+    }
     if (!isDefaultViewState && mapRef.current) {
       const map = mapRef.current.getMap();
-      map?.flyTo({ center: [longitude, latitude], zoom: 15 });
+      map?.easeTo({ center: [longitude, latitude] });
     }
   }, [longitude, latitude, isDefaultViewState]);
 
@@ -786,9 +886,11 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           onDblClick={handleMapDoubleClick}
           mapStyle={currentStyleUrl}
         >
-          <FullscreenControl pseudo={config.useFullscreenPseudo ?? true} />
-          <NavigationControl />
-          <GeolocateControl />
+          {/* keyed so a late-arriving config value rebuilds the controls with the right mode */}
+          <MapControls
+            key={String(config.useFullscreenPseudo ?? true)}
+            pseudo={config.useFullscreenPseudo ?? true}
+          />
           {config.mapStyles && config.mapStyles.length > 1 && (
             <BasemapControlComponent
               mapStyles={config.mapStyles}
@@ -951,51 +1053,51 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
             latitude={latitude}
             color="#4945ff" /* primary600 */
             draggable
-            onClick={handleMainMarkerClick}
             onDragEnd={handleMainMarkerDragEnd}
           />
         </Map>
       </Flex>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
-        {/* Row 1: Name/Address (50%) + Longitude (25%) + Latitude (25%) */}
-        <Field.Root style={{ flex: '2 1 0' }}>
-          <Field.Label>
-            {formatMessage({
-              id: result?.properties?.sourceId
-                ? getTranslation('fields.poi-name')
-                : getTranslation('fields.address'),
-              defaultMessage: result?.properties?.sourceId ? 'POI Name' : 'Address',
-            })}
-          </Field.Label>
-          <Field.Input name="place_name" value={address} disabled />
-        </Field.Root>
-        <Field.Root style={{ flex: '1 1 0' }}>
-          <Field.Label>
-            {formatMessage({ id: getTranslation('fields.longitude'), defaultMessage: 'Longitude' })}
-          </Field.Label>
-          <Field.Input name="longitude" value={longitude} disabled />
-        </Field.Root>
-        <Field.Root style={{ flex: '1 1 0' }}>
-          <Field.Label>
-            {formatMessage({ id: getTranslation('fields.latitude'), defaultMessage: 'Latitude' })}
-          </Field.Label>
-          <Field.Input name="latitude" value={latitude} disabled />
-        </Field.Root>
-
-        {/* Row 2 (POI only): Full address at 100% */}
-        {result?.properties?.sourceId && result?.properties?.address && (
-          <Field.Root style={{ flexBasis: '100%' }}>
+      <Grid.Root gap={2} marginTop={1}>
+        {/* Row 1: Name (half) + Longitude (quarter) + Latitude (quarter) */}
+        <Grid.Item col={6} direction="column" alignItems="stretch">
+          <Field.Root>
+            <Field.Label>
+              {formatMessage({ id: getTranslation('fields.name'), defaultMessage: 'Name' })}
+            </Field.Label>
+            <Field.Input name="place_name" value={locationName} placeholder="—" disabled />
+          </Field.Root>
+        </Grid.Item>
+        <Grid.Item col={3} direction="column" alignItems="stretch">
+          <Field.Root>
             <Field.Label>
               {formatMessage({
-                id: getTranslation('fields.poi-address'),
-                defaultMessage: 'Full Address',
+                id: getTranslation('fields.longitude'),
+                defaultMessage: 'Longitude',
               })}
             </Field.Label>
-            <Field.Input name="poi_address" value={result.properties.address} disabled />
+            <Field.Input name="longitude" value={longitude} disabled />
           </Field.Root>
-        )}
-      </div>
+        </Grid.Item>
+        <Grid.Item col={3} direction="column" alignItems="stretch">
+          <Field.Root>
+            <Field.Label>
+              {formatMessage({ id: getTranslation('fields.latitude'), defaultMessage: 'Latitude' })}
+            </Field.Label>
+            <Field.Input name="latitude" value={latitude} disabled />
+          </Field.Root>
+        </Grid.Item>
+
+        {/* Row 2: Address, full width */}
+        <Grid.Item col={12} direction="column" alignItems="stretch">
+          <Field.Root>
+            <Field.Label>
+              {formatMessage({ id: getTranslation('fields.address'), defaultMessage: 'Address' })}
+            </Field.Label>
+            <Field.Input name="address" value={address} placeholder="—" disabled />
+          </Field.Root>
+        </Grid.Item>
+      </Grid.Root>
     </Flex>
   );
 };
