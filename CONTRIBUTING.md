@@ -88,26 +88,23 @@ actually ships to npm.
 
 ### Watch Mode
 
-`npm run watch` only type-checks (`tsc --watch --noEmit`) — it does not produce a runtime build, so
-it cannot drive live reload in a linked Strapi project on its own.
-
-For live reload with the `yalc add` setup above, run two watchers in the plugin directory:
+With the `yalc add` setup above, run one command in the plugin directory:
 
 ```bash
-# Terminal 1: rebuilds dist/ on every source change
-npx strapi-plugin watch
-
-# Terminal 2: re-publishes to yalc whenever dist/ changes
-npx nodemon --watch dist -e ts,js,mjs,css,map --exec "yalc push --changed"
+npx strapi-plugin watch:link
 ```
 
-Then start Strapi as usual in your project (`npm run develop`). Changes to the plugin propagate to
-the linked project in a few seconds, no manual reinstall needed.
+This rebuilds `dist/` on every source change and pushes the result to yalc automatically —
+`npm run watch` (`strapi-plugin watch`, a real build watcher, not `tsc --watch`) runs alongside a
+`nodemon` that re-publishes whenever `dist/` changes.
 
-Note: `@strapi/sdk-plugin` ships a `strapi-plugin watch:link` command that is meant to do both of
-the above in one process, but it hardcodes `npm run watch` as the build step — which in this repo
-is the type-check-only script above, not a real build. Until that script is repointed at a real
-build (or the sdk command becomes configurable), use the two-terminal setup instead.
+Start (or restart) Strapi as usual in your project (`npm run develop`). A plain restart is enough:
+Strapi's Vite dev server re-optimises its dependency cache from the `node_modules` copy at every
+cold start, so it always picks up whatever yalc last pushed — no cache-clearing, no editor-side
+config. It only needs to be *running*; if it wasn't started yet in this session, start it once.
+
+For a pure type-check without a build (e.g. quick IDE-driven feedback), `npm run typecheck:watch`
+still runs `tsc --watch`.
 
 ## Project Structure
 

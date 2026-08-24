@@ -43,7 +43,8 @@
   },
   "scripts": {
     "build": "strapi-plugin build",
-    "watch": "tsc --watch --preserveWatchOutput",
+    "watch": "strapi-plugin watch",
+    "typecheck:watch": "tsc --watch --preserveWatchOutput",
     "verify": "strapi-plugin verify",
     "test": "vitest run",
     "test:watch": "vitest",
