@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Keyboard access to the search results** - The results dropdown was a list of clickable `<div>`s: reachable with a mouse only, with no `listbox`/`option` roles, no arrow-key navigation and nothing announced to a screen reader. It is now built on the design system's `Combobox`, which supplies the WAI-ARIA combobox pattern along with the loading state and the empty-state message. Two aspects of its configuration are load-bearing and documented next to the code: `autocomplete="none"`, because results come from a server and an option's label need not contain what the user typed — any client-side filtering would hide valid results; and a controlled `open` that refuses to open until a search has run, because a combobox normally opens as you type, which here would show an empty popup and put the list in the state where Enter picks an option instead of running the search. Searching stays on an explicit request — Enter, or the chevron — never on keystrokes, since Nominatim's usage policy rules out autocomplete-style querying.
+
+- **Search results name their source** - Each result is now two lines: the name, and below it the source in words plus the address (`Skatespots · Via Sammartini, Milano`, `OpenStreetMap · Ladakh, India`). The coloured dot remains as a redundant cue rather than the only way to tell a custom layer from OpenStreetMap, which also makes the distinction available to colour-blind editors. For Nominatim hits this splits information that used to be concatenated into a single label.
+
+### Changed
+
+- **The read-only fields below the map have a fixed shape** - They were one slot whose label *and* meaning changed between "Address" and "POI Name" depending on the value, with a second row appearing and disappearing beneath it — so the layout shifted under the pointer and no position had a stable meaning. There are now always four fields: `Name`, `Longitude`, `Latitude` on one row and `Address` on the next. Each holds exactly one property and stays empty (`—`) when the location has none. Laid out with the design system's `Grid` instead of a hand-rolled flex `div`, so spacing comes from the theme rather than hardcoded pixels. `Null Island` moved from the address field to the name field, where a place name belongs.
+
+- **Selection notifications are translated** - Picking a POI produced `Skatespots ➙ Bump al Monumentale`, built by hand in English and joined with a dingbat glyph that falls back to an arbitrary font. Arrows used this way stand in for a preposition, and prepositions differ per language, so the messages are now full sentences in all five supported languages (`Selected {name} from {layer}`). The two other hardcoded English notifications — the snap distance and the search confirmation — went the same way. Snapping to a POI also raised *two* notifications for a single gesture, repeating the name; it now raises one, carrying the distance.
+
+- **The geolocate button is a switch** - Built with `trackUserLocation: true`, so a second press turns location off and clears the dot and the accuracy circle, the way openstreetmap.org's locate control behaves. With MapLibre's default the button only ever re-centred, and nothing could dismiss the overlay short of reloading the page. The cost is a `watchPosition` for as long as the editor leaves it on.
+
+- **The map's controls have a declared order** - MapLibre has no ordering API — `addControl` appends in call order — so while each control was its own React component the on-screen order was decided by whichever mounted first. The three top-right controls are now declared together: fullscreen, which acts on the container, above zoom, compass and geolocate, which act on the view.
+
+- **Clicking the location marker no longer raises a notification** - It reported the coordinates, which are shown permanently in the fields below the map: a transient channel repeating a persistent one.
+
+### Fixed
+
+- **Fullscreen produced a frozen map on Firefox/Linux** - `useFullscreenPseudo` had never taken effect. react-map-gl's `<FullscreenControl>` accepts `pseudo` in its prop types (they are `Omit<FullscreenControlOptions, 'container'>`, and MapLibre's options include it) but only ever constructs `new FullscreenControl({ container })`, so the prop was dropped in silence while TypeScript stayed quiet. Every map therefore used the native Fullscreen API, whose transition can leave the map full-screen but frozen and uninteractive. The control is now built over `useControl` so the option reaches MapLibre; the documented default (`true`, CSS-based) applies as described.
+
+- **The location pin could not be dragged once geolocation was on** - MapLibre sizes the geolocate accuracy circle to the reported accuracy (`diameter = 2 × accuracy / metresPerPixel`). Desktop browsers locate by Wi-Fi or IP, so an accuracy of kilometres is routine and the circle regularly covers the whole viewport. It ships without `pointer-events: none`, so it swallowed the mousedown meant for the pin underneath and dragging silently stopped working. The circle is decorative — nothing listens to it — so it is now click-through.
+
+- **Placing a point no longer changes the zoom** - An effect keyed on the coordinates flew the camera to a hardcoded zoom 15 every time they changed, so double-clicking, dragging the marker or picking a POI while zoomed in threw the editor back out to 15. It also fired immediately after the search's own `flyTo`, silently undoing it. Placing a point now re-centres at the current zoom; only a search result moves the camera's zoom, and nothing cancels that flight.
+
+- **A search was lost when focus moved to another field** - On blur a combobox reverts its text to the selected option's label and, having no selection here, emptied the box — discarding the query and its results, so clicking any other field in the edit view meant searching again from scratch. Fixed with `allowCustomValue`, which tells the combobox the typed text is a value in its own right.
+
+- **A search that found nothing gave no feedback** - The "no results" message was unreachable code: the dropdown was only opened when there was at least one result, and the message rendered only when the dropdown was open with none. The tracked loading state was likewise never rendered, leaving the interface unchanged for the seconds a Nominatim call can take. Both are now shown, and the message — previously hardcoded English — is translated.
+
+- **Five missing Spanish translations** - `es.json` was missing `search.placeholder`, `search.button` and `search.clear`, which fell back to their message ids.
+
 ### Changed
 
 - **Lint and format now cover `tests/`** - `npm run lint` and `npm run format:check` only looked at `admin/src` and `server/src`, so nothing ever checked the test suite — which is how a Prettier violation sat on `main` from the draggable-marker commit until it was noticed by hand. `eslint.config.js` already carried a dedicated `tests/**` block (Vitest globals, `no-explicit-any` relaxed), so the rules were written but never applied; only the script's path list was missing. Verified by reintroducing that exact violation and confirming `npm run lint` now exits 1. Root config files stay out: `vitest.config.ts` is clean but `eslint.config.js` is legitimately CommonJS and trips `no-require-imports`. Dev-only change — not part of the published package.
