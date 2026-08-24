@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useIntl } from 'react-intl';
 import { useNotification } from '@strapi/strapi/admin';
 import SearchBox from './SearchBox';
@@ -248,6 +248,17 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         (s) => s.type === 'pmtiles' && poiLayersRef.current.find((l) => l.id === s.id)?.enabled
       )
       .map((s) => `pmtiles-circle-${s.id}`);
+
+  // POI sources for SearchBox, with `enabled` reflecting the live layer-control toggle
+  // rather than each source's static default from plugin config
+  const searchablePoiSources = useMemo(
+    () =>
+      (config.poiSources || []).map((source) => ({
+        ...source,
+        enabled: poiLayers.find((layer) => layer.id === source.id)?.enabled ?? source.enabled,
+      })),
+    [config.poiSources, poiLayers]
+  );
 
   // Callback passed to SearchBox so it can query features loaded in the map (for PMTiles sources)
   const queryMapFeatures = (sourceId: string, sourceLayer: string) => {
@@ -753,7 +764,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         onSelectResult={handleSearchResult}
         nominatimUrl={config.nominatimUrl || 'https://nominatim.openstreetmap.org'}
         poiSearchEnabled={config.poiSearchEnabled}
-        poiSources={config.poiSources}
+        poiSources={searchablePoiSources}
         queryMapFeatures={queryMapFeatures}
       />
 

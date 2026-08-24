@@ -1,13 +1,14 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import MapInput from '../../../admin/src/components/MapInput';
 import { findNearestPOI } from '../../../admin/src/services/poi-service';
 import { IntlProvider } from 'react-intl';
 import { DesignSystemProvider } from '@strapi/design-system';
 
 // vi.mock factories run before the module body, so anything they close over has to be hoisted too.
-const { mockPluginConfig, mockMapInstance } = vi.hoisted(() => ({
+const { mockPluginConfig, mockMapInstance, mockSearchBoxProps } = vi.hoisted(() => ({
+  mockSearchBoxProps: vi.fn(),
   // Stable config object: a new reference on every render would retrigger the map effects.
   mockPluginConfig: {
     mapStyles: [
@@ -22,6 +23,11 @@ const { mockPluginConfig, mockMapInstance } = vi.hoisted(() => ({
     defaultCenter: [10, 45] as [number, number],
     geocodingProvider: 'nominatim',
     nominatimUrl: 'https://nominatim.test.com',
+    poiDisplayEnabled: undefined as boolean | undefined,
+    poiSearchEnabled: undefined as boolean | undefined,
+    poiSources: undefined as
+      | { id: string; name: string; apiUrl: string; enabled?: boolean }[]
+      | undefined,
   },
   // Map instance with all the methods MapInput calls
   mockMapInstance: {
@@ -34,6 +40,8 @@ const { mockPluginConfig, mockMapInstance } = vi.hoisted(() => ({
       }
     }),
     getZoom: vi.fn(() => 5),
+    loaded: vi.fn(() => true),
+    querySourceFeatures: vi.fn(() => []),
     getBounds: vi.fn(() => ({
       getNorth: () => 46,
       getSouth: () => 44,
@@ -101,10 +109,13 @@ vi.mock('react-map-gl/maplibre', () => ({
   Layer: () => null,
 }));
 
-// Mock SearchBox component
+// Mock SearchBox component, capturing the props it receives (e.g. poiSources)
 vi.mock('../../../admin/src/components/MapInput/SearchBox', () => ({
   __esModule: true,
-  default: () => <div>SearchBox</div>,
+  default: (props: any) => {
+    mockSearchBoxProps(props);
+    return <div>SearchBox</div>;
+  },
 }));
 
 // Mock other MapInput components
@@ -113,9 +124,22 @@ vi.mock('../../../admin/src/components/MapInput/basemap-control', () => ({
   default: () => <div>BasemapControl</div>,
 }));
 
+// Mock LayerControl with a button per layer so tests can simulate the on-map toggle
 vi.mock('../../../admin/src/components/MapInput/layer-control', () => ({
   __esModule: true,
-  default: () => <div>LayerControl</div>,
+  default: ({ layers, onLayerToggle }: any) => (
+    <div>
+      LayerControl
+      {layers.map((layer: any) => (
+        <button
+          key={layer.id}
+          onClick={() => onLayerToggle(layer.id, !layer.enabled)}
+        >
+          toggle-{layer.id}
+        </button>
+      ))}
+    </div>
+  ),
 }));
 
 // Mock POI service
@@ -316,5 +340,44 @@ describe('MapInput Component', () => {
     expect(feature.geometry.coordinates).toEqual([9.2, 45.47]);
     expect(feature.properties.name).toBe('Skatespot Centro');
     expect(feature.properties.inputMethod).toBe('poi_click');
+  });
+
+  describe('search sees the live layer-control toggle, not just the config default', () => {
+    const originalPoiSources = mockPluginConfig.poiSources;
+    const originalPoiDisplayEnabled = mockPluginConfig.poiDisplayEnabled;
+    const originalPoiSearchEnabled = mockPluginConfig.poiSearchEnabled;
+
+    beforeEach(() => {
+      mockSearchBoxProps.mockClear();
+      mockPluginConfig.poiDisplayEnabled = true;
+      mockPluginConfig.poiSearchEnabled = true;
+      // Disabled by default in config...
+      mockPluginConfig.poiSources = [
+        { id: 'skatespots', name: 'Skatespots', apiUrl: 'https://poi.test/skatespots.geojson', enabled: false },
+      ];
+    });
+
+    afterEach(() => {
+      mockPluginConfig.poiSources = originalPoiSources;
+      mockPluginConfig.poiDisplayEnabled = originalPoiDisplayEnabled;
+      mockPluginConfig.poiSearchEnabled = originalPoiSearchEnabled;
+    });
+
+    test('a source turned on in the layer panel becomes searchable, even if disabled by default', () => {
+      render(<MockMapInput {...defaultProps} />);
+
+      const lastSearchBoxCall = () =>
+        mockSearchBoxProps.mock.calls[mockSearchBoxProps.mock.calls.length - 1][0];
+
+      // Config default: SearchBox should not see it as enabled yet
+      const initialSources = lastSearchBoxCall().poiSources;
+      expect(initialSources.find((s: any) => s.id === 'skatespots').enabled).toBe(false);
+
+      // User turns the layer on via the on-map layer-control panel
+      fireEvent.click(screen.getByText('toggle-skatespots'));
+
+      const updatedSources = lastSearchBoxCall().poiSources;
+      expect(updatedSources.find((s: any) => s.id === 'skatespots').enabled).toBe(true);
+    });
   });
 });
