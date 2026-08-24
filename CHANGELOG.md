@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Dead backward compatibility removed** - `engines` no longer claims to accept npm 6, a floor that was never true and told consumers nothing. The worker setup dropped its `maplibre-gl < 6` guard: `dependencies` pins `^6.4.1`, so v5 could not be installed and that branch could never run — the test exercising it went with it. Two option descriptions still named a `v5.18.0+` requirement, meaningless against a 6.4.1 floor, and one of them was shown to users in the configuration reference.
+
+  The supported range is unchanged and is what CI verifies on every push: **Node 22, 24 and 26**.
+
 ## [1.6.0] - 2026-08-24
 
 ### Added

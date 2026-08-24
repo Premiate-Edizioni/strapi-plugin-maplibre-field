@@ -459,8 +459,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     }, 300); // 300ms debounce delay
   };
 
-  // Handle POI marker click
-  // Handle main marker click (MapLibre v5.18.0+ feature)
   // Handle main marker drag - reposition the point directly on the map.
   // Snaps to a nearby POI just like double-clicking the map does.
   const handleMainMarkerDragEnd = async (evt: MarkerDragEvent) => {

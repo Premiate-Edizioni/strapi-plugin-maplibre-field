@@ -1,4 +1,4 @@
-import { getVersion, setWorkerUrl } from 'maplibre-gl';
+import { setWorkerUrl } from 'maplibre-gl';
 import pluginId from './pluginId';
 
 /**
@@ -6,8 +6,6 @@ import pluginId from './pluginId';
  * URL. The plugin server serves it (see server/src/controllers/worker.ts), which keeps the worker
  * same-origin — satisfying Strapi's default CSP (`worker-src 'self' blob:`) with no configuration
  * in the host app — and on the same maplibre-gl version as the bundled main thread.
- *
- * v5 bootstraps its own worker internally and must not be overridden.
  */
 export const WORKER_FILE = 'maplibre-gl-worker.mjs';
 
@@ -18,9 +16,5 @@ const getBackendURL = (): string =>
   (globalThis as { strapi?: { backendURL?: string } }).strapi?.backendURL ?? '';
 
 export const configureMaplibreWorker = (): void => {
-  if (parseInt(getVersion(), 10) < 6) {
-    return;
-  }
-
   setWorkerUrl(`${getBackendURL()}${WORKER_PATH}/${WORKER_FILE}`);
 };

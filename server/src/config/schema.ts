@@ -55,6 +55,6 @@ export default {
     type: 'boolean',
     default: true,
     description:
-      'Use CSS-based fullscreen (faster on some devices) instead of native fullscreen API (requires MapLibre v5.18.0+)',
+      'Use CSS-based fullscreen (faster on some devices) instead of the native Fullscreen API',
   },
 };

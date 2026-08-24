@@ -6,25 +6,19 @@ import {
   WORKER_PATH,
 } from '../../../admin/src/utils/maplibreWorker';
 
-// Version is per-test: the worker setup only applies from maplibre-gl v6 onwards.
-const { state, mockSetWorkerUrl } = vi.hoisted(() => ({
-  state: { version: '6.0.0' },
-  mockSetWorkerUrl: vi.fn(),
-}));
+const { mockSetWorkerUrl } = vi.hoisted(() => ({ mockSetWorkerUrl: vi.fn() }));
 
 vi.mock('maplibre-gl', () => ({
-  getVersion: () => state.version,
   setWorkerUrl: (url: string) => mockSetWorkerUrl(url),
 }));
 
 describe('configureMaplibreWorker', () => {
   beforeEach(() => {
     mockSetWorkerUrl.mockClear();
-    state.version = '6.0.0';
     delete (globalThis as { strapi?: unknown }).strapi;
   });
 
-  test('points maplibre-gl v6 at the plugin worker route', () => {
+  test('points maplibre-gl at the plugin worker route', () => {
     (globalThis as { strapi?: unknown }).strapi = { backendURL: 'https://cms.example.com' };
 
     configureMaplibreWorker();
@@ -47,14 +41,6 @@ describe('configureMaplibreWorker', () => {
 
     const [url] = mockSetWorkerUrl.mock.calls[0];
     expect(url).not.toMatch(/cdn\.|unpkg|jsdelivr/);
-  });
-
-  test('leaves maplibre-gl v5 to bootstrap its own worker', () => {
-    state.version = '5.24.0';
-
-    configureMaplibreWorker();
-
-    expect(mockSetWorkerUrl).not.toHaveBeenCalled();
   });
 });
 

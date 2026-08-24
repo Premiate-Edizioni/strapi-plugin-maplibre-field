@@ -181,7 +181,6 @@ vi.mock('maplibre-gl', () => ({
   addProtocol: vi.fn(),
   removeProtocol: vi.fn(),
   setWorkerUrl: vi.fn(),
-  getVersion: vi.fn(() => '6.0.0'),
 }));
 
 const MockMapInput = (props: any) => (
