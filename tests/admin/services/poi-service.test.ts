@@ -7,6 +7,7 @@ import {
   createLocationFeature,
   filterByDistance,
   findNearestPOI,
+  formatAddress,
   geoJSONFeatureToPOI,
   queryCustomAPI,
   queryNominatim,
@@ -266,16 +267,116 @@ describe('queryCustomAPI', () => {
   });
 });
 
+describe('formatAddress', () => {
+  // Every fixture below is a verbatim `properties.geocoding` object returned by
+  // nominatim.openstreetmap.org, trimmed only of members this function ignores.
+
+  test('keeps the postal fields and drops the administrative hierarchy', () => {
+    // Nominatim's own label for this place is
+    // "21 House of Stories - Milano Città Studi, 24, Via Enrico Noë, Buenos Aires - Venezia,
+    //  Municipio 3, Milano, <municipality>, Milano, Lombardia, 20133, Italia"
+    expect(
+      formatAddress({
+        type: 'house',
+        name: '21 House of Stories - Milano Città Studi',
+        housenumber: '24',
+        street: 'Via Enrico Noë',
+        locality: 'Buenos Aires - Venezia',
+        district: 'Municipio 3',
+        postcode: '20133',
+        city: 'Milano',
+        county: 'Milano',
+        state: 'Lombardia',
+        country: 'Italia',
+        country_code: 'it',
+      })
+    ).toBe('Via Enrico Noë 24, 20133 Milano, Lombardia, Italia');
+  });
+
+  test('falls back to the name on results that are themselves a street', () => {
+    // Nominatim leaves `street` null when the result *is* the street.
+    expect(
+      formatAddress({
+        type: 'street',
+        name: 'Piazza Velasca',
+        housenumber: null,
+        street: null,
+        postcode: '20122',
+        city: 'Milano',
+        state: 'Lombardia',
+        country: 'Italia',
+      })
+    ).toBe('Piazza Velasca, 20122 Milano, Lombardia, Italia');
+  });
+
+  test('omits the region when it merely repeats the city', () => {
+    expect(
+      formatAddress({
+        type: 'house',
+        name: 'WBAI-FM (New York)',
+        housenumber: '350',
+        street: '5th Avenue',
+        district: 'Manhattan',
+        postcode: '10118',
+        city: 'New York',
+        county: 'New York County',
+        state: 'New York',
+        country: 'United States',
+      })
+    ).toBe('5th Avenue 350, 10118 New York, United States');
+  });
+
+  test('handles a result with no house number', () => {
+    expect(
+      formatAddress({
+        type: 'house',
+        name: 'Buckingham Palace',
+        street: 'Buckingham Gate',
+        district: 'Victoria',
+        postcode: 'SW1A 1AA',
+        city: 'Greater London',
+        state: 'England',
+        country: 'United Kingdom',
+      })
+    ).toBe('Buckingham Gate, SW1A 1AA Greater London, England, United Kingdom');
+  });
+
+  test('returns an empty string rather than stray separators when nothing is usable', () => {
+    expect(formatAddress(null)).toBe('');
+    expect(formatAddress({})).toBe('');
+    expect(formatAddress({ street: '  ', city: null, country: '' })).toBe('');
+  });
+});
+
 describe('queryNominatim', () => {
-  const reverseResult = (overrides: Record<string, unknown> = {}) => ({
-    place_id: 42,
-    lat: '45.4601',
-    lon: '9.1901',
-    name: 'Piazza Velasca',
-    display_name: 'Piazza Velasca, Milano, 20122, Italia',
-    type: 'square',
-    class: 'place',
-    ...overrides,
+  const reverseResult = (
+    overrides: Record<string, unknown> = {},
+    coordinates: [number, number] = [9.1901, 45.4601]
+  ) => ({
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates },
+        properties: {
+          geocoding: {
+            place_id: 42,
+            osm_type: 'node',
+            osm_id: 7,
+            osm_key: 'place',
+            osm_value: 'square',
+            type: 'house',
+            name: 'Piazza Velasca',
+            street: 'Piazza Velasca',
+            postcode: '20122',
+            city: 'Milano',
+            state: 'Lombardia',
+            country: 'Italia',
+            ...overrides,
+          },
+        },
+      },
+    ],
   });
 
   test('asks for POI-level detail at the given coordinates', async () => {
@@ -284,9 +385,18 @@ describe('queryNominatim', () => {
     await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL);
 
     // zoom=18 is building/POI level; anything lower snaps to city or country.
+    // geocodejson normalises the address keys across countries; the other formats return raw OSM tags.
     expect(fetchMock).toHaveBeenCalledWith(
-      `${NOMINATIM_URL}/reverse?format=jsonv2&lat=45.4601&lon=9.1901&zoom=18&addressdetails=1`
+      `${NOMINATIM_URL}/reverse?format=geocodejson&lat=45.4601&lon=9.1901&zoom=18&addressdetails=1`
     );
+  });
+
+  test('forwards the admin language so place names come back localised', async () => {
+    const fetchMock = stubFetch({ [NOMINATIM_URL]: reverseResult() });
+
+    await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL, 'de');
+
+    expect(fetchMock.mock.calls[0][0]).toContain('accept-language=de');
   });
 
   test('sends no custom headers, which would force a CORS preflight on every call', async () => {
@@ -310,24 +420,30 @@ describe('queryNominatim', () => {
       name: 'Piazza Velasca',
       type: 'square',
       coordinates: [9.1901, 45.4601],
-      address: 'Piazza Velasca, Milano, 20122, Italia',
+      address: 'Piazza Velasca, 20122 Milano, Lombardia, Italia',
       source: 'nominatim',
     });
   });
 
   test('drops a hit that lies outside the requested radius', async () => {
     // Nominatim answers with the nearest match at any distance, so the radius is enforced here.
-    stubFetch({ [NOMINATIM_URL]: reverseResult({ lat: '45.6000', lon: '9.1901' }) });
+    stubFetch({ [NOMINATIM_URL]: reverseResult({}, [9.1901, 45.6]) });
 
     expect(await queryNominatim(45.4601, 9.1901, 100, NOMINATIM_URL)).toEqual([]);
   });
 
-  test('prefers namedetails over the generic name', async () => {
-    stubFetch({ [NOMINATIM_URL]: reverseResult({ namedetails: { name: 'Torre Velasca' } }) });
+  test('falls back to the formatted address when the place has no name', async () => {
+    stubFetch({ [NOMINATIM_URL]: reverseResult({ name: null }) });
 
     const [poi] = await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL);
 
-    expect(poi.name).toBe('Torre Velasca');
+    expect(poi.name).toBe('Piazza Velasca, 20122 Milano, Lombardia, Italia');
+  });
+
+  test('degrades to an empty list when the response carries no feature', async () => {
+    stubFetch({ [NOMINATIM_URL]: { type: 'FeatureCollection', features: [] } });
+
+    expect(await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL)).toEqual([]);
   });
 
   test('degrades to an empty list when the request fails', async () => {
@@ -346,10 +462,14 @@ describe('searchNearbyPOIsForSnap', () => {
   test('combines Nominatim and custom GeoJSON results', async () => {
     stubFetch({
       [NOMINATIM_URL]: {
-        place_id: 1,
-        lat: '45.4601',
-        lon: '9.1901',
-        display_name: 'Piazza Velasca',
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [9.1901, 45.4601] },
+            properties: { geocoding: { place_id: 1, name: 'Piazza Velasca' } },
+          },
+        ],
       },
       [CUSTOM_API_URL]: featureCollection([
         pointFeature([9.1901, 45.4601], { name: 'Skate Park' }),
@@ -370,10 +490,14 @@ describe('searchNearbyPOIsForSnap', () => {
   test('never fetches a pmtiles source, which is queried through the rendered tiles instead', async () => {
     const fetchMock = stubFetch({
       [NOMINATIM_URL]: {
-        place_id: 1,
-        lat: '45.4601',
-        lon: '9.1901',
-        display_name: 'Piazza Velasca',
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [9.1901, 45.4601] },
+            properties: { geocoding: { place_id: 1, name: 'Piazza Velasca' } },
+          },
+        ],
       },
       [CUSTOM_API_URL]: featureCollection([]),
     });

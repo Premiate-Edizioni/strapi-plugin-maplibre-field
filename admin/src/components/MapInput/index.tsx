@@ -50,7 +50,7 @@ interface MapFieldProps {
 }
 
 const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value }) => {
-  const { formatMessage } = useIntl();
+  const { formatMessage, locale } = useIntl();
   const { toggleNotification } = useNotification();
   const config = usePluginConfig();
   const mapRef = useRef<MapRef>(null);
@@ -504,6 +504,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
             clickCoords[0], // lng
             {
               nominatimUrl: config.nominatimUrl || 'https://nominatim.openstreetmap.org',
+              language: locale,
               customApiUrl: apiUrl,
               mapName: mapName,
               layerId: layer.id,

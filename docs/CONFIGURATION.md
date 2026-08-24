@@ -391,6 +391,36 @@ nominatimUrl: 'https://your-nominatim-server.org',
 - [Running Nominatim](https://nominatim.org/release-docs/latest/admin/Installation/)
 - [Docker Image](https://github.com/mediagis/nominatim-docker)
 
+### Geocoding Language
+
+There is nothing to configure: every Nominatim request carries the editor's **admin panel locale**
+as `accept-language`, so search results and reverse-geocoded addresses come back in the language the
+editor is already working in. An editor with the panel set to German sees `Mailand, Italien`, one
+set to Italian sees `Milano, Italia`, for the very same point.
+
+Two consequences worth knowing:
+
+- The stored `properties.address` is in **whichever language the editor who saved it was using**.
+  It is a human-readable label, not a stable key — the coordinates are the stable value. If you need
+  one consistent language across a whole collection, render the address in your front end rather
+  than reading the stored string.
+- Nominatim falls back to the local name when it has no translation for a place, so parts of an
+  address may stay in the local language regardless of the locale requested.
+
+The field order is the same for every language and every country — the plugin does not reorder
+addresses per postal convention. See [DATA-MODEL.md](DATA-MODEL.md#address-string-optional).
+
+### Response Format
+
+The plugin queries Nominatim with `format=geocodejson` rather than `jsonv2` or `geojson`. Only
+GeocodeJSON normalises the address keys across countries (`street`, `housenumber`, `city`), where the
+other formats return the raw OSM tags (`road`, `house_number`, and the `city|town|village` variance).
+The same field names are emitted by [Photon](https://github.com/komoot/photon) and Addok, so a
+self-hosted alternative can be swapped in without changing how responses are read.
+
+A self-hosted Nominatim must therefore have the GeocodeJSON output format available — it is built in
+and enabled by default.
+
 ### Alternative Geocoding Providers
 
 Currently, the plugin is optimized for Nominatim. Support for other providers (MapTiler Geocoding, Photon, etc.) can be added by extending the geocoder component.
