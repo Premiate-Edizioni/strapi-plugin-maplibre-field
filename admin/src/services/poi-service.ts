@@ -166,6 +166,10 @@ export interface NominatimGeocoding {
   [key: string]: unknown;
 }
 
+/** Trimmed string value, or an empty string for anything Nominatim left null, absent or blank. */
+const clean = (value: unknown): string =>
+  typeof value === 'string' && value.trim() !== '' ? value.trim() : '';
+
 /**
  * Build a readable address string from a Nominatim GeocodeJSON object.
  *
@@ -188,15 +192,18 @@ export function formatAddress(geocoding: NominatimGeocoding | null | undefined):
     return '';
   }
 
-  const clean = (value: unknown): string =>
-    typeof value === 'string' && value.trim() !== '' ? value.trim() : '';
-
-  // On results that *are* a street, Nominatim leaves `street` null and carries it in `name`.
-  const street =
-    clean(geocoding.street) || (geocoding.type === 'street' ? clean(geocoding.name) : '');
+  // GeocodeJSON's `type` names the level the result *is*, and on that level Nominatim leaves the
+  // matching field null and carries the value in `name`: a street result has no `street`, a city
+  // result has no `city`. Without these fallbacks the address loses the very thing it is about —
+  // a search for "Rivoli" would format as "10098, Piemonte, Italia", a postcode with no comune.
+  const name = clean(geocoding.name);
+  const street = clean(geocoding.street) || (geocoding.type === 'street' ? name : '');
   const housenumber = clean(geocoding.housenumber);
   const postcode = clean(geocoding.postcode);
-  const city = clean(geocoding.city) || clean(geocoding.locality);
+  const city =
+    clean(geocoding.city) ||
+    clean(geocoding.locality) ||
+    (geocoding.type === 'city' || geocoding.type === 'locality' ? name : '');
   const country = clean(geocoding.country);
 
   // `state` repeats the city for city-states and city-provinces (e.g. New York, Berlin).
@@ -229,9 +236,6 @@ export function formatName(geocoding: NominatimGeocoding | null | undefined): st
     return '';
   }
 
-  const clean = (value: unknown): string =>
-    typeof value === 'string' && value.trim() !== '' ? value.trim() : '';
-
   const name = clean(geocoding.name);
   if (name) {
     return name;
@@ -240,6 +244,31 @@ export function formatName(geocoding: NominatimGeocoding | null | undefined): st
   const street = [clean(geocoding.street), clean(geocoding.housenumber)].filter(Boolean).join(' ');
 
   return street || clean(geocoding.city) || clean(geocoding.locality);
+}
+
+/**
+ * Build the one-line label for a geocoding result in the search dropdown.
+ *
+ * A result list has to be both scannable and unambiguous. The name on its own repeats for every
+ * house on a street; the address on its own hides which place was matched. Show the name first and
+ * the address as context — the same shape as Nominatim's own `label`, minus the administrative
+ * levels {@link formatAddress} drops.
+ *
+ * The name is left out when the address already carries it, so a city ("10098 Rivoli, Piemonte,
+ * Italia") or a street is never stated twice.
+ *
+ * @param geocoding The `properties.geocoding` object, or null/undefined
+ * @returns The label, or an empty string when no usable field is present
+ */
+export function formatLabel(geocoding: NominatimGeocoding | null | undefined): string {
+  const address = formatAddress(geocoding);
+  const name = formatName(geocoding);
+
+  if (!address || !name) {
+    return address || name;
+  }
+
+  return address.toLowerCase().includes(name.toLowerCase()) ? address : `${name}, ${address}`;
 }
 
 /**

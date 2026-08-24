@@ -220,6 +220,19 @@ describe('MapInput Component', () => {
     expect(screen.queryByText('POI Name')).not.toBeInTheDocument();
   });
 
+  test('the Address field holds the address, not the short name', () => {
+    // Without a POI this is the only field of the two, so it has to carry the address its
+    // label promises — the name alone ("Rivoli") is not one.
+    const value = JSON.stringify({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [7.5176764, 45.0697151] },
+      properties: { name: 'Rivoli', address: '10098 Rivoli, Piemonte, Italia' },
+    });
+
+    render(<MockMapInput {...defaultProps} value={value} />);
+    expect(screen.getByDisplayValue('10098 Rivoli, Piemonte, Italia')).toBeInTheDocument();
+  });
+
   test('shows POI Name and Full Address fields when value has sourceId', () => {
     const value = JSON.stringify({
       type: 'Feature',

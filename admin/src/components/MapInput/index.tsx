@@ -50,6 +50,16 @@ interface MapFieldProps {
   value: string | null;
 }
 
+/**
+ * Text for the first read-only field, which is labelled "POI Name" for a POI and "Address"
+ * otherwise. A POI shows its name there and its address in the "Full Address" field below;
+ * everything else has that one field only, so it has to hold the address.
+ */
+const primaryFieldValue = (feature: LocationFeature): string => {
+  const { name, address, sourceId } = feature.properties;
+  return (sourceId ? name || address : address || name) || '';
+};
+
 const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value }) => {
   const { formatMessage, locale } = useIntl();
   const { toggleNotification } = useNotification();
@@ -88,7 +98,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   // Show "Null Island" when coordinates are [0, 0] and no address is defined
   const isNullIsland = initialCoordinates[0] === 0 && initialCoordinates[1] === 0;
   const initialAddress =
-    result?.properties?.name || result?.properties?.address || (isNullIsland ? 'Null Island' : '');
+    (result && primaryFieldValue(result)) || (isNullIsland ? 'Null Island' : '');
 
   const [longitude, setLongitude] = useState(initialCoordinates[0]);
   const [latitude, setLatitude] = useState(initialCoordinates[1]);
@@ -615,7 +625,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   const updateValues = (feature: LocationFeature) => {
     if (!feature) return;
     const value = JSON.stringify(feature);
-    setAddress(feature.properties.name || feature.properties.address || '');
+    setAddress(primaryFieldValue(feature));
     setLongitude(feature.geometry.coordinates[0]);
     setLatitude(feature.geometry.coordinates[1]);
     onChange({ target: { name, value, type: 'json' } });

@@ -118,8 +118,8 @@ describe('performSearch', () => {
       expect(results).toEqual([
         {
           id: 'nominatim-0',
-          // The dropdown shows the full address: `name` alone repeats for every
-          // house on the same street.
+          // The dropdown shows name + address; here the address already opens with the
+          // name, because the result is the street itself.
           place_name: 'Piazza Velasca, 20122 Milano, Lombardia, Italia',
           feature: {
             type: 'Feature',
@@ -134,6 +134,33 @@ describe('performSearch', () => {
           source: 'nominatim',
         },
       ]);
+    });
+
+    test('keeps a named place identifiable in the dropdown', async () => {
+      // A search for a comune returns type "city" with the comune in `name`: the dropdown has to
+      // show it, or the entry reads as a bare postcode and region.
+      stubFetch({
+        [NOMINATIM_URL]: nominatimResponse([
+          nominatimHit(
+            {
+              type: 'city',
+              name: 'Rivoli',
+              postcode: '10098',
+              county: 'Torino',
+              state: 'Piemonte',
+              country: 'Italia',
+            },
+            7.5176764,
+            45.0697151
+          ),
+        ]),
+      });
+
+      const [result] = await performSearch('rivoli', config());
+
+      expect(result.place_name).toBe('10098 Rivoli, Piemonte, Italia');
+      expect(result.feature.properties.name).toBe('Rivoli');
+      expect(result.feature.properties.address).toBe('10098 Rivoli, Piemonte, Italia');
     });
 
     test('returns no Nominatim results when the request fails', async () => {

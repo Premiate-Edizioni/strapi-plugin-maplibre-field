@@ -8,6 +8,7 @@ import {
   filterByDistance,
   findNearestPOI,
   formatAddress,
+  formatLabel,
   formatName,
   geoJSONFeatureToPOI,
   queryCustomAPI,
@@ -268,6 +269,44 @@ describe('queryCustomAPI', () => {
   });
 });
 
+describe('formatLabel', () => {
+  test('puts the name first and the address after it as context', () => {
+    expect(
+      formatLabel({
+        type: 'house',
+        name: '21 House of Stories - Milano Città Studi',
+        housenumber: '24',
+        street: 'Via Enrico Noë',
+        postcode: '20133',
+        city: 'Milano',
+        state: 'Lombardia',
+        country: 'Italia',
+      })
+    ).toBe(
+      '21 House of Stories - Milano Città Studi, Via Enrico Noë 24, 20133 Milano, Lombardia, Italia'
+    );
+  });
+
+  test('states the name once when the address already carries it', () => {
+    // A city or a street *is* its own address line; repeating it reads as a duplicate.
+    expect(
+      formatLabel({
+        type: 'city',
+        name: 'Rivoli',
+        postcode: '10098',
+        state: 'Piemonte',
+        country: 'Italia',
+      })
+    ).toBe('10098 Rivoli, Piemonte, Italia');
+  });
+
+  test('falls back to whichever half exists', () => {
+    expect(formatLabel({ type: 'house', name: 'Somewhere' })).toBe('Somewhere');
+    expect(formatLabel({ type: 'country', country: 'Italia' })).toBe('Italia');
+    expect(formatLabel(null)).toBe('');
+  });
+});
+
 describe('formatName', () => {
   test('uses the place name when there is one', () => {
     expect(
@@ -345,6 +384,23 @@ describe('formatAddress', () => {
         country: 'Italia',
       })
     ).toBe('Piazza Velasca, 20122 Milano, Lombardia, Italia');
+  });
+
+  test('falls back to the name on results that are themselves a city', () => {
+    // Nominatim leaves `city` null when the result *is* the comune: without the fallback this
+    // formats as "10098, Piemonte, Italia" — a postcode with no place attached to it.
+    expect(
+      formatAddress({
+        type: 'city',
+        osm_key: 'boundary',
+        osm_value: 'administrative',
+        name: 'Rivoli',
+        postcode: '10098',
+        county: 'Torino',
+        state: 'Piemonte',
+        country: 'Italia',
+      })
+    ).toBe('10098 Rivoli, Piemonte, Italia');
   });
 
   test('omits the region when it merely repeats the city', () => {
