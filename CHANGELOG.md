@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Lint and format now cover `tests/`** - `npm run lint` and `npm run format:check` only looked at `admin/src` and `server/src`, so nothing ever checked the test suite — which is how a Prettier violation sat on `main` from the draggable-marker commit until it was noticed by hand. `eslint.config.js` already carried a dedicated `tests/**` block (Vitest globals, `no-explicit-any` relaxed), so the rules were written but never applied; only the script's path list was missing. Verified by reintroducing that exact violation and confirming `npm run lint` now exits 1. Root config files stay out: `vitest.config.ts` is clean but `eslint.config.js` is legitimately CommonJS and trips `no-require-imports`. Dev-only change — not part of the published package.
+
 ### Fixed
 
 - **Double-click never produced an address without custom POI sources** - The Nominatim lookup that resolves the basemap's own POIs ran *inside* the loop over enabled custom POI layers, so it inherited that loop's conditions. With no `poiSources` configured, `poiLayers` was empty, the loop body never executed, and a double-click — even landing exactly on a hotel or a shop drawn by the map style — saved bare coordinates with no name and no address. Nominatim covers the basemap and has nothing to do with the custom sources, so it is now queried once per gesture, outside that loop. As a side effect this also stops repeating an identical reverse-geocoding request once per configured source: an app with three custom layers issued three of them for a single double-click, against a service whose usage policy caps clients at 1 request per second.

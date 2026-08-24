@@ -47,10 +47,10 @@
     "verify": "strapi-plugin verify",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint admin/src server/src",
-    "lint:fix": "eslint admin/src server/src --fix",
-    "format": "prettier --write \"admin/src/**/*.{ts,tsx}\" \"server/src/**/*.ts\"",
-    "format:check": "prettier --check \"admin/src/**/*.{ts,tsx}\" \"server/src/**/*.ts\"",
+    "lint": "eslint admin/src server/src tests",
+    "lint:fix": "eslint admin/src server/src tests --fix",
+    "format": "prettier --write \"admin/src/**/*.{ts,tsx}\" \"server/src/**/*.ts\" \"tests/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"admin/src/**/*.{ts,tsx}\" \"server/src/**/*.ts\" \"tests/**/*.{ts,tsx}\"",
     "prepublishOnly": "npm run build && npm run verify && npm test"
   },
   "dependencies": {
