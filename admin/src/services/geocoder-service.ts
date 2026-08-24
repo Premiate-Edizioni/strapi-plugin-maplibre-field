@@ -4,8 +4,8 @@
  * Combines Nominatim geocoding and custom POI search into a unified search interface
  */
 
-import { searchPOIsForGeocoder, type POI } from './poi-service';
-import type { LocationFeature } from './poi-service';
+import { formatAddress, searchPOIsForGeocoder, type POI } from './poi-service';
+import type { LocationFeature, NominatimGeocoding } from './poi-service';
 
 // Nominatim requests send no custom headers, `User-Agent` included — see the note in poi-service.ts.
 
@@ -16,10 +16,10 @@ interface MapFeature {
   id?: string | number;
 }
 
-interface NominatimResult {
-  display_name: string;
-  lon: string;
-  lat: string;
+/** One feature of a Nominatim `format=geocodejson` response */
+interface NominatimFeature {
+  geometry: { coordinates: [number, number] };
+  properties: { geocoding: NominatimGeocoding };
 }
 
 export interface SearchResult {
@@ -41,6 +41,8 @@ export interface POISource {
 
 export interface SearchConfig {
   nominatimUrl: string;
+  /** Sent to Nominatim as `accept-language`; localises the place names it returns */
+  language?: string;
   poiSearchEnabled?: boolean;
   poiSources?: POISource[];
   // Callback to query loaded map features (used for pmtiles sources)
@@ -145,33 +147,53 @@ export async function performSearch(query: string, config: SearchConfig): Promis
 
   // 2. Search Nominatim for global address search
   try {
-    const response = await fetch(
-      `${config.nominatimUrl}/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5`
-    );
+    const params = new URLSearchParams({
+      q: query,
+      format: 'geocodejson',
+      addressdetails: '1',
+      limit: '5',
+    });
+
+    if (config.language) {
+      params.set('accept-language', config.language);
+    }
+
+    const response = await fetch(`${config.nominatimUrl}/search?${params.toString()}`);
 
     if (response.ok) {
       const data = await response.json();
 
       // Convert Nominatim results to SearchResult format
       results.push(
-        ...data.map((result: NominatimResult, idx: number) => ({
-          id: `nominatim-${idx}`,
-          place_name: result.display_name,
-          feature: {
-            type: 'Feature' as const,
-            geometry: {
-              type: 'Point' as const,
-              coordinates: [parseFloat(result.lon), parseFloat(result.lat)],
+        ...(data?.features ?? []).map((result: NominatimFeature, idx: number) => {
+          const geocoding = result.properties.geocoding;
+          const address = formatAddress(geocoding);
+          const name = geocoding.name || address;
+
+          return {
+            id: `nominatim-${idx}`,
+            // Show the full address in the dropdown so results are distinguishable;
+            // `name` alone repeats for every house on the same street.
+            place_name: address || name,
+            feature: {
+              type: 'Feature' as const,
+              geometry: {
+                type: 'Point' as const,
+                coordinates: [
+                  Number(result.geometry.coordinates[0]),
+                  Number(result.geometry.coordinates[1]),
+                ] as [number, number],
+              },
+              properties: {
+                name,
+                address,
+                source: 'nominatim',
+                inputMethod: 'search' as const,
+              },
             },
-            properties: {
-              name: result.display_name,
-              address: result.display_name,
-              source: 'nominatim',
-              inputMethod: 'search' as const,
-            },
-          },
-          source: 'nominatim' as const,
-        }))
+            source: 'nominatim' as const,
+          };
+        })
       );
     }
   } catch (error) {

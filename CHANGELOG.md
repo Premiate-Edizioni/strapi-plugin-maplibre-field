@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Geocoding follows the admin panel locale** - Nominatim requests now carry the editor's admin locale as `accept-language`, so search results and reverse-geocoded addresses come back in the language the editor is already working in (`Mailand, Italien` for a German panel, `Milano, Italia` for an Italian one, same point). Previously no language was requested at all and Nominatim answered in the local language of the place. Note that `properties.address` is therefore stored in whichever language the editor who saved it was using — it is a human-readable label, not a stable key; the coordinates remain the stable value. Documented in [docs/CONFIGURATION.md](docs/CONFIGURATION.md#geocoding-language).
+
+### Fixed
+
+- **Unreadable addresses saved from Nominatim** - `properties.address` was Nominatim's `display_name` verbatim, which is not a postal address: it concatenates every administrative level the service holds for a place, in the same order for every country. A hotel in Milan was stored as `21 House of Stories - Milano Città Studi, 24, Via Enrico Noë, Buenos Aires - Venezia, Municipio 3, Milano, Rodano, Milano, Lombardia, 20133, Italia` — the POI name repeated in front of its own address, two administrative subdivisions nobody writes on an envelope, and the city three times over.
+
+  Nominatim performs no postal formatting of its own and exposes no formatted-address field, so the string is now composed by the plugin from a whitelist of postal fields only (`street`, `housenumber`, `postcode`, `city`, `state`, `country`), giving `Via Enrico Noë 24, 20133 Milano, Lombardia, Italia`. Administrative subdivisions such as `district`, `county` and `municipality` are excluded because they are not part of an address — not because any particular value is wrong upstream, so the result stays correct against a self-hosted instance or corrected OSM data. The region is dropped when it merely repeats the city (city-states such as Berlin, city-provinces such as New York).
+
+  The field order is deliberately the same for every country: a US address reads `5th Avenue 350`, not `350 5th Avenue`. Rendering an address per local postal convention needs a template set per country and is left to consumers, who have the coordinates and `name` as stable inputs.
+
+  The same applies to search results, where `display_name` had been used as both the name *and* the address of every hit.
+
+### Changed
+
+- **Nominatim response format** - Requests moved from `format=jsonv2` (reverse) and `format=json` (search) to `format=geocodejson`. Of the four formats Nominatim offers, only GeocodeJSON normalises the address keys across countries — `street`/`housenumber`/`city` — where `jsonv2` and `geojson` return the raw OSM tags (`road`, `house_number`) plus the `city|town|village` variance that every consumer would otherwise have to unpick. The same field names are emitted by [Photon](https://github.com/komoot/photon) and Addok, so a different geocoding backend can be substituted without changing how responses are read. `format=geojson` was considered and rejected: its RFC 7946 envelope is of no use here, since the plugin builds its own single `Feature` rather than storing Nominatim's `FeatureCollection`, while its `address` dictionary is the unnormalised one. Self-hosted instances need no change — GeocodeJSON is built in and enabled by default.
+- **Dead `namedetails` branch removed** - `queryNominatim()` preferred `namedetails.name` over the plain name, but `namedetails` is only returned with `namedetails=1`, which the plugin never sent. The branch had never executed.
+
 ## [1.5.0] - 2026-08-21
 
 ### Added

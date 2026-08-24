@@ -42,7 +42,7 @@ const SearchBox: React.FC<SearchBoxProps> = ({
   poiSources,
   queryMapFeatures,
 }) => {
-  const { formatMessage } = useIntl();
+  const { formatMessage, locale } = useIntl();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -79,6 +79,7 @@ const SearchBox: React.FC<SearchBoxProps> = ({
     try {
       const searchResults = await performSearch(query, {
         nominatimUrl,
+        language: locale,
         poiSearchEnabled,
         poiSources,
         queryMapFeatures,

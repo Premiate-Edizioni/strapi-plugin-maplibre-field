@@ -89,26 +89,44 @@ All other fields in `properties` are optional and only included when available.
 
 ### `address` (string, optional)
 
-**Description**: Full formatted address for the location
+**Description**: Postal address for the location
 
 **Source**:
-- Nominatim search: Formatted address from result
+- Nominatim search: Composed by the plugin from the result
 - POI click: Reverse geocoded via Nominatim
 - Map double-click (POI snap): Reverse geocoded via Nominatim
 - Map double-click (empty area): Not included
+- Custom POI sources: The source's own `properties.address`, verbatim
 
 **Examples**:
 ```json
-"address": "Piazza Velasca, Municipio 1, Milano, Lombardia, 20122, Italia"
-"address": "5 Avenue Anatole France, 75007 Paris, France"
-"address": "Via Roma 1, 20121 Milano MI, Italy"
+"address": "Via Enrico Noë 24, 20133 Milano, Lombardia, Italia"
+"address": "Buckingham Gate, SW1A 1AA Greater London, England, United Kingdom"
+"address": "5th Avenue 350, 10118 New York, United States"
 ```
 
+**How it is built**
+
+Nominatim performs no postal formatting of its own: the `display_name` it returns concatenates
+every administrative level it holds for the place — quarter, district, county, region — in the same
+order for every country. The plugin therefore queries `format=geocodejson`, whose address keys are
+normalised across countries, and composes the string itself from a whitelist of **postal fields
+only**:
+
+```text
+<street> <housenumber>, <postcode> <city>, <region>, <country>
+```
+
+Missing fields are skipped along with their separator, and `<region>` is dropped when it merely
+repeats the city (city-states such as Berlin, city-provinces such as New York).
+
 **Notes**:
-- Language depends on the region (from OSM/Nominatim)
-- Format varies by country
-- May include postal code, region, country
-- Empty if reverse geocoding fails
+- The field order is the same for every country — it is **not** localised per postal convention.
+  A US address reads `5th Avenue 350`, not `350 5th Avenue`. Consumers needing locale-correct
+  rendering should format their own string; the coordinates and `name` are the stable inputs.
+- The language of the place names follows the admin panel locale — see
+  [CONFIGURATION.md](CONFIGURATION.md#geocoding-language).
+- Empty if reverse geocoding fails or returns no postal field.
 
 ---
 
@@ -278,7 +296,7 @@ All other fields in `properties` are optional and only included when available.
   },
   "properties": {
     "name": "Piazza Velasca",
-    "address": "Piazza Velasca, Cerchia dei Navigli, Municipio 1, Milano, Lombardia, 20122, Italia",
+    "address": "Piazza Velasca, 20122 Milano, Lombardia, Italia",
     "source": "nominatim",
     "sourceId": "nominatim-68428992",
     "category": "bus_stop",

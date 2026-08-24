@@ -125,6 +125,92 @@ export interface POIServiceConfig {
   radius: number;
   categories: string[];
   sourceType?: 'geojson' | 'pmtiles'; // Skip HTTP fetch for pmtiles sources
+  language?: string; // Sent to Nominatim as `accept-language`
+}
+
+// =============================================================================
+// Nominatim GeocodeJSON
+// =============================================================================
+
+/**
+ * The `properties.geocoding` object of a Nominatim `format=geocodejson` result.
+ *
+ * GeocodeJSON normalises the address keys across countries, which `format=geojson` and `jsonv2` do
+ * not: a single `city` instead of the `city|town|village` variance, and `street`/`housenumber`
+ * instead of the raw OSM tags `road`/`house_number`. The same names are emitted by Photon and
+ * Addok, so switching geocoding provider would not change the shape we read.
+ *
+ * @see https://github.com/geocoders/geocodejson-spec/blob/master/draft/README.md
+ */
+export interface NominatimGeocoding {
+  /** One of "house", "street", "locality", "city", "region", "country" */
+  type?: string | null;
+  name?: string | null;
+  housenumber?: string | null;
+  street?: string | null;
+  locality?: string | null;
+  district?: string | null;
+  postcode?: string | null;
+  city?: string | null;
+  county?: string | null;
+  state?: string | null;
+  country?: string | null;
+  country_code?: string | null;
+  /** Nominatim's suggested label: every administrative level, comma-joined */
+  label?: string | null;
+  place_id?: number;
+  osm_id?: number;
+  osm_type?: string;
+  osm_key?: string;
+  osm_value?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Build a readable address string from a Nominatim GeocodeJSON object.
+ *
+ * Nominatim does no postal formatting of its own: its `label` (and the `display_name` of the other
+ * formats) concatenates every administrative level it holds for the place, in the same order for
+ * every country, giving strings shaped like
+ * "<name>, <housenumber>, <street>, <quarter>, <district>, <city>, <county>, <region>, <postcode>,
+ * <country>" — most of which is not part of an address.
+ *
+ * This keeps a whitelist of postal fields only and joins them in one generic order. It deliberately
+ * does *not* reorder per country: a US address comes out as "5th Avenue 350, …" rather than
+ * "350 5th Avenue". Consumers needing locale-correct rendering should format it themselves from the
+ * coordinates and name.
+ *
+ * @param geocoding The `properties.geocoding` object, or null/undefined
+ * @returns Formatted address, or an empty string when no usable field is present
+ */
+export function formatAddress(geocoding: NominatimGeocoding | null | undefined): string {
+  if (!geocoding) {
+    return '';
+  }
+
+  const clean = (value: unknown): string =>
+    typeof value === 'string' && value.trim() !== '' ? value.trim() : '';
+
+  // On results that *are* a street, Nominatim leaves `street` null and carries it in `name`.
+  const street =
+    clean(geocoding.street) || (geocoding.type === 'street' ? clean(geocoding.name) : '');
+  const housenumber = clean(geocoding.housenumber);
+  const postcode = clean(geocoding.postcode);
+  const city = clean(geocoding.city) || clean(geocoding.locality);
+  const country = clean(geocoding.country);
+
+  // `state` repeats the city for city-states and city-provinces (e.g. New York, Berlin).
+  const state = clean(geocoding.state);
+  const region = state.toLowerCase() === city.toLowerCase() ? '' : state;
+
+  return [
+    [street, housenumber].filter(Boolean).join(' '),
+    [postcode, city].filter(Boolean).join(' '),
+    region,
+    country,
+  ]
+    .filter(Boolean)
+    .join(', ');
 }
 
 /**
@@ -200,33 +286,48 @@ export async function queryCustomAPI(
  * @param lng Longitude
  * @param radius Search radius in meters
  * @param nominatimUrl Nominatim API base URL
+ * @param language Optional `accept-language` value; Nominatim localises place names accordingly
  * @returns Array of POIs
  */
 export async function queryNominatim(
   lat: number,
   lng: number,
   radius: number,
-  nominatimUrl: string
+  nominatimUrl: string,
+  language?: string
 ): Promise<POI[]> {
   try {
     // Use zoom=18 to get building/POI level detail (higher zoom = more specific)
     // zoom 3: country, zoom 10: city, zoom 18: building
-    const url = `${nominatimUrl}/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+    const params = new URLSearchParams({
+      format: 'geocodejson',
+      lat: String(lat),
+      lon: String(lng),
+      zoom: '18',
+      addressdetails: '1',
+    });
+
+    if (language) {
+      params.set('accept-language', language);
+    }
 
     // No custom headers: see the note on Nominatim requests at the top of this file.
-    const response = await fetch(url);
+    const response = await fetch(`${nominatimUrl}/reverse?${params.toString()}`);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
+    const feature = data?.features?.[0];
+    const geocoding: NominatimGeocoding | undefined = feature?.properties?.geocoding;
 
-    if (!data) {
+    if (!feature?.geometry?.coordinates || !geocoding) {
       return [];
     }
 
-    const coordinates: [number, number] = [parseFloat(data.lon), parseFloat(data.lat)];
+    const [lon, latitude] = feature.geometry.coordinates;
+    const coordinates: [number, number] = [Number(lon), Number(latitude)];
     const distance = calculateDistance([lng, lat], coordinates);
 
     // Only return if within radius
@@ -234,29 +335,23 @@ export async function queryNominatim(
       return [];
     }
 
-    // Determine POI name - prefer specific name over generic address
-    let poiName = data.name || data.display_name || 'Unknown Location';
-
-    // If there's a specific amenity/shop/building name, use it
-    if (data.namedetails) {
-      poiName = data.namedetails.name || poiName;
-    }
+    const address = formatAddress(geocoding);
 
     // Convert Nominatim response to POI
     const poi: POI = {
-      id: `nominatim-${data.place_id || Date.now()}`,
-      name: poiName,
-      type: data.type || data.class || 'address',
+      id: `nominatim-${geocoding.place_id || Date.now()}`,
+      name: geocoding.name || address || 'Unknown Location',
+      type: geocoding.osm_value || geocoding.osm_key || 'address',
       coordinates,
-      address: data.display_name || '',
+      address,
       distance,
       metadata: {
-        osm_id: data.osm_id,
-        osm_type: data.osm_type,
-        place_id: data.place_id,
-        addresstype: data.addresstype,
-        class: data.class,
-        category: data.category,
+        osm_id: geocoding.osm_id,
+        osm_type: geocoding.osm_type,
+        place_id: geocoding.place_id,
+        addresstype: geocoding.type,
+        class: geocoding.osm_key,
+        category: geocoding.osm_value,
       },
       source: 'nominatim',
     };
@@ -422,7 +517,13 @@ export async function searchNearbyPOIsForSnap(
 
   try {
     // 1. Query Nominatim
-    const nominatimPOIs = await queryNominatim(lat, lng, config.radius, config.nominatimUrl);
+    const nominatimPOIs = await queryNominatim(
+      lat,
+      lng,
+      config.radius,
+      config.nominatimUrl,
+      config.language
+    );
     results.push(...nominatimPOIs);
 
     // 2. Query custom API if configured (skipped for pmtiles sources — handled via queryRenderedFeatures)

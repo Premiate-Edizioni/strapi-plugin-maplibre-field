@@ -31,10 +31,16 @@ const stubFetch = (byUrl: Record<string, unknown>) => {
   return fetchMock;
 };
 
-const nominatimHit = (displayName: string, lon: string, lat: string) => ({
-  display_name: displayName,
-  lon,
-  lat,
+/** A Nominatim `format=geocodejson` response carrying the given features */
+const nominatimResponse = (features: unknown[] = []) => ({
+  type: 'FeatureCollection',
+  features,
+});
+
+const nominatimHit = (geocoding: Record<string, unknown>, lon: number, lat: number) => ({
+  type: 'Feature',
+  geometry: { type: 'Point', coordinates: [lon, lat] },
+  properties: { geocoding },
 });
 
 const geojsonSource = (overrides: Partial<POISource> = {}): POISource => ({
@@ -62,19 +68,27 @@ afterEach(() => {
 describe('performSearch', () => {
   describe('Nominatim results', () => {
     test('escapes the query and asks for at most five hits', async () => {
-      const fetchMock = stubFetch({ [NOMINATIM_URL]: [] });
+      const fetchMock = stubFetch({ [NOMINATIM_URL]: nominatimResponse() });
 
       await performSearch('piazza velasca', config());
 
       expect(fetchMock).toHaveBeenCalledWith(
-        `${NOMINATIM_URL}/search?q=piazza%20velasca&format=json&addressdetails=1&limit=5`
+        `${NOMINATIM_URL}/search?q=piazza+velasca&format=geocodejson&addressdetails=1&limit=5`
       );
+    });
+
+    test('forwards the admin language so place names come back localised', async () => {
+      const fetchMock = stubFetch({ [NOMINATIM_URL]: nominatimResponse() });
+
+      await performSearch('piazza velasca', config({ language: 'de' }));
+
+      expect(fetchMock.mock.calls[0][0]).toContain('accept-language=de');
     });
 
     test('sends no custom headers, which would force a CORS preflight on every keystroke', async () => {
       // See the note in poi-service.ts: a `User-Agent` is dropped by Chromium, and elsewhere costs
       // an extra OPTIONS round-trip per search against a service capped at 1 req/s.
-      const fetchMock = stubFetch({ [NOMINATIM_URL]: [] });
+      const fetchMock = stubFetch({ [NOMINATIM_URL]: nominatimResponse() });
 
       await performSearch('piazza velasca', config());
 
@@ -83,7 +97,20 @@ describe('performSearch', () => {
 
     test('maps a hit onto a LocationFeature marked as searched', async () => {
       stubFetch({
-        [NOMINATIM_URL]: [nominatimHit('Piazza Velasca, Milano, Italia', '9.1901', '45.4601')],
+        [NOMINATIM_URL]: nominatimResponse([
+          nominatimHit(
+            {
+              type: 'street',
+              name: 'Piazza Velasca',
+              postcode: '20122',
+              city: 'Milano',
+              state: 'Lombardia',
+              country: 'Italia',
+            },
+            9.1901,
+            45.4601
+          ),
+        ]),
       });
 
       const results = await performSearch('piazza velasca', config());
@@ -91,13 +118,15 @@ describe('performSearch', () => {
       expect(results).toEqual([
         {
           id: 'nominatim-0',
-          place_name: 'Piazza Velasca, Milano, Italia',
+          // The dropdown shows the full address: `name` alone repeats for every
+          // house on the same street.
+          place_name: 'Piazza Velasca, 20122 Milano, Lombardia, Italia',
           feature: {
             type: 'Feature',
             geometry: { type: 'Point', coordinates: [9.1901, 45.4601] },
             properties: {
-              name: 'Piazza Velasca, Milano, Italia',
-              address: 'Piazza Velasca, Milano, Italia',
+              name: 'Piazza Velasca',
+              address: 'Piazza Velasca, 20122 Milano, Lombardia, Italia',
               source: 'nominatim',
               inputMethod: 'search',
             },
@@ -137,7 +166,20 @@ describe('performSearch', () => {
             },
           ],
         },
-        [NOMINATIM_URL]: [nominatimHit('Piazza Velasca, Milano, Italia', '9.1901', '45.4601')],
+        [NOMINATIM_URL]: nominatimResponse([
+          nominatimHit(
+            {
+              type: 'street',
+              name: 'Piazza Velasca',
+              postcode: '20122',
+              city: 'Milano',
+              state: 'Lombardia',
+              country: 'Italia',
+            },
+            9.1901,
+            45.4601
+          ),
+        ]),
       });
 
       const results = await performSearch(
@@ -164,7 +206,7 @@ describe('performSearch', () => {
     });
 
     test('skips sources that are explicitly disabled', async () => {
-      const fetchMock = stubFetch({ [NOMINATIM_URL]: [] });
+      const fetchMock = stubFetch({ [NOMINATIM_URL]: nominatimResponse() });
 
       await performSearch(
         'velasca',
@@ -176,7 +218,7 @@ describe('performSearch', () => {
     });
 
     test('ignores POI sources entirely when POI search is off', async () => {
-      const fetchMock = stubFetch({ [NOMINATIM_URL]: [] });
+      const fetchMock = stubFetch({ [NOMINATIM_URL]: nominatimResponse() });
 
       await performSearch('velasca', config({ poiSources: [geojsonSource()] }));
 
@@ -191,7 +233,9 @@ describe('performSearch', () => {
           if (url.startsWith(CUSTOM_API_URL)) {
             throw new Error('POI source down');
           }
-          return jsonResponse([nominatimHit('Piazza Velasca', '9.1901', '45.4601')]);
+          return jsonResponse(
+            nominatimResponse([nominatimHit({ name: 'Piazza Velasca' }, 9.1901, 45.4601)])
+          );
         })
       );
 
@@ -212,7 +256,7 @@ describe('performSearch', () => {
     });
 
     test('searches the tiles already rendered on the map instead of fetching', async () => {
-      const fetchMock = stubFetch({ [NOMINATIM_URL]: [] });
+      const fetchMock = stubFetch({ [NOMINATIM_URL]: nominatimResponse() });
       const queryMapFeatures = vi.fn(() => [
         {
           geometry: { type: 'Point', coordinates: [9.19, 45.46] },
@@ -243,7 +287,7 @@ describe('performSearch', () => {
     });
 
     test('yields no PMTiles results when the map cannot be queried', async () => {
-      stubFetch({ [NOMINATIM_URL]: [] });
+      stubFetch({ [NOMINATIM_URL]: nominatimResponse() });
 
       const results = await performSearch(
         'velasca',
