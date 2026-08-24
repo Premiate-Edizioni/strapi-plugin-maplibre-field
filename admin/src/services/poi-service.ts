@@ -171,6 +171,19 @@ const clean = (value: unknown): string =>
   typeof value === 'string' && value.trim() !== '' ? value.trim() : '';
 
 /**
+ * Whether two administrative levels name the same place, so that printing both would repeat it.
+ * Containment rather than equality: a province is often the city plus a qualifier ("New York" /
+ * "New York County", "Roma" / "Città Metropolitana di Roma Capitale").
+ */
+const repeats = (a: string, b: string): boolean => {
+  if (!a || !b) {
+    return false;
+  }
+  const [x, y] = [a.toLowerCase(), b.toLowerCase()];
+  return x.includes(y) || y.includes(x);
+};
+
+/**
  * Build a readable address string from a Nominatim GeocodeJSON object.
  *
  * Nominatim does no postal formatting of its own: its `label` (and the `display_name` of the other
@@ -210,9 +223,16 @@ export function formatAddress(geocoding: NominatimGeocoding | null | undefined):
   const state = clean(geocoding.state);
   const region = state.toLowerCase() === city.toLowerCase() ? '' : state;
 
+  // `county` is the province, part of the postal address in Italy and much of Europe. It repeats
+  // the city in the metropolitan areas that are both (Milano, Roma, New York County), where one of
+  // the two names contains the other — that is what the containment test below catches.
+  const county = clean(geocoding.county);
+  const province = repeats(county, city) || repeats(county, region) ? '' : county;
+
   return [
     [street, housenumber].filter(Boolean).join(' '),
     [postcode, city].filter(Boolean).join(' '),
+    province,
     region,
     country,
   ]
@@ -254,8 +274,8 @@ export function formatName(geocoding: NominatimGeocoding | null | undefined): st
  * the address as context — the same shape as Nominatim's own `label`, minus the administrative
  * levels {@link formatAddress} drops.
  *
- * The name is left out when the address already carries it, so a city ("10098 Rivoli, Piemonte,
- * Italia") or a street is never stated twice.
+ * The name is left out when the address already carries it, so a city ("10098 Rivoli, Torino,
+ * Piemonte, Italia") or a street is never stated twice.
  *
  * @param geocoding The `properties.geocoding` object, or null/undefined
  * @returns The label, or an empty string when no usable field is present

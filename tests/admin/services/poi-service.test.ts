@@ -294,10 +294,11 @@ describe('formatLabel', () => {
         type: 'city',
         name: 'Rivoli',
         postcode: '10098',
+        county: 'Torino',
         state: 'Piemonte',
         country: 'Italia',
       })
-    ).toBe('10098 Rivoli, Piemonte, Italia');
+    ).toBe('10098 Rivoli, Torino, Piemonte, Italia');
   });
 
   test('falls back to whichever half exists', () => {
@@ -400,7 +401,24 @@ describe('formatAddress', () => {
         state: 'Piemonte',
         country: 'Italia',
       })
-    ).toBe('10098 Rivoli, Piemonte, Italia');
+    ).toBe('10098 Rivoli, Torino, Piemonte, Italia');
+  });
+
+  test('omits the province when it merely repeats the city', () => {
+    // Milano is both comune and città metropolitana; New York's county is the city plus a
+    // qualifier. Neither adds anything to the address.
+    expect(
+      formatAddress({
+        type: 'house',
+        street: 'Via Enrico Noë',
+        housenumber: '24',
+        postcode: '20133',
+        city: 'Milano',
+        county: 'Milano',
+        state: 'Lombardia',
+        country: 'Italia',
+      })
+    ).toBe('Via Enrico Noë 24, 20133 Milano, Lombardia, Italia');
   });
 
   test('omits the region when it merely repeats the city', () => {

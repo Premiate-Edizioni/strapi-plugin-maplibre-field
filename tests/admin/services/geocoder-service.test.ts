@@ -158,9 +158,9 @@ describe('performSearch', () => {
 
       const [result] = await performSearch('rivoli', config());
 
-      expect(result.place_name).toBe('10098 Rivoli, Piemonte, Italia');
+      expect(result.place_name).toBe('10098 Rivoli, Torino, Piemonte, Italia');
       expect(result.feature.properties.name).toBe('Rivoli');
-      expect(result.feature.properties.address).toBe('10098 Rivoli, Piemonte, Italia');
+      expect(result.feature.properties.address).toBe('10098 Rivoli, Torino, Piemonte, Italia');
     });
 
     test('returns no Nominatim results when the request fails', async () => {
