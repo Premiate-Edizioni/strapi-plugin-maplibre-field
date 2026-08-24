@@ -1,15 +1,15 @@
 {
   "label": "Map",
   "description": "A map custom field using MapLibre",
-  "search": "Search for a place or address on OpenStreetMap",
   "search.placeholder": "Search for a location...",
-  "search.button": "Search",
   "search.clear": "Clear",
   "search.loading": "Searching…",
   "search.no-results-yet": "No results available",
   "search.no-results": "No results found for “{query}”",
   "search.source-osm": "OpenStreetMap",
   "search.source-poi": "Custom layer",
+  "layers.title": "POI layers",
+  "layers.toggle": "Toggle POI layers",
   "fields.name": "Name",
   "fields.address": "Address",
   "fields.longitude": "Longitude",
@@ -19,9 +19,6 @@
   "notification.selected-from-layer": "Selected {name} from {layer}",
   "notification.snapped": "Selected {name} ({distance}m away)",
   "notification.snapped-from-layer": "Selected {name} from {layer} ({distance}m away)",
-  "geocoding.success": "Address updated successfully",
-  "geocoding.error": "Failed to fetch address. Please try again.",
-  "geocoding.no-results": "No address found for this location",
   "i18n.localized.label": "Enable localization for this field",
   "i18n.localized.description": "The field can have different values in each language"
 }

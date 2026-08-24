@@ -1,15 +1,15 @@
 {
   "label": "Mapa",
   "description": "Un campo personalizado de mapa usando MapLibre",
-  "search": "Buscar un lugar o dirección en OpenStreetMap",
   "search.placeholder": "Buscar una ubicación...",
-  "search.button": "Buscar",
   "search.clear": "Borrar",
   "search.loading": "Buscando…",
   "search.no-results-yet": "No hay resultados disponibles",
   "search.no-results": "No se encontraron resultados para «{query}»",
   "search.source-osm": "OpenStreetMap",
   "search.source-poi": "Capa personalizada",
+  "layers.title": "Capas de POI",
+  "layers.toggle": "Mostrar u ocultar las capas de POI",
   "fields.name": "Nombre",
   "fields.address": "Dirección",
   "fields.longitude": "Longitud",
@@ -19,9 +19,6 @@
   "notification.selected-from-layer": "{name} seleccionado de {layer}",
   "notification.snapped": "{name} seleccionado (a {distance} m)",
   "notification.snapped-from-layer": "{name} seleccionado de {layer} (a {distance} m)",
-  "geocoding.success": "Dirección actualizada con éxito",
-  "geocoding.error": "Error al obtener la dirección. Por favor, inténtelo de nuevo.",
-  "geocoding.no-results": "No se encontró dirección para esta ubicación",
   "i18n.localized.label": "Activar localización para este campo",
   "i18n.localized.description": "El campo puede tener valores diferentes en cada idioma"
 }

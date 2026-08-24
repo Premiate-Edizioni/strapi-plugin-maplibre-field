@@ -1,15 +1,15 @@
 {
   "label": "Carte",
   "description": "Un champ carte utilisant MapLibre",
-  "search": "Recherche d'un lieu ou d'une adresse",
   "search.placeholder": "Rechercher un lieu...",
-  "search.button": "Rechercher",
   "search.clear": "Effacer",
   "search.loading": "Recherche en cours…",
   "search.no-results-yet": "Aucun résultat disponible",
   "search.no-results": "Aucun résultat pour « {query} »",
   "search.source-osm": "OpenStreetMap",
   "search.source-poi": "Couche personnalisée",
+  "layers.title": "Couches de POI",
+  "layers.toggle": "Afficher ou masquer les couches de POI",
   "fields.name": "Nom",
   "fields.address": "Adresse",
   "fields.longitude": "Longitude",
@@ -19,9 +19,6 @@
   "notification.selected-from-layer": "{name} sélectionné dans {layer}",
   "notification.snapped": "{name} sélectionné (à {distance} m)",
   "notification.snapped-from-layer": "{name} sélectionné dans {layer} (à {distance} m)",
-  "geocoding.success": "Adresse mise à jour avec succès",
-  "geocoding.error": "Impossible de récupérer l'adresse. Veuillez réessayer.",
-  "geocoding.no-results": "Aucune adresse trouvée pour cet emplacement",
   "i18n.localized.label": "Activer la localisation pour ce champ",
   "i18n.localized.description": "Le champ peut avoir des valeurs différentes dans chaque langue"
 }

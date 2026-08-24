@@ -1,15 +1,15 @@
 {
   "label": "Karte",
   "description": "Eine Kartenkomponente, basierend auf MapLibre",
-  "search": "Suchen Sie nach einem Ort oder einer Adresse",
   "search.placeholder": "Suchen Sie nach einem Ort...",
-  "search.button": "Suchen",
   "search.clear": "Löschen",
   "search.loading": "Suche läuft…",
   "search.no-results-yet": "Keine Ergebnisse verfügbar",
   "search.no-results": "Keine Ergebnisse für „{query}“",
   "search.source-osm": "OpenStreetMap",
   "search.source-poi": "Eigene Ebene",
+  "layers.title": "POI-Ebenen",
+  "layers.toggle": "POI-Ebenen ein- oder ausblenden",
   "fields.name": "Name",
   "fields.address": "Adresse",
   "fields.longitude": "Längengrad",
@@ -19,9 +19,6 @@
   "notification.selected-from-layer": "{name} aus {layer} ausgewählt",
   "notification.snapped": "{name} ausgewählt ({distance} m entfernt)",
   "notification.snapped-from-layer": "{name} aus {layer} ausgewählt ({distance} m entfernt)",
-  "geocoding.success": "Adresse erfolgreich aktualisiert",
-  "geocoding.error": "Fehler beim Abrufen der Adresse. Bitte versuchen Sie es erneut.",
-  "geocoding.no-results": "Keine Adresse für diesen Standort gefunden",
   "i18n.localized.label": "Lokalisierung für dieses Feld aktivieren",
   "i18n.localized.description": "Das Feld kann in jeder Sprache unterschiedliche Werte haben"
 }

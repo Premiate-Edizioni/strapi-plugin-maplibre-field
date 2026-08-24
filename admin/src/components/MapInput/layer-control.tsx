@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
+import { useIntl } from 'react-intl';
 import type { MapRef } from 'react-map-gl/maplibre';
 import type { IControl, Map as MapLibreMap } from 'maplibre-gl';
+import getTranslation from '../../utils/getTrad';
 
 export interface LayerConfig {
   id: string;
@@ -16,9 +18,18 @@ interface LayerControlProps {
   onLayerToggle: (layerId: string, enabled: boolean) => void;
 }
 
+/** The panel's own wording. Everything else it displays comes from the host app's `poiSources`. */
+interface LayerControlLabels {
+  title: string;
+  toggle: string;
+}
+
 /**
  * MapLibre native layer control implementation
  * Follows MapLibre GL JS IControl interface standard
+ *
+ * The control builds raw DOM, so it cannot format its own messages: the two strings it owns are
+ * translated by the React wrapper below and handed in, the way `_layers` is.
  */
 class LayerControlImpl implements IControl {
   private _isPanelOpen = false;
@@ -29,6 +40,7 @@ class LayerControlImpl implements IControl {
   constructor(
     private _layers: LayerConfig[],
     private _onToggle: (layerId: string, enabled: boolean) => void,
+    private _labels: LayerControlLabels,
     private _map?: MapLibreMap,
     private _container?: HTMLDivElement
   ) {}
@@ -43,8 +55,8 @@ class LayerControlImpl implements IControl {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'maplibregl-ctrl-icon';
-    button.title = 'Toggle Layers';
-    button.setAttribute('aria-label', 'Toggle Layers');
+    button.title = this._labels.toggle;
+    button.setAttribute('aria-label', this._labels.toggle);
     button.innerHTML = `
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M12 2L2 7l10 5 10-5-10-5z"/>
@@ -78,7 +90,7 @@ class LayerControlImpl implements IControl {
 
     // Add title (once)
     const title = document.createElement('div');
-    title.textContent = 'POI Layers';
+    title.textContent = this._labels.title;
     title.style.fontSize = '12px';
     title.style.fontWeight = 'bold';
     title.style.marginBottom = '8px';
@@ -199,6 +211,13 @@ class LayerControlImpl implements IControl {
  */
 const LayerControl: React.FC<LayerControlProps> = ({ mapRef, layers, onLayerToggle }) => {
   const controlRef = useRef<LayerControlImpl | null>(null);
+  const { formatMessage } = useIntl();
+
+  const title = formatMessage({ id: getTranslation('layers.title'), defaultMessage: 'POI layers' });
+  const toggle = formatMessage({
+    id: getTranslation('layers.toggle'),
+    defaultMessage: 'Toggle POI layers',
+  });
 
   useEffect(() => {
     if (!mapRef.current || layers.length === 0) return;
@@ -206,7 +225,7 @@ const LayerControl: React.FC<LayerControlProps> = ({ mapRef, layers, onLayerTogg
     const map = mapRef.current.getMap();
 
     // Create and add control
-    const control = new LayerControlImpl(layers, onLayerToggle);
+    const control = new LayerControlImpl(layers, onLayerToggle, { title, toggle });
     controlRef.current = control;
 
     map.addControl(control, 'top-right');
@@ -217,7 +236,8 @@ const LayerControl: React.FC<LayerControlProps> = ({ mapRef, layers, onLayerTogg
         controlRef.current = null;
       }
     };
-  }, [mapRef, onLayerToggle]); // Don't include layers to avoid recreation
+    // Labels are compared by value, so a locale change rebuilds the control and nothing else does.
+  }, [mapRef, onLayerToggle, title, toggle]); // Don't include layers to avoid recreation
 
   // Update control when layers change
   useEffect(() => {
