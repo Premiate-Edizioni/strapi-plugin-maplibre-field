@@ -7,7 +7,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useIntl } from 'react-intl';
-import { Flex, Box, Typography, TextInput } from '@strapi/design-system';
+import { Flex, Box, Typography, Searchbar, SearchForm } from '@strapi/design-system';
 import { performSearch, type SearchResult } from '../../services/geocoder-service';
 import type { LocationFeature } from '../../services/poi-service';
 import getTranslation from '../../utils/getTrad';
@@ -106,6 +106,12 @@ const SearchBox: React.FC<SearchBoxProps> = ({
     }
   };
 
+  const handleClear = () => {
+    setQuery('');
+    setResults([]);
+    setIsOpen(false);
+  };
+
   const handleSelectResult = (result: SearchResult) => {
     onSelectResult(result.feature);
     setIsOpen(false);
@@ -138,13 +144,19 @@ const SearchBox: React.FC<SearchBoxProps> = ({
 
   return (
     <Box ref={containerRef} style={{ position: 'relative', width: '100%' }}>
-      <TextInput
-        placeholder={formatMessage({ id: getTranslation('search.placeholder') })}
-        value={query}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
-        onKeyDown={handleKeyDown}
-        aria-label="Location search"
-      />
+      <SearchForm onSubmit={(e) => e.preventDefault()}>
+        <Searchbar
+          name="location-search"
+          placeholder={formatMessage({ id: getTranslation('search.placeholder') })}
+          value={query}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onClear={handleClear}
+          clearLabel={formatMessage({ id: getTranslation('search.clear') })}
+        >
+          {formatMessage({ id: getTranslation('search.placeholder') })}
+        </Searchbar>
+      </SearchForm>
 
       {/* Results Dropdown */}
       {isOpen && results.length > 0 && (

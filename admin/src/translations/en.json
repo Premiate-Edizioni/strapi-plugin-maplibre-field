@@ -4,6 +4,7 @@
   "search": "Search for a place or address on OpenStreetMap",
   "search.placeholder": "Search for a location...",
   "search.button": "Search",
+  "search.clear": "Clear",
   "fields.address": "Address",
   "fields.longitude": "Longitude",
   "fields.latitude": "Latitude",

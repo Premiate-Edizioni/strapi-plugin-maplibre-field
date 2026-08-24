@@ -4,6 +4,7 @@
   "search": "Recherche d'un lieu ou d'une adresse",
   "search.placeholder": "Rechercher un lieu...",
   "search.button": "Rechercher",
+  "search.clear": "Effacer",
   "fields.address": "Adresse",
   "fields.longitude": "Longitude",
   "fields.latitude": "Latitude",
