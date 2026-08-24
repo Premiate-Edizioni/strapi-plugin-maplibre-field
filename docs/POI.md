@@ -337,8 +337,9 @@ The layer control panel appears in the **top-right corner** of the map (customiz
 - Success notification shows: "POI Name (source: Source Layer)"
 
 **4. Double-Click Snap**:
-- Double-click near a POI (within `poiSnapRadius`, default 5m)
-- Automatically selects the nearest POI
+- Double-click on a POI (within `poiSnapRadius`, default 5m)
+- Automatically selects the nearest POI, from your custom sources **or** from the basemap's own
+  OpenStreetMap POIs — the latter need no `poiSources` configuration
 - Shows distance in notification: "POI Name (3m)"
 - If no POI within radius, saves coordinates only
 
@@ -725,3 +726,8 @@ poiSources: [
 **Check POI layer**:
 - Verify layer is enabled in layer control
 - POI must be within viewport bounds
+
+**Note on basemap POIs**:
+- Snapping also works on the map style's own OpenStreetMap POIs, with no `poiSources` configured
+- Those are looked up through Nominatim, so they are subject to its coverage: a POI drawn by the
+  map style but absent from the reverse-geocoding index will not snap

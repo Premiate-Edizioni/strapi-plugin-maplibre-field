@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Double-click never produced an address without custom POI sources** - The Nominatim lookup that resolves the basemap's own POIs ran *inside* the loop over enabled custom POI layers, so it inherited that loop's conditions. With no `poiSources` configured, `poiLayers` was empty, the loop body never executed, and a double-click — even landing exactly on a hotel or a shop drawn by the map style — saved bare coordinates with no name and no address. Nominatim covers the basemap and has nothing to do with the custom sources, so it is now queried once per gesture, outside that loop. As a side effect this also stops repeating an identical reverse-geocoding request once per configured source: an app with three custom layers issued three of them for a single double-click, against a service whose usage policy caps clients at 1 request per second.
+
+  The snap threshold is unchanged at `poiSnapRadius` (default 5m) and no configuration option was added. Clicking away from any POI still saves coordinates only — deliberately, since OpenStreetMap answers a reverse-geocoding query with its nearest match at *any* distance (39m for a point in central Milan, 366km in unmapped terrain), so accepting it unconditionally would attach a wildly wrong address.
+
+### Changed
+
+- **`searchNearbyPOIsForSnap()` split into `searchNearbyCustomPOIs()`** - The old function queried Nominatim *and* one custom source, which is what tied the two together above. It now queries the custom source only; the Nominatim call moved to the caller. Internal to the admin bundle — not part of the plugin's public API.
+
 ### Added
 
 - **Geocoding follows the admin panel locale** - Nominatim requests now carry the editor's admin locale as `accept-language`, so search results and reverse-geocoded addresses come back in the language the editor is already working in (`Mailand, Italien` for a German panel, `Milano, Italia` for an Italian one, same point). Previously no language was requested at all and Nominatim answered in the local language of the place. Note that `properties.address` is therefore stored in whichever language the editor who saved it was using — it is a human-readable label, not a stable key; the coordinates remain the stable value. Documented in [docs/CONFIGURATION.md](docs/CONFIGURATION.md#geocoding-language).

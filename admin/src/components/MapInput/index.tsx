@@ -27,7 +27,8 @@ import {
   LocationFeature,
   createLocationFeature,
   queryPOIsForViewport,
-  searchNearbyPOIsForSnap,
+  queryNominatim,
+  searchNearbyCustomPOIs,
   findNearestPOI,
   calculateDistance,
 } from '../../services/poi-service';
@@ -482,6 +483,18 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       const enabledLayers = poiLayers.filter((layer) => layer.enabled);
       const allNearbyPOIs: POI[] = [];
 
+      // Nominatim covers the basemap's own POIs, so it is queried once per gesture — independently
+      // of how many custom sources are configured, and also when none is.
+      const basemapPOIs = await queryNominatim(
+        clickCoords[1], // lat
+        clickCoords[0], // lng
+        snapRadius,
+        config.nominatimUrl || 'https://nominatim.openstreetmap.org',
+        locale
+      );
+
+      allNearbyPOIs.push(...basemapPOIs);
+
       // Search in all enabled sources
       for (const layer of enabledLayers) {
         let apiUrl: string | null = null;
@@ -499,7 +512,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         }
 
         if (apiUrl) {
-          const pois = await searchNearbyPOIsForSnap(
+          const pois = await searchNearbyCustomPOIs(
             clickCoords[1], // lat
             clickCoords[0], // lng
             {

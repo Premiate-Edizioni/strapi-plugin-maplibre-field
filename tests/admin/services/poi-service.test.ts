@@ -12,7 +12,7 @@ import {
   queryCustomAPI,
   queryNominatim,
   queryPOIsForViewport,
-  searchNearbyPOIsForSnap,
+  searchNearbyCustomPOIs,
   type GeoJSONFeature,
   type POI,
   type POIServiceConfig,
@@ -458,58 +458,69 @@ describe('queryNominatim', () => {
   });
 });
 
-describe('searchNearbyPOIsForSnap', () => {
-  test('combines Nominatim and custom GeoJSON results', async () => {
+describe('searchNearbyCustomPOIs', () => {
+  test('returns the custom POIs within the radius', async () => {
     stubFetch({
-      [NOMINATIM_URL]: {
-        type: 'FeatureCollection',
-        features: [
-          {
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: [9.1901, 45.4601] },
-            properties: { geocoding: { place_id: 1, name: 'Piazza Velasca' } },
-          },
-        ],
-      },
       [CUSTOM_API_URL]: featureCollection([
         pointFeature([9.1901, 45.4601], { name: 'Skate Park' }),
         pointFeature([9.5, 45.4601], { name: 'Too Far' }),
       ]),
     });
 
-    const results = await searchNearbyPOIsForSnap(
+    const results = await searchNearbyCustomPOIs(
       45.4601,
       9.1901,
       config({ customApiUrl: CUSTOM_API_URL, radius: 500 })
     );
 
-    expect(results.map((poi) => poi.source)).toEqual(['nominatim', 'custom']);
-    expect(results.map((poi) => poi.name)).toEqual(['Piazza Velasca', 'Skate Park']);
+    expect(results.map((poi) => poi.source)).toEqual(['custom']);
+    expect(results.map((poi) => poi.name)).toEqual(['Skate Park']);
   });
 
-  test('never fetches a pmtiles source, which is queried through the rendered tiles instead', async () => {
+  test('never queries Nominatim, which the caller handles once per gesture', async () => {
+    // Nominatim covers the basemap's own POIs and does not depend on the custom sources, so
+    // querying it here would repeat the same request once per configured source.
     const fetchMock = stubFetch({
-      [NOMINATIM_URL]: {
-        type: 'FeatureCollection',
-        features: [
-          {
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: [9.1901, 45.4601] },
-            properties: { geocoding: { place_id: 1, name: 'Piazza Velasca' } },
-          },
-        ],
-      },
       [CUSTOM_API_URL]: featureCollection([]),
     });
 
-    await searchNearbyPOIsForSnap(
+    await searchNearbyCustomPOIs(45.4601, 9.1901, config({ customApiUrl: CUSTOM_API_URL }));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toContain(CUSTOM_API_URL);
+  });
+
+  test('never fetches a pmtiles source, which is queried through the rendered tiles instead', async () => {
+    const fetchMock = stubFetch({ [CUSTOM_API_URL]: featureCollection([]) });
+
+    const results = await searchNearbyCustomPOIs(
       45.4601,
       9.1901,
       config({ customApiUrl: CUSTOM_API_URL, sourceType: 'pmtiles' })
     );
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toContain(NOMINATIM_URL);
+    expect(results).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test('returns an empty list when no custom source is configured', async () => {
+    const fetchMock = stubFetch({});
+
+    expect(await searchNearbyCustomPOIs(45.4601, 9.1901, config())).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test('degrades to an empty list when the custom source is unreachable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('POI source down');
+      })
+    );
+
+    expect(
+      await searchNearbyCustomPOIs(45.4601, 9.1901, config({ customApiUrl: CUSTOM_API_URL }))
+    ).toEqual([]);
   });
 });
 

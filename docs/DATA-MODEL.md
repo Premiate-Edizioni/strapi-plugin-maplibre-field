@@ -71,7 +71,7 @@ All other fields in `properties` are optional and only included when available.
 **Source**:
 - Nominatim search: Place name from search result
 - POI click: `properties.name` from GeoJSON API
-- Map double-click: Not included (unless snapped to POI)
+- Map double-click / marker drag: Not included, unless it snaps to a POI (basemap or custom)
 
 **Examples**:
 ```json
@@ -94,9 +94,13 @@ All other fields in `properties` are optional and only included when available.
 **Source**:
 - Nominatim search: Composed by the plugin from the result
 - POI click: Reverse geocoded via Nominatim
-- Map double-click (POI snap): Reverse geocoded via Nominatim
-- Map double-click (empty area): Not included
+- Map double-click / marker drag, landing on a basemap POI: Reverse geocoded via Nominatim
+- Map double-click / marker drag, away from any POI: Not included
 - Custom POI sources: The source's own `properties.address`, verbatim
+
+A double-click or marker drop only produces an address when it lands within `poiSnapRadius` of a
+POI — see [USAGE.md](USAGE.md#3-double-clicking-on-the-map) for why that threshold exists.
+Basemap POIs are covered without any `poiSources` configuration.
 
 **Examples**:
 ```json

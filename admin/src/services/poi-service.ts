@@ -502,54 +502,39 @@ export async function searchPOIsForGeocoder(
 }
 
 /**
- * Search nearby POIs for snap (double-click) - queries BOTH sources
+ * Search one custom POI source near coordinates, for snap (double-click, marker drag).
+ *
+ * This queries the custom source only. Nominatim covers the basemap's own POIs and is independent
+ * of how many custom sources are configured, so the caller queries it once per gesture rather than
+ * once per source — see `setLocationWithPOISnap()` in the MapInput component.
+ *
  * @param lat Latitude
  * @param lng Longitude
  * @param config POI service configuration
- * @returns Array of POIs from both Nominatim and Custom API
+ * @returns Array of POIs from the custom source, empty if none is configured or reachable
  */
-export async function searchNearbyPOIsForSnap(
+export async function searchNearbyCustomPOIs(
   lat: number,
   lng: number,
   config: POIServiceConfig
 ): Promise<POI[]> {
-  const results: POI[] = [];
+  // pmtiles sources are snapped through queryRenderedFeatures, not fetched over HTTP
+  if (!config.customApiUrl || config.sourceType === 'pmtiles') {
+    return [];
+  }
 
   try {
-    // 1. Query Nominatim
-    const nominatimPOIs = await queryNominatim(
-      lat,
-      lng,
-      config.radius,
-      config.nominatimUrl,
-      config.language
-    );
-    results.push(...nominatimPOIs);
+    const customFeatures = await queryCustomAPI(config.customApiUrl);
 
-    // 2. Query custom API if configured (skipped for pmtiles sources — handled via queryRenderedFeatures)
-    if (config.customApiUrl && config.sourceType !== 'pmtiles') {
-      try {
-        const customFeatures = await queryCustomAPI(config.customApiUrl);
+    // Filter by distance from click point
+    const nearbyFeatures = filterByDistance(customFeatures, [lng, lat], config.radius);
 
-        // Filter by distance from click point
-        const nearbyFeatures = filterByDistance(customFeatures, [lng, lat], config.radius);
-
-        const customPOIs = nearbyFeatures
-          .map((feature) =>
-            geoJSONFeatureToPOI(feature, [lng, lat], config.mapName, config.layerId)
-          )
-          .filter((poi): poi is POI => poi !== null);
-
-        results.push(...customPOIs);
-      } catch (error) {
-        console.warn('Custom API query failed, continuing with Nominatim only:', error);
-      }
-    }
-
-    return results;
+    return nearbyFeatures
+      .map((feature) => geoJSONFeatureToPOI(feature, [lng, lat], config.mapName, config.layerId))
+      .filter((poi): poi is POI => poi !== null);
   } catch (error) {
-    console.error('Search nearby POIs error:', error);
-    return results;
+    console.warn('Custom API query failed:', error);
+    return [];
   }
 }
 

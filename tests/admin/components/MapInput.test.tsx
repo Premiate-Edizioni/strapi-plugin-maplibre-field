@@ -131,7 +131,8 @@ vi.mock('../../../admin/src/services/poi-service', () => ({
     })
   ),
   queryPOIsForViewport: vi.fn(() => Promise.resolve([])),
-  searchNearbyPOIsForSnap: vi.fn(() => []),
+  searchNearbyCustomPOIs: vi.fn(() => []),
+  queryNominatim: vi.fn(() => Promise.resolve([])),
   findNearestPOI: vi.fn(() => null),
   calculateDistance: vi.fn(() => 0),
 }));

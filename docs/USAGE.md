@@ -110,17 +110,33 @@ For precise coordinate selection or when no POI exists:
 
 **Two behaviors based on proximity**:
 
-**A) Near a POI (within snap radius - default 5 meters)**:
+**A) On a POI (within snap radius - default 5 meters)**:
 - Automatically selects the nearest POI
 - Saves complete POI data (same as clicking the POI marker)
 - Notification shows: "POI Name (distance)"
 - Example: "Skatepark Milano (3m)"
 
-**B) Far from any POI**:
+Both kinds of POI count here:
+- **Basemap POIs** — the shops, hotels and stations drawn by the map style itself. These are looked
+  up in OpenStreetMap via Nominatim, and need no configuration.
+- **Custom POIs** — anything you supplied through `poiSources`.
+
+**B) Away from any POI**:
 - Places marker at exact click coordinates
 - Saves **only coordinates** (no name or address)
 - Useful for marking locations without existing POI data
 - Notification shows: "Location saved (coordinates only)"
+
+**Why an address is not always produced**
+
+The snap radius is a deliberate threshold: it decides whether you clicked *on* a POI or merely
+*near* one. Double-clicking empty ground does not fill in an address, and that is intentional —
+OpenStreetMap always answers a reverse-geocoding query with its closest match at any distance, so
+accepting it unconditionally would attach a street hundreds of metres away, or a town hundreds of
+kilometres away in unmapped terrain. Only a match within `poiSnapRadius` is treated as the place you
+meant.
+
+To place a point that has no POI and still record an address, use the search box instead.
 
 **What's saved** (coordinates-only mode):
 ```json
