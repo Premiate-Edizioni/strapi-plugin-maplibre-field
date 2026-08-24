@@ -121,13 +121,15 @@ vi.mock('../../../admin/src/components/MapInput/layer-control', () => ({
 // Mock POI service
 vi.mock('../../../admin/src/services/poi-service', () => ({
   __esModule: true,
-  createLocationFeature: vi.fn((coords: [number, number], properties: Record<string, any> = {}) => ({
-    type: 'Feature',
-    geometry: { type: 'Point', coordinates: coords },
-    properties: Object.fromEntries(
-      Object.entries(properties).filter(([, v]) => v != null && v !== '')
-    ),
-  })),
+  createLocationFeature: vi.fn(
+    (coords: [number, number], properties: Record<string, any> = {}) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: coords },
+      properties: Object.fromEntries(
+        Object.entries(properties).filter(([, v]) => v != null && v !== '')
+      ),
+    })
+  ),
   queryPOIsForViewport: vi.fn(() => Promise.resolve([])),
   searchNearbyPOIsForSnap: vi.fn(() => []),
   findNearestPOI: vi.fn(() => null),
