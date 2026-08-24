@@ -47,14 +47,13 @@ npm run build
 
 ### Testing in a Strapi Project
 
-**Option 1: Using npm link** (recommended for development)
+**Option 1: Using yalc** (recommended — live reload, see [Watch Mode](#watch-mode) below)
 
 ```bash
-# In the plugin directory
-npm link
+# yalc must be installed globally first: npm install -g yalc
 
 # In your Strapi project directory
-npm link @premiate/strapi-plugin-maplibre-field
+npx yalc add @premiate/strapi-plugin-maplibre-field
 
 # Add to config/plugins.ts
 export default {
@@ -62,41 +61,53 @@ export default {
     enabled: true,
   },
 };
-
-# Start Strapi in watch mode
-npm run develop
 ```
 
-**Option 2: Using local file path**
+Avoid `npm link`/`yalc link --link` here: a symlinked package resolves through a different
+path than a normal `node_modules` copy, which can make Vite/esbuild's dependency pre-bundling
+(used by `strapi develop`) or React's module resolution behave differently than production —
+see the *Worker Loading* section of [CLAUDE.md](CLAUDE.md) for a case where exactly this class of
+resolution difference broke the dev server. `yalc add` (no `--link`) copies files instead, which
+avoids that class of bug.
 
-```bash
-# In your Strapi project
-npm install /path/to/strapi-plugin-maplibre-field
-```
-
-**Option 3: Create a test Strapi project**
-
-```bash
-npx create-strapi-app@latest my-test-app --quickstart
-cd my-test-app
-npm link /path/to/strapi-plugin-maplibre-field
-```
-
-### Watch Mode
-
-For active development, use watch mode to automatically rebuild on changes:
+**Option 2: Using a packed tarball**
 
 ```bash
 # In the plugin directory
-npm run watch
+npm run build && npm pack
+
+# In your Strapi project's package.json
+"@premiate/strapi-plugin-maplibre-field": "file:/path/to/strapi-plugin-maplibre-field/premiate-strapi-plugin-maplibre-field-<version>.tgz"
+
+# Then reinstall
+rm -rf node_modules/@premiate/strapi-plugin-maplibre-field .cache build .strapi && npm install
 ```
 
-Then in your Strapi project:
+No live reload — repeat build + pack + reinstall after every change. Useful for confirming what
+actually ships to npm.
+
+### Watch Mode
+
+`npm run watch` only type-checks (`tsc --watch --noEmit`) — it does not produce a runtime build, so
+it cannot drive live reload in a linked Strapi project on its own.
+
+For live reload with the `yalc add` setup above, run two watchers in the plugin directory:
+
 ```bash
-npm run develop
+# Terminal 1: rebuilds dist/ on every source change
+npx strapi-plugin watch
+
+# Terminal 2: re-publishes to yalc whenever dist/ changes
+npx nodemon --watch dist -e ts,js,mjs,css,map --exec "yalc push --changed"
 ```
 
-Changes to the plugin will trigger automatic rebuilds.
+Then start Strapi as usual in your project (`npm run develop`). Changes to the plugin propagate to
+the linked project in a few seconds, no manual reinstall needed.
+
+Note: `@strapi/sdk-plugin` ships a `strapi-plugin watch:link` command that is meant to do both of
+the above in one process, but it hardcodes `npm run watch` as the build step — which in this repo
+is the type-check-only script above, not a real build. Until that script is repointed at a real
+build (or the sdk command becomes configurable), use the two-terminal setup instead.
 
 ## Project Structure
 
