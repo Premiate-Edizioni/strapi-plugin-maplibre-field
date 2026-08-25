@@ -91,8 +91,7 @@ If custom POI layers are configured (see [POI Integration](POI.md)), you can cli
 
 1. Zoom into an area with POI markers (they appear at zoom level 10+)
 2. Click on any **POI marker** (colored pins on the map)
-3. The marker turns **orange** when selected
-4. Complete POI data is saved automatically
+3. Complete POI data is saved automatically
 
 **What's saved**:
 - POI name
@@ -240,81 +239,32 @@ The layer control lets you toggle POI layers on and off:
 3. Each POI source has a **coloured dot** next to its name — filled when the layer is shown, an empty outline when it is hidden
 4. Click a row to show or hide that layer's POI markers
 
-### Features
-
-- **Real-time updates**: POIs appear/disappear immediately when toggling
-- **Independent control**: Each layer can be toggled separately
-- **Persistent state**: Layer visibility is remembered during your session
-- **Dynamic loading**: When moving the map, POIs are fetched only for visible layers
-
-### Example Use Cases
-
-**Skateparks and Skateshops**:
-- Show both layers when planning a skate trip
-- Hide skateshops to focus only on parks
-- Show only shops when looking for gear
-
-**Multiple Categories**:
-- Museums, restaurants, and hotels
-- Toggle based on current planning need
-- Reduce visual clutter by hiding unused categories
+Each layer toggles independently and updates the map immediately; a hidden layer stops fetching.
+The toggle is local to the open field — it resets to the `enabled` default from `poiSources` the
+next time the field is reopened, it isn't saved anywhere. See
+[POI Integration: Layer Control](POI.md#layer-control) for configuration details.
 
 ## Best Practices
 
 ### For Content Editors
 
-**1. Use Search for Known Places**
-- Fastest method for well-known addresses and landmarks
-- Ensures accurate geocoding and address formatting
-- Automatically includes POI category when available
-
-**2. Use POI Click for Pre-defined Locations**
-- When the location is already in your custom POI database
-- Ensures consistency across content entries
-- Includes all custom metadata from your API
-
-**3. Use Double-Click for Precise Coordinates**
-- When no POI exists at the exact location
-- For marking temporary or unofficial spots
-- When you need precise positioning (e.g., photo locations)
-
-**4. Zoom In Before Selecting**
-- Higher zoom = more precision
-- At high zoom, double-clicking can snap to small POIs (shops, cafes)
-- At low zoom, you might miss small POI targets
-
-**5. Verify the Address**
-- Always check the readonly address field after selection
-- Geocoding may return unexpected results for ambiguous searches
-- Re-search with more specific terms if needed
+- **Search** is fastest for known addresses and landmarks, and includes POI category when available
+- **POI click** keeps entries consistent when the location already exists in a custom POI source
+- **Double-click** is for precise coordinates with no matching POI (temporary or unofficial spots)
+- Zoom in before selecting — at low zoom you can miss small POI targets, and double-click snapping
+  needs the POI to already be rendered
+- Always check the readonly address field after selecting; re-search with more specific terms if
+  geocoding returns something unexpected
 
 ### For Administrators
 
-**1. Configure Appropriate Zoom Levels**
-- Set `defaultZoom` based on your typical use case
-- City-level: 10-12
-- Neighborhood: 13-15
-- Street-level: 16-18
-
-**2. Optimize POI Display**
-- Set `poiMinZoom` high enough to prevent clutter (10-12 recommended)
-- Limit `poiMaxDisplay` based on POI density (50-200 typical)
-- Use descriptive `name` values in `poiSources` for clarity
-
-**3. Choose Appropriate Map Styles**
-- Satellite: Best for outdoor locations, parks, terrain
-- Streets: Best for addresses, urban navigation
-- Outdoor: Best for hiking, natural features
-
-**4. Test Geocoding Performance**
-- Use self-hosted Nominatim for production (avoid public server limits)
-- Monitor geocoding response times
-- Consider caching frequently searched locations
-
-**5. Provide User Guidance**
-- Add field descriptions in the Content-Type Builder
-- Document your specific POI sources and categories
-- Create internal guides for content editors
+- Match `defaultZoom` to your typical use case (city: 10-12, neighborhood: 13-15, street: 16-18)
+- Tune `poiMinZoom` and `poiMaxDisplay` for your data density — see
+  [POI Integration: Performance Optimization](POI.md#performance-optimization) for the numbers
+- For production traffic, point `nominatimUrl` at a self-hosted instance rather than the public
+  server — see [Configuration: Geocoding](CONFIGURATION.md#geocoding-configuration)
+- Add field descriptions in the Content-Type Builder and document your POI sources/categories for
+  content editors
 
 ### Common Issues and Solutions
 
@@ -324,40 +274,23 @@ The layer control lets you toggle POI layers on and off:
 
 ---
 
-**Problem**: POI markers don't appear
-
-**Solutions**:
-- Check that you're zoomed in enough (`poiMinZoom` setting)
-- Verify layer is enabled in layer control
-- Check browser console for API errors
-- Verify your POI API returns valid GeoJSON
-
----
-
 **Problem**: Search returns no results
 
 **Solutions**:
 - Be more specific in your search (add city/country)
 - Check Nominatim service is accessible
 - Try different search terms (address vs place name)
-- Verify internet connection
-
----
-
-**Problem**: Double-click doesn't select nearby POI
-
-**Solutions**:
-- Zoom in closer (POIs must be visible)
-- Check if you're within snap radius (default 5m, configurable)
-- Ensure POI layer is enabled
-- Click directly on POI marker instead
 
 ---
 
 **Problem**: Wrong address displayed
 
 **Solutions**:
-- Nominatim uses OpenStreetMap data which may be incomplete
+- Nominatim uses OpenStreetMap data, which may be incomplete for the area
 - Try clicking a different nearby location
 - Manually verify the coordinates are correct
-- Consider using a different geocoding provider for your region
+
+---
+
+**POI-related issues** (markers not appearing, double-click not snapping, PMTiles layers not
+loading): see [POI Integration: Troubleshooting](POI.md#troubleshooting).

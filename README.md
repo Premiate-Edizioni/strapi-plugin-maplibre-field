@@ -10,17 +10,14 @@ A [Strapi](https://strapi.io/) plugin providing a [MapLibre](https://www.maplibr
 
 ## ✨ Key Features
 
-- **Works with no configuration** - falls back to OpenFreeMap tiles; no API key, no account
+- **No map provider setup required** - works out of the box with OpenFreeMap tiles; swap in MapTiler, Stadia, PMTiles or a custom style anytime
 - **Interactive MapLibre GL map** with fullscreen, zoom, compass and geolocate controls
 - **Four ways to place a point** - search, POI click, double-click, or drag the marker
-- **Multiple basemap styles** support (MapTiler, Stadia, PMTiles, custom)
 - **OpenStreetMap geocoding** via Nominatim, in the language of the admin panel
+- **Custom POI layers** (GeoJSON or PMTiles) with a layer control panel to toggle sources
 - **Keyboard-accessible search** built on Strapi's Combobox (WAI-ARIA combobox pattern)
-- **Custom POI layers** with GeoJSON API or PMTiles vector tiles
-- **Layer control panel** for toggling POI sources
 - **GeoJSON Feature** storage (RFC 7946 compliant)
 - **Five UI languages** - English, German, Spanish, French, Italian
-- **TypeScript** support with full type definitions
 
 ## 📦 Installation
 
@@ -124,13 +121,12 @@ The selected location is saved as a GeoJSON Feature with coordinates, name, addr
 
 ## 🗺️ Map Providers
 
-The plugin supports any [MapLibre Style Specification](https://maplibre.org/maplibre-style-spec/) compatible provider:
+The plugin supports any [MapLibre Style Specification](https://maplibre.org/maplibre-style-spec/) compatible provider — no lock-in to a single tile service:
 
-- **OpenFreeMap** - Free, public OpenStreetMap tiles, no API key required (setup as fallback if no configuration available)
-- **MapTiler** - Requires API key, multiple styles available
-- **Stadia Maps** - Requires API key, OSM-based styles
-- **PMTiles** - Self-hosted tiles, no tile server required
-- **Custom styles** - Create your own with [Maputnik](https://maputnik.github.io/)
+- **OpenFreeMap** - the default, free and unlimited, no API key or account
+- **Commercial providers** (e.g. [MapTiler](https://www.maptiler.com/), [Stadia Maps](https://stadiamaps.com/)) - more style choice, require an API key
+- **PMTiles** - self-host your own tile archive on any static storage (S3, R2, ...), no tile server needed
+- **Custom styles** - build your own with [Maputnik](https://maputnik.github.io/)
 
 See the [Configuration Guide](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/docs/CONFIGURATION.md) for detailed setup instructions.
 

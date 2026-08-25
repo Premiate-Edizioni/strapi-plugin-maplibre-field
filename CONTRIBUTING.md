@@ -12,6 +12,9 @@ Thank you for your interest in contributing to the MapLibre Field plugin! This d
 - [Testing](#testing)
 - [Pull Requests](#pull-requests)
 - [Reporting Issues](#reporting-issues)
+- [Development Tips](#development-tips)
+- [Getting Help](#getting-help)
+- [License](#license)
 
 ## Getting Started
 
@@ -26,10 +29,10 @@ Before contributing, please:
 
 ### Prerequisites
 
-- Node.js 22.0.0 or higher (up to 24.x)
+- Node.js 22.0.0 or higher (per Strapi's supported LTS versions)
 - npm or yarn
 - Git
-- A Strapi v5 project for testing (optional but recommended)
+- A Strapi v5 project for testing
 
 ### Clone and Install
 
@@ -47,7 +50,7 @@ npm run build
 
 ### Testing in a Strapi Project
 
-**Option 1: Using yalc** (recommended — live reload, see [Watch Mode](#watch-mode) below)
+**Option 1: Using yalc** (recommended — auto-rebuild & publish, no manual reinstall; see [Watch Mode](#watch-mode) below)
 
 ```bash
 # yalc must be installed globally first: npm install -g yalc
@@ -83,7 +86,7 @@ npm run build && npm pack
 rm -rf node_modules/@premiate/strapi-plugin-maplibre-field .cache build .strapi && npm install
 ```
 
-No live reload — repeat build + pack + reinstall after every change. Useful for confirming what
+No auto-publish — repeat build + pack + reinstall after every change. Useful for confirming what
 actually ships to npm.
 
 ### Watch Mode
@@ -112,37 +115,35 @@ still runs `tsc --watch`.
 strapi-plugin-maplibre-field/
 ├── admin/                    # Frontend (Strapi admin panel)
 │   └── src/
-│       ├── components/       # React components
-│       │   ├── Input.tsx     # Main map field component
-│       │   └── ...
-│       ├── index.tsx         # Plugin registration
+│       ├── components/MapInput/  # Map field components
+│       ├── services/         # Geocoding and POI services
 │       └── translations/     # i18n files
-│           ├── en.json
-│           ├── it.json
-│           └── ...
 ├── server/                   # Backend (Strapi server)
-│   ├── register.ts           # Plugin registration
-│   └── ...
+│   └── src/
+│       ├── controllers/      # Config + worker file endpoints
+│       └── routes/
 ├── tests/                    # Test files
 ├── docs/                     # Documentation
 ├── package.json
 ├── tsconfig.json
-├── eslint.config.js
-└── README.md
+└── eslint.config.js
 ```
+
+See [CLAUDE.md](CLAUDE.md) for the full file-by-file breakdown of both sides — it's kept in sync
+with the code and is the more detailed reference.
 
 ### Key Files
 
-**Frontend (admin/src/)**:
-- `components/Input.tsx` - Main map field component with MapLibre GL
-- `components/SearchBox.tsx` - Geocoding search component
-- `components/LayerControl.tsx` - POI layer toggle component
-- `index.tsx` - Plugin registration and configuration
-- `translations/*.json` - Internationalization files
+**Frontend (`admin/src/`)**:
 
-**Backend (server/)**:
-- `register.ts` - Plugin lifecycle registration
-- Currently minimal (field is client-side only)
+- `components/MapInput/index.tsx` - Main map field component
+- `components/MapInput/SearchBox.tsx` - Geocoding search component
+- `services/poi-service.ts`, `services/geocoder-service.ts` - Nominatim and POI logic
+
+**Backend (`server/src/`)**:
+
+- `controllers/worker.ts` - Serves the maplibre-gl worker files (see *Worker Loading* in CLAUDE.md)
+- `controllers/config.ts`, `routes/admin.ts` - Plugin config endpoint
 
 ## Development Workflow
 
@@ -169,6 +170,9 @@ npm run lint
 
 # Fix linting issues automatically
 npm run lint:fix
+
+# Check formatting
+npm run format:check
 
 # Build the plugin
 npm run build
@@ -244,6 +248,12 @@ npm run lint
 
 # Auto-fix linting issues
 npm run lint:fix
+
+# Check formatting without changing files
+npm run format:check
+
+# Auto-format files with Prettier
+npm run format
 ```
 
 **Configuration files**:
@@ -252,31 +262,6 @@ npm run lint:fix
 
 ### React/JSX
 
-**Component structure**:
-
-```tsx
-import { useState, useEffect } from 'react';
-
-interface MyComponentProps {
-  location: Location;
-  onSave: (location: Location) => void;
-}
-
-export function MyComponent({ location, onSave }: MyComponentProps) {
-  const [state, setState] = useState(null);
-  
-  useEffect(() => {
-    // Effect logic
-  }, [location]);
-  
-  return (
-    <div>
-      {/* JSX */}
-    </div>
-  );
-}
-```
-
 **Naming conventions**:
 - Components: PascalCase (`LocationMap`, `SearchBox`)
 - Props interfaces: `ComponentNameProps`
@@ -284,20 +269,21 @@ export function MyComponent({ location, onSave }: MyComponentProps) {
 - Functions: camelCase (`handleClick`, `fetchLocations`)
 - Constants: UPPER_SNAKE_CASE (`DEFAULT_ZOOM`, `MAX_RESULTS`)
 
+### Strapi Design System
+
+Anything rendered by React outside the map container must use `@strapi/design-system` components
+and tokens (e.g. `useTheme()`) rather than literal colors — a hardcoded value that matches a token
+is a bug. `SearchBox` builds on the DS `Combobox` for this reason.
+
+The one deliberate exception is the map chrome: the hardcoded colors in `layer-control.tsx` and
+`basemap-control.tsx` must **not** be wired to `useTheme()`. The map surface stays light in both
+Strapi themes, matching MapLibre's own zoom/compass/geolocate/fullscreen buttons, which are not
+React and can't be recolored via the admin theme.
+
 ### Comments
 
-Add comments for:
-- Complex logic
-- Non-obvious behavior
-- Workarounds or hacks
-- TODOs
-
-```typescript
-// Reverse coordinates for Leaflet (uses [lat, lng] instead of [lng, lat])
-const leafletCoords = [lat, lng];
-
-// TODO: Add support for polygon geometries in future version
-```
+Add comments only for non-obvious behavior: a hidden constraint, a workaround, an invariant that
+isn't clear from the code itself. Don't comment what the code already says.
 
 ## Testing
 
@@ -332,7 +318,8 @@ Before submitting a PR, test these scenarios:
 
 ### Unit Tests
 
-Currently, the plugin has basic test setup:
+The plugin has test coverage across admin components, services, utils, and the server's worker
+controller (see `tests/`):
 
 ```bash
 # Run tests
@@ -342,9 +329,7 @@ npm test
 npm run test:watch
 ```
 
-**We welcome contributions to improve test coverage!**
-
-Ideal areas for testing:
+Areas that could use more testing:
 - Coordinate validation
 - GeoJSON structure validation
 - POI filtering and display logic
@@ -356,7 +341,7 @@ Ideal areas for testing:
 
 1. **Update documentation** if you've changed functionality
 2. **Test thoroughly** in a real Strapi project
-3. **Run linter** and fix all issues
+3. **Run linter and formatter** (`npm run lint`, `npm run format:check`) and fix all issues
 4. **Update CHANGELOG.md** with your changes (under "Unreleased")
 5. **Rebase on main** to ensure no conflicts
 
@@ -386,7 +371,7 @@ Describe the tests you ran and their results.
 
 ### Review Process
 
-1. A maintainer will review your PR within 1-2 weeks
+1. A maintainer will review your PR as soon as possible
 2. Address any feedback or requested changes
 3. Once approved, your PR will be merged
 4. Your contribution will be included in the next release
@@ -399,7 +384,7 @@ Use the [GitHub Issues](https://github.com/Premiate-Edizioni/strapi-plugin-mapli
 
 **Include**:
 - **Strapi version** (e.g., 5.0.0)
-- **Plugin version** (e.g., 1.0.0)
+- **Plugin version** (e.g., 1.6.0)
 - **Browser** (if frontend issue)
 - **Steps to reproduce**
 - **Expected behavior**
@@ -411,7 +396,7 @@ Use the [GitHub Issues](https://github.com/Premiate-Edizioni/strapi-plugin-mapli
 
 ```markdown
 **Strapi Version**: 5.0.0
-**Plugin Version**: 1.0.0
+**Plugin Version**: 1.6.0
 **Browser**: Chrome 120
 
 **Steps to Reproduce**:
@@ -443,52 +428,10 @@ Open an issue with:
 
 ### Debugging
 
-**Enable verbose logging**:
-
-```typescript
-// In admin/src/components/Input.tsx
-console.log('Location selected:', location);
-console.log('POI data:', poiData);
-```
-
-**Browser DevTools**:
-- Network tab: Check API requests to POI sources, Nominatim
-- Console: Look for JavaScript errors
-- React DevTools: Inspect component state
-
-**Strapi Admin Panel**:
-- Check browser console for errors
-- Use Redux DevTools to inspect Strapi state
-
-### Working with MapLibre
-
-**Resources**:
-- [MapLibre GL JS Docs](https://maplibre.org/maplibre-gl-js/docs/)
-- [MapLibre Style Spec](https://maplibre.org/maplibre-style-spec/)
-- [React Map GL Docs](https://visgl.github.io/react-map-gl/)
-
-**Common patterns**:
-
-```typescript
-// Add a layer
-map.addLayer({
-  id: 'my-layer',
-  type: 'circle',
-  source: 'my-source',
-  paint: {
-    'circle-color': '#ff0000',
-    'circle-radius': 8,
-  },
-});
-
-// Listen for events
-map.on('click', 'my-layer', (e) => {
-  console.log('Clicked feature:', e.features[0]);
-});
-
-// Update map center
-map.setCenter([lng, lat]);
-```
+- Network tab: check API requests to POI sources and Nominatim
+- React DevTools: inspect `MapInput` state
+- [MapLibre GL JS Docs](https://maplibre.org/maplibre-gl-js/docs/) and
+  [React Map GL Docs](https://visgl.github.io/react-map-gl/) for API reference
 
 ### Working with Nominatim
 
@@ -540,32 +483,12 @@ composed from a whitelist of postal fields instead — see `formatAddress()` in
 
 ## Getting Help
 
-- **GitHub Discussions**: Ask questions, share ideas
 - **GitHub Issues**: Report bugs, request features
 - **Documentation**: Check [docs/](docs/) folder
 
 ## License
 
 By contributing, you agree that your contributions will be licensed under the MIT License.
-
-## Code of Conduct
-
-### Our Standards
-
-- Be respectful and inclusive
-- Welcome newcomers
-- Focus on what is best for the community
-- Show empathy towards others
-
-### Unacceptable Behavior
-
-- Harassment, discrimination, or offensive comments
-- Personal attacks or trolling
-- Spam or off-topic discussions
-
-### Enforcement
-
-Project maintainers have the right to remove, edit, or reject comments, commits, code, issues, and other contributions that do not align with this Code of Conduct.
 
 ---
 

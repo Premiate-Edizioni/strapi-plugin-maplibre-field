@@ -118,8 +118,7 @@ Your POI API must:
 2. **Use Point geometries** (no Polygons or Lines)
 3. **Be publicly accessible** (no authentication required)
 4. **Use correct coordinate order**: `[longitude, latitude]`
-5. **Include `properties.name`** field (can be null, will use fallback)
-6. **Enable CORS** headers for browser requests
+5. **Enable CORS** headers for browser requests
 
 ### GeoJSON FeatureCollection Format
 
@@ -166,11 +165,11 @@ Your POI API must:
 - `features[].type: "Feature"` - Each feature must be type "Feature"
 - `features[].geometry.type: "Point"` - Only Point geometries supported
 - `features[].geometry.coordinates: [lng, lat]` - Longitude first, latitude second
-- `features[].properties.name: string` - POI name (required, can be null)
 
 ### Optional Fields
 
 - `features[].id` - Unique identifier (recommended)
+- `features[].properties.name` - POI name; missing or empty falls back to "Unnamed Location" in the UI
 - `features[].properties.*` - Any custom metadata you want to preserve
 
 All properties are saved when a user selects the POI and can be accessed in your frontend.
@@ -238,7 +237,7 @@ For static files on S3/R2/Linode Object Storage, configure CORS in bucket settin
 |---|---|---|
 | Dataset size | Small–medium (< 5,000 POIs) | Any size (tested with millions) |
 | Hosting | Any HTTP server, S3, CDN | S3, R2, Cloudflare, any static host |
-| Search support | Full (via cached features) | Partial (searches features visible in viewport) |
+| Search support | Full (whole file is fetched) | Partial (only features visible in viewport) |
 | Setup complexity | Low | Medium (requires generating `.pmtiles` file) |
 | API requests | One request per viewport move | HTTP range requests (very efficient) |
 
@@ -282,7 +281,7 @@ Because PMTiles data is rendered as vector tiles (not fetched as a single JSON),
 
 - Search works for POIs visible on screen at the current zoom level
 - Zoom in or pan to the relevant area before searching
-- GeoJSON sources are searched across the full cached dataset
+- GeoJSON sources, by contrast, are searched across the full dataset (see above)
 
 ### Source Type Badge
 
@@ -294,25 +293,11 @@ When you configure multiple `poiSources`, a layer control panel appears on the m
 
 ### Features
 
-**Toggle Layers On/Off**:
-- Click a row to show or hide that layer
-- Its **coloured dot** is filled while the layer is shown and an empty outline once hidden — the same colour you gave the source in `poiSources`
-- POI markers appear/disappear immediately
-- Changes apply in real-time
-
-**Independent Control**:
-- Each POI source can be toggled separately
-- Combine layers as needed (e.g., show both skatespots and shops)
-- Hide unused layers to reduce visual clutter
-
-**Dynamic Loading**:
-- POIs are fetched only for visible layers
-- When you move the map, POIs update automatically for new viewport
-- Invisible layers don't make unnecessary API requests
-
-**Persistent State**:
-- Layer visibility is remembered during your session
-- Each content entry starts with default visibility from config
+- Click a row to show or hide that layer; its **coloured dot** is filled while shown and an empty
+  outline once hidden — the same colour you gave the source in `poiSources`
+- Each source toggles independently, and a hidden layer stops making requests
+- Toggling is local to the open field: it resets to the `enabled` value from `poiSources` the next
+  time the field mounts (e.g. reopening the entry), it is not saved anywhere
 
 ### UI Location
 
@@ -413,44 +398,18 @@ poiMaxDisplay: 100 // Maximum 100 POIs at once
 - Medium density (cities): 100-200
 - High density (downtown): 200-500 (be careful, can slow down rendering)
 
-### Viewport-Based Loading
+### GeoJSON sources fetch the whole file, every time
 
-POIs are fetched based on the current map bounds:
+For `type: 'geojson'` sources, the plugin does **not** send a bounding box or any other query
+parameter — every pan or zoom that triggers a POI refresh re-fetches the entire GeoJSON file from
+`apiUrl`, then filters to the visible bounds and the closest `poiMaxDisplay` points client-side.
+Responses are not cached between requests either. This is what makes GeoJSON search "full" (the
+whole dataset is always in hand), but it also means a large file is downloaded repeatedly as the
+editor moves the map.
 
-1. User moves/zooms the map
-2. Plugin calculates new viewport bounds
-3. Queries POI APIs for features within bounds
-4. Only closest `poiMaxDisplay` POIs rendered
-
-**Benefits**:
-- Works efficiently with large datasets (10,000+ POIs)
-- No need to load all POIs at once
-- Smooth performance even with multiple layers
-
-### Caching
-
-API responses are cached client-side for 15 minutes:
-
-- Reduces API calls when panning/zooming in same area
-- Improves performance and reduces bandwidth
-- Automatically refreshes after 15 minutes
-
-### Best Practices
-
-**For Small Datasets** (< 1,000 POIs):
-- Serve all POIs in single GeoJSON file
-- Use static file hosting (S3, R2, CDN)
-- Let plugin handle filtering client-side
-
-**For Large Datasets** (> 5,000 POIs):
-- Implement server-side filtering by bounding box
-- Return only POIs within requested viewport
-- Use spatial database (PostGIS) for efficient queries
-
-**For Very Large Datasets** (> 50,000 POIs):
-- Use vector tiles instead of GeoJSON
-- Consider clustering POIs at low zoom levels
-- Implement progressive loading
+Practical consequence: past a few thousand features, switch to **PMTiles** (see comparison table
+above) rather than trying to filter a GeoJSON endpoint server-side by viewport — the plugin has no
+mechanism to tell your API which viewport it's asking for.
 
 ## Examples
 
@@ -553,79 +512,7 @@ poiSources: [
 ]
 ```
 
-### Example 3: PostGIS Database with Spatial Query
-
-For large datasets, use PostGIS to filter by bounding box:
-
-**API Endpoint** (Node.js + PostGIS):
-
-```typescript
-// /api/skatespots/geojson?bbox=west,south,east,north
-app.get('/api/skatespots/geojson', async (req, res) => {
-  const { bbox } = req.query;
-  const [west, south, east, north] = bbox.split(',').map(Number);
-  
-  const result = await db.query(`
-    SELECT 
-      id,
-      name,
-      surface,
-      ST_AsGeoJSON(location) as geometry
-    FROM skatespots
-    WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
-    LIMIT 500
-  `, [west, south, east, north]);
-  
-  const geojson = {
-    type: 'FeatureCollection',
-    features: result.rows.map(row => ({
-      type: 'Feature',
-      id: row.id,
-      geometry: JSON.parse(row.geometry),
-      properties: {
-        name: row.name,
-        surface: row.surface,
-      },
-    })),
-  };
-  
-  res.json(geojson);
-});
-```
-
-**Note**: Current plugin version doesn't send bbox parameter. This would require extending the plugin to send `?bbox=` query param. Future enhancement.
-
-### Example 4: Multiple POI Sources with Layer Control
-
-```typescript
-poiSources: [
-  {
-    id: "skateparks",
-    name: "Skateparks",
-    apiUrl: "https://api.example.com/skateparks.geojson",
-    color: "#cc0000",
-    enabled: true,
-  },
-  {
-    id: "skateshops",
-    name: "Skate Shops",
-    apiUrl: "https://api.example.com/skateshops.geojson",
-    color: "#0066cc",
-    enabled: true,
-  },
-  {
-    id: "events",
-    name: "Skate Events",
-    apiUrl: "https://api.example.com/events.geojson",
-    color: "#ff9900",
-    enabled: false, // Hidden by default
-  },
-]
-```
-
-Users can toggle each layer independently using the layer control panel. The panel shows the source type label (`GEOJSON` or `PMTILES`) next to each layer name.
-
-### Example 5: Mixed GeoJSON and PMTiles Sources
+### Example 3: Mixed GeoJSON and PMTiles Sources
 
 Combine small dynamic datasets (GeoJSON) with large static datasets (PMTiles):
 
@@ -669,8 +556,8 @@ poiSources: [
 - POIs are hidden at low zoom to prevent clutter
 
 **Check layer visibility**:
-- Open layer control panel
-- Verify layer eye icon is "open" (visible)
+- Open the layer control panel
+- Verify the layer's coloured dot is filled (shown), not an empty outline (hidden)
 - Toggle off/on to force refresh
 
 **Check API response**:

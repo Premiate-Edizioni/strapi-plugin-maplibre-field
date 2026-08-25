@@ -410,51 +410,28 @@ does carry `sourceId`, `sourceLayer` and `category` — see Example 2.
 
 ## Usage in Code
 
-### Accessing Location Data
-
 **REST API**:
 
 ```bash
 GET /api/articles?populate=location
 ```
 
+Strapi v5 responses are flat — no `data.attributes` wrapping:
+
 ```json
 {
   "data": [
     {
       "id": 1,
-      "attributes": {
-        "title": "Milano Guide",
-        "location": {
-          "type": "Feature",
-          "geometry": {
-            "type": "Point",
-            "coordinates": [9.1901, 45.4601]
-          },
-          "properties": {
-            "name": "Piazza Velasca",
-            "address": "..."
-          }
-        }
+      "documentId": "abc123",
+      "title": "Milano Guide",
+      "location": {
+        "type": "Feature",
+        "geometry": { "type": "Point", "coordinates": [9.1901, 45.4601] },
+        "properties": { "name": "Piazza Velasca", "address": "..." }
       }
     }
   ]
-}
-```
-
-**GraphQL**:
-
-```graphql
-query {
-  articles {
-    data {
-      id
-      attributes {
-        title
-        location
-      }
-    }
-  }
 }
 ```
 
@@ -463,7 +440,7 @@ query {
 **Extract coordinates**:
 
 ```typescript
-const location = article.attributes.location;
+const location = article.location;
 const [longitude, latitude] = location.geometry.coordinates;
 
 console.log(`Lat: ${latitude}, Lng: ${longitude}`);
@@ -506,22 +483,7 @@ if (location.properties.metadata) {
 }
 ```
 
-**Display on a map** (Leaflet example):
-
-```typescript
-import L from 'leaflet';
-
-const map = L.map('map').setView(
-  location.geometry.coordinates.reverse(), // Leaflet uses [lat, lng]
-  15
-);
-
-L.marker(location.geometry.coordinates.reverse())
-  .bindPopup(location.properties.name || 'Location')
-  .addTo(map);
-```
-
-**Display on a map** (MapLibre GL example):
+**Display on a map**:
 
 ```typescript
 import maplibregl from 'maplibre-gl';
@@ -540,65 +502,28 @@ new maplibregl.Marker()
   .addTo(map);
 ```
 
-### Database Queries
-
-**Find articles near a location** (with Strapi + PostGIS):
-
-```typescript
-// This would require custom Strapi controller with PostGIS
-const nearbyArticles = await strapi.db.query('api::article.article').findMany({
-  where: {
-    // Custom SQL query using PostGIS
-    $raw: `
-      ST_DWithin(
-        ST_GeomFromGeoJSON(location->>'geometry'),
-        ST_Point(9.1901, 45.4601),
-        1000
-      )
-    `
-  }
-});
-```
-
-**Note**: Spatial queries require PostgreSQL with PostGIS extension.
+Spatial queries (e.g. "articles within N meters") are not built into the plugin — it stores plain
+GeoJSON in a JSON column. Implementing them requires your own database-level solution (e.g.
+PostgreSQL with the PostGIS extension) on top of the stored `geometry.coordinates`.
 
 ## Validation
 
-### JSON Schema
+The plugin itself only checks, on load, that the stored value parses as JSON and has a
+`geometry.coordinates` — it does not enforce a formal schema, so nothing stops a lifecycle hook,
+import script, or direct database write from saving a malformed value. If you need to validate
+incoming data (e.g. in your own lifecycle hook), check for the required shape yourself:
 
-The plugin validates saved data against this JSON schema:
+```typescript
+function isValidLocation(location: any): boolean {
+  if (location?.type !== 'Feature') return false;
+  if (location?.geometry?.type !== 'Point') return false;
 
-```json
-{
-  "type": "object",
-  "required": ["type", "geometry"],
-  "properties": {
-    "type": {
-      "type": "string",
-      "enum": ["Feature"]
-    },
-    "geometry": {
-      "type": "object",
-      "required": ["type", "coordinates"],
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": ["Point"]
-        },
-        "coordinates": {
-          "type": "array",
-          "items": {
-            "type": "number"
-          },
-          "minItems": 2,
-          "maxItems": 2
-        }
-      }
-    },
-    "properties": {
-      "type": "object"
-    }
-  }
+  const [lng, lat] = location.geometry.coordinates || [];
+  if (typeof lng !== 'number' || typeof lat !== 'number') return false;
+  if (lng < -180 || lng > 180) return false;
+  if (lat < -90 || lat > 90) return false;
+
+  return true;
 }
 ```
 
@@ -622,71 +547,15 @@ The plugin validates saved data against this JSON schema:
 "coordinates": [9.1901, 45.4601]
 ```
 
-### Checking Data Validity
-
-```typescript
-function isValidLocation(location: any): boolean {
-  // Check basic structure
-  if (location?.type !== 'Feature') return false;
-  if (location?.geometry?.type !== 'Point') return false;
-  
-  // Check coordinates
-  const [lng, lat] = location.geometry.coordinates || [];
-  if (typeof lng !== 'number' || typeof lat !== 'number') return false;
-  if (lng < -180 || lng > 180) return false;
-  if (lat < -90 || lat > 90) return false;
-  
-  return true;
-}
-```
-
 ## Best Practices
 
 ### For Developers
 
-**1. Always check coordinates exist**:
+**Preserve unknown properties when updating**: properties are sparse by design (see Overview), so
+spread the existing object rather than reconstructing it — a naive rebuild silently drops fields
+like `metadata` or `sourceId` that your code doesn't know about:
 
 ```typescript
-const coords = location?.geometry?.coordinates;
-if (!coords || coords.length !== 2) {
-  console.error('Invalid location data');
-  return;
-}
-```
-
-**2. Use optional chaining for properties**:
-
-```typescript
-const name = location?.properties?.name ?? 'Unknown location';
-const address = location?.properties?.address ?? 'No address';
-```
-
-**3. Respect coordinate order** (longitude, latitude):
-
-```typescript
-const [lng, lat] = location.geometry.coordinates;
-// Not: const [lat, lng] = ...
-```
-
-**4. Type-safe access with TypeScript**:
-
-```typescript
-interface LocationFeature {
-  type: 'Feature';
-  geometry: {
-    type: 'Point';
-    coordinates: [number, number];
-  };
-  properties: Record<string, any>;
-}
-
-const location: LocationFeature = article.attributes.location;
-```
-
-**5. Preserve original data**:
-
-```typescript
-// When updating, preserve metadata
 const updatedLocation = {
   ...location,
   properties: {
