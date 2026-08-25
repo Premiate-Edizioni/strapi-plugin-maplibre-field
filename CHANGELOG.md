@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A search result's source dot ignored the dark theme** - The grey marking an OpenStreetMap result was a literal colour value, so it stayed light-theme grey while the text beside it followed the panel. It is now taken from the theme, like the rest of the dropdown. Colours you configure for your own POI layers are untouched — those are your data, not the admin's palette.
+
+- **The map field's label was not a label** - The heading above the map reproduced the design system's label styling by hand and rendered a `<span>`, where every other field in the edit view renders a `<label>`. It now uses the design system's own, so it will also follow any future change to how Strapi styles field labels instead of drifting away from them.
+
 ### Changed
+
+- **The POI layer panel uses the map's font** - It asked for `system-ui`, which matched neither the admin panel's font nor MapLibre's. It now inherits the map's, like the attribution and scale bar beside it. The map's controls stay light in both Strapi themes on purpose: they sit over a map canvas that is light whatever the admin theme says, the way openstreetmap.org's own controls do.
 
 - **Dead backward compatibility removed** - `engines` no longer claims to accept npm 6, a floor that was never true and told consumers nothing. The worker setup dropped its `maplibre-gl < 6` guard: `dependencies` pins `^6.4.1`, so v5 could not be installed and that branch could never run — the test exercising it went with it. Two option descriptions still named a `v5.18.0+` requirement, meaningless against a 6.4.1 floor, and one of them was shown to users in the configuration reference.
 
