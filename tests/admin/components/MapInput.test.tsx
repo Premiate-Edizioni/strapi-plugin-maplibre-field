@@ -210,6 +210,12 @@ describe('MapInput Component', () => {
     expect(screen.getByText('Map')).toBeInTheDocument();
   });
 
+  test('the field label comes from Field.Label, not a hand-styled Typography', () => {
+    render(<MockMapInput {...defaultProps} />);
+    // Field.Label renders a <label>; a Typography copying its variant/colour/weight renders a <span>.
+    expect(screen.getByText('Map').tagName).toBe('LABEL');
+  });
+
   test('displays map component', () => {
     render(<MockMapInput {...defaultProps} />);
     expect(screen.getByTestId('mock-map')).toBeInTheDocument();

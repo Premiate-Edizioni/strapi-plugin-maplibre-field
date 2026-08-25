@@ -102,6 +102,22 @@ describe('SearchBox', () => {
     expect(screen.getByText('OpenStreetMap · Ladakh, India')).toBeInTheDocument();
   });
 
+  test('the Nominatim dot takes its grey from the theme, the POI dot from its configuration', async () => {
+    vi.mocked(performSearch).mockResolvedValue([poiResult, nominatimResult] as any);
+
+    render(<Wrapper {...defaultProps} />);
+    await searchFor('bump');
+
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(2));
+    const [poiOption, nominatimOption] = screen.getAllByRole('option');
+    const dotOf = (option: HTMLElement) =>
+      getComputedStyle(option.querySelector('[aria-hidden="true"]')!).backgroundColor;
+
+    // neutral500 in the light theme; a literal grey here would not follow the dark theme.
+    expect(dotOf(nominatimOption)).toBe('rgb(142, 142, 169)');
+    expect(dotOf(poiOption)).toBe('rgb(204, 0, 0)');
+  });
+
   test('tells the user when a search found nothing', async () => {
     vi.mocked(performSearch).mockResolvedValue([]);
 

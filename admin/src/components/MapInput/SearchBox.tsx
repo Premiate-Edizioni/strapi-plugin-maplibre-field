@@ -169,16 +169,18 @@ const SearchBox: React.FC<SearchBoxProps> = ({
   };
 
   /**
-   * Get the indicator color for a search result
-   * - Nominatim results: gray (#6c757d)
-   * - Custom POI results: color from configuration (or red fallback)
+   * The `background` value for a result's indicator dot — a theme colour name or a raw CSS colour,
+   * both of which `Box` accepts.
+   * - Nominatim results: `neutral500`, so the dot follows the admin theme like the text beside it.
+   *   A literal grey here would stay light-theme grey on a dark background.
+   * - Custom POI results: colour from configuration (or red fallback), which is data, not theme.
    *
    * The colour repeats what the second line of each result says in words — it is a redundant cue,
    * never the only way to tell the sources apart.
    */
   const getResultColor = (result: SearchResult): string => {
     if (result.source === 'nominatim') {
-      return '#6c757d'; // Gray for Nominatim
+      return 'neutral500';
     }
 
     // Custom POI - look up color from configuration
@@ -267,15 +269,13 @@ const SearchBox: React.FC<SearchBoxProps> = ({
           return (
             <ComboboxOption key={result.id} value={result.id} textValue={result.place_name}>
               <Flex gap={2} alignItems="center">
-                <div
+                <Box
                   aria-hidden
-                  style={{
-                    width: '10px',
-                    height: '10px',
-                    borderRadius: '50%',
-                    backgroundColor: getResultColor(result),
-                    flexShrink: 0,
-                  }}
+                  width="10px"
+                  height="10px"
+                  borderRadius="50%"
+                  background={getResultColor(result)}
+                  shrink={0}
                 />
                 <Flex direction="column" alignItems="flex-start" gap={0} overflow="hidden">
                   {/* No textColor: Typography defaults to currentcolor, so the name picks up the

@@ -4,7 +4,7 @@ import { useNotification } from '@strapi/strapi/admin';
 import SearchBox from './SearchBox';
 import BasemapControlComponent from './basemap-control';
 import LayerControl, { LayerConfig } from './layer-control';
-import { Flex, Grid, Typography, Field } from '@strapi/design-system';
+import { Flex, Grid, Field } from '@strapi/design-system';
 import Map, {
   Marker,
   Source,
@@ -852,10 +852,12 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   }, [config.poiDisplayEnabled, JSON.stringify(getPMTilesLayerIds())]);
 
   return (
-    <Flex direction="column" alignItems="stretch" gap={4}>
-      <Typography textColor="neutral800" variant="pi" fontWeight="bold">
-        {formatMessage(label)}
-      </Typography>
+    // Field.Root/Field.Label rather than a Typography reproducing `variant="pi"`,
+    // `textColor="neutral800"`, `fontWeight="bold"` by hand — that trio is exactly what Field.Label
+    // renders internally, and copying it means the label silently stops matching every other field
+    // in the edit view the day the design system changes it.
+    <Field.Root name={name} gap={4}>
+      <Field.Label>{formatMessage(label)}</Field.Label>
 
       {/* Search Box - NEW */}
       <SearchBox
@@ -866,15 +868,15 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         queryMapFeatures={queryMapFeatures}
       />
 
+      {/* hasRadius, not borderRadius: '4px' — the literal was the theme's borderRadius token
+          spelled out, so the map corners would have drifted from every other boxed surface. */}
       <Flex
         direction="column"
         alignItems="stretch"
-        style={{
-          height: '500px',
-          width: '100%',
-          borderRadius: '4px',
-          overflow: 'hidden',
-        }}
+        height="500px"
+        width="100%"
+        hasRadius
+        overflow="hidden"
       >
         <Map
           ref={mapRef}
@@ -1096,7 +1098,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           </Field.Root>
         </Grid.Item>
       </Grid.Root>
-    </Flex>
+    </Field.Root>
   );
 };
 
