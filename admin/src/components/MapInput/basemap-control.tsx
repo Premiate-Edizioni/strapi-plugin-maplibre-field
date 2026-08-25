@@ -48,7 +48,10 @@ class BasemapControl implements maplibregl.IControl {
       button.style.alignItems = 'center';
       button.style.justifyContent = 'center';
 
-      // Add visual indicator for active state
+      // These buttons carry MapLibre's own `maplibregl-ctrl-icon` styling, so the active tint and
+      // the separator are expressed as translucent black over it rather than as Strapi colours:
+      // they have to sit on MapLibre's white, which does not change with the admin theme. Same
+      // decision as the layer panel — see the comment there for why the map chrome stays light.
       if (style.url === this._currentStyleUrl) {
         button.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
         button.style.fontWeight = 'bold';

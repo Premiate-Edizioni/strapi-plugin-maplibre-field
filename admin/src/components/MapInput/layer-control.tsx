@@ -73,6 +73,14 @@ class LayerControlImpl implements IControl {
     button.style.alignItems = 'center';
     button.style.justifyContent = 'center';
 
+    // The panel is deliberately map chrome, not admin chrome: it stays light in both Strapi
+    // themes, like the attribution and the scale bar, because it sits over a map canvas that is
+    // light whatever the admin theme says. Making it follow `neutral0`/`neutral800` would put a
+    // dark panel next to MapLibre's own white zoom and geolocate buttons, which are not ours to
+    // restyle without overriding MapLibre's stylesheet. Hence the literal colours below — they are
+    // matched to the map surface on purpose, and are not design system values gone stale.
+    // Nothing here declares a font: MapLibre sets `12px/20px Helvetica Neue, …` on
+    // `.maplibregl-map`, and inheriting it is what keeps the panel looking like the rest of the map.
     // Create panel (once)
     this._panel = document.createElement('div');
     this._panel.className = 'maplibregl-ctrl-layers-panel';
@@ -91,11 +99,9 @@ class LayerControlImpl implements IControl {
     // Add title (once)
     const title = document.createElement('div');
     title.textContent = this._labels.title;
-    title.style.fontSize = '12px';
     title.style.fontWeight = 'bold';
     title.style.marginBottom = '8px';
     title.style.color = '#333';
-    title.style.fontFamily = 'system-ui, -apple-system, sans-serif';
     this._panel.appendChild(title);
 
     // Container for layer list items (updated on each render)
@@ -148,9 +154,7 @@ class LayerControlImpl implements IControl {
       layerItem.style.alignItems = 'center';
       layerItem.style.padding = '4px 0';
       layerItem.style.cursor = 'pointer';
-      layerItem.style.fontSize = '12px';
       layerItem.style.color = '#333';
-      layerItem.style.fontFamily = 'system-ui, -apple-system, sans-serif';
 
       const circle = document.createElement('div');
       circle.style.width = '12px';
