@@ -1,6 +1,6 @@
 {
   "label": "Karte",
-  "description": "Eine Kartenkomponente, basierend auf MapLibre",
+  "description": "Geografischer Punkt auf einer interaktiven MapLibre-Karte",
   "search.placeholder": "Suchen Sie nach einem Ort...",
   "search.clear": "Löschen",
   "search.loading": "Suche läuft…",

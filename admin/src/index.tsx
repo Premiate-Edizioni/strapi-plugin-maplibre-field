@@ -30,7 +30,7 @@ export default {
       },
       intlDescription: {
         id: getTrad('description'),
-        defaultMessage: 'A map custom field using MapLibre',
+        defaultMessage: 'Geographical point on an interactive MapLibre map',
       },
       icon: PluginIcon,
       components: {

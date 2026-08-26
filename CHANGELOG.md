@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The field has its own icon** - The Content-Type Builder showed Strapi's generic `PinMap`, the same pin any other plugin could pick, so nothing in the picker said which field was this one. It is now the MapLibre mark.
+
+- **The field's description says what the field stores** - It now reads "Geographical point on an interactive MapLibre map". The five translations have been updated.
+
 - **The POI layer panel uses the map's font** - It asked for `system-ui`, which matched neither the admin panel's font nor MapLibre's. It now inherits the map's, like the attribution and scale bar beside it. The map's controls stay light in both Strapi themes on purpose: they sit over a map canvas that is light whatever the admin theme says, the way openstreetmap.org's own controls do.
 
 - **Dead backward compatibility removed** - `engines` no longer claims to accept npm 6, a floor that was never true and told consumers nothing. The worker setup dropped its `maplibre-gl < 6` guard: `dependencies` pins `^6.4.1`, so v5 could not be installed and that branch could never run — the test exercising it went with it. Two option descriptions still named a `v5.18.0+` requirement, meaningless against a 6.4.1 floor, and one of them was shown to users in the configuration reference.

@@ -1,6 +1,6 @@
 {
   "label": "Carte",
-  "description": "Un champ carte utilisant MapLibre",
+  "description": "Point géographique sur une carte interactive MapLibre",
   "search.placeholder": "Rechercher un lieu...",
   "search.clear": "Effacer",
   "search.loading": "Recherche en cours…",

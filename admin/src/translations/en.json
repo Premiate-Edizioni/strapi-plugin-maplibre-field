@@ -1,6 +1,6 @@
 {
   "label": "Map",
-  "description": "A map custom field using MapLibre",
+  "description": "Geographical point on an interactive MapLibre map",
   "search.placeholder": "Search for a location...",
   "search.clear": "Clear",
   "search.loading": "Searching…",
