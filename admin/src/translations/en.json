@@ -1,4 +1,5 @@
 {
+  "global.plugins.maplibre-field.description": "Add a location field to your content types using MapLibre: pick a point on an interactive map or search for an address.",
   "label": "Map",
   "description": "Geographical point on an interactive MapLibre map",
   "search.placeholder": "Search for a location...",

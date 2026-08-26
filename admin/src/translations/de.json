@@ -1,4 +1,5 @@
 {
+  "global.plugins.maplibre-field.description": "Fügen Sie Ihren Inhaltstypen mit MapLibre ein Standortfeld hinzu: Wählen Sie einen Punkt auf einer interaktiven Karte oder suchen Sie nach einer Adresse.",
   "label": "Karte",
   "description": "Geografischer Punkt auf einer interaktiven MapLibre-Karte",
   "search.placeholder": "Suchen Sie nach einem Ort...",

@@ -12,7 +12,7 @@
   "homepage": "https://community.strapi.io/marketplace/premiate-strapi-plugin-maplibre-field",
   "strapi": {
     "name": "maplibre-field",
-    "description": "Add a MapLibre custom field to your Strapi content types",
+    "description": "Add a location field to your content types using MapLibre: pick a point on an interactive map or search for an address.",
     "kind": "plugin",
     "displayName": "MapLibre Field"
   },

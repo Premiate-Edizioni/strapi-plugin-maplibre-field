@@ -1,4 +1,5 @@
 {
+  "global.plugins.maplibre-field.description": "Ajoutez un champ de localisation à vos types de contenu avec MapLibre : choisissez un point sur une carte interactive ou recherchez une adresse.",
   "label": "Carte",
   "description": "Point géographique sur une carte interactive MapLibre",
   "search.placeholder": "Rechercher un lieu...",

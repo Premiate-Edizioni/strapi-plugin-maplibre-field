@@ -1,4 +1,5 @@
 {
+  "global.plugins.maplibre-field.description": "Aggiungi un campo località ai tuoi content type con MapLibre: scegli un punto sulla mappa interattiva o cerca un indirizzo.",
   "label": "Mappa",
   "description": "Punto geografico su una mappa interattiva MapLibre",
   "search.placeholder": "Cerca una località...",

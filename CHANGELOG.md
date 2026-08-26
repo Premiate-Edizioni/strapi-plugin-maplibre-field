@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **The field's description says what the field stores** - It now reads "Geographical point on an interactive MapLibre map". The five translations have been updated.
 
+- **The plugin's description on Settings > Plugins is translated** - It now reads "Add a location field to your content types using MapLibre: pick a point on an interactive map or search for an address.", and is translated into the five languages the plugin ships. Strapi looks that text up in its own `global.plugins.*` namespace, so `prefixPluginTranslations` leaves keys starting with `global.` unprefixed; the `package.json` text stays as the fallback for the other admin locales and for the Marketplace listing.
+
 - **The POI layer panel uses the map's font** - It asked for `system-ui`, which matched neither the admin panel's font nor MapLibre's. It now inherits the map's, like the attribution and scale bar beside it. The map's controls stay light in both Strapi themes on purpose: they sit over a map canvas that is light whatever the admin theme says, the way openstreetmap.org's own controls do.
 
 - **Dead backward compatibility removed** - `engines` no longer claims to accept npm 6, a floor that was never true and told consumers nothing. The worker setup dropped its `maplibre-gl < 6` guard: `dependencies` pins `^6.4.1`, so v5 could not be installed and that branch could never run — the test exercising it went with it. Two option descriptions still named a `v5.18.0+` requirement, meaningless against a 6.4.1 floor, and one of them was shown to users in the configuration reference.
