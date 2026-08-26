@@ -27,6 +27,8 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
+      # Same pin as ci.yml, and for the same reason: see the comment there.
+      - run: npm i -g npm@11
       - run: npm ci
       - run: npm run build
       - run: npm run verify
@@ -46,8 +48,12 @@ jobs:
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
+      # Before `npm ci`, not after: this is the same pin the other jobs use, and it doubles as
+      # the npm upgrade Trusted Publishing needs (npm/cli#8730 puts the minimum at 11.5.1).
+      # Pinned rather than @latest so a future npm 12 cannot change the install behaviour of a
+      # release without anyone deciding to.
+      - run: npm i -g npm@11
       - run: npm ci
-      - run: npm install -g npm@latest
       - run: npm --version
       # --provenance is required the first time a package is published from a given repository
       # (npm/cli#8730); without it the token exchange answers "package not found".

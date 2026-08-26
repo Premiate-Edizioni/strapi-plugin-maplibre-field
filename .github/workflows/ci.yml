@@ -25,6 +25,12 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+      # Pin npm instead of taking whatever each Node ships (22 -> npm 10, 24/26 -> npm 11).
+      # `npm ci` refuses to install when the lockfile's tree is not the one it would compute,
+      # and npm 10 and 11 do not always hoist identically, so a lockfile written on one and
+      # read on the other can fail before a single test runs. The matrix is here to test our
+      # code on three Node versions, not to test npm against itself.
+      - run: npm i -g npm@11
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
@@ -45,6 +51,12 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
+      # Pin npm instead of taking whatever each Node ships (22 -> npm 10, 24/26 -> npm 11).
+      # `npm ci` refuses to install when the lockfile's tree is not the one it would compute,
+      # and npm 10 and 11 do not always hoist identically, so a lockfile written on one and
+      # read on the other can fail before a single test runs. The matrix is here to test our
+      # code on three Node versions, not to test npm against itself.
+      - run: npm i -g npm@11
       - run: npm ci
       - run: npm run build
       - run: npm run verify
