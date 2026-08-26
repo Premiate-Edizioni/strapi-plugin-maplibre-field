@@ -1,10 +1,18 @@
-# MapLibre Field - Strapi v5 Plugin
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Premiate-Edizioni/strapi-plugin-maplibre-field/main/logo.png" alt="MapLibre Field logo" width="120">
+</p>
 
-[![npm version](https://img.shields.io/npm/v/@premiate/strapi-plugin-maplibre-field)](https://www.npmjs.com/package/@premiate/strapi-plugin-maplibre-field)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/LICENSE)
-[![Strapi v5](https://img.shields.io/badge/Strapi-v5-blue)](https://strapi.io)
+<h1 align="center">MapLibre Field</h1>
 
-A [Strapi](https://strapi.io/) plugin providing a [MapLibre](https://www.maplibre.org/) map custom field with POI support, geocoding and multi base maps.
+<p align="center">
+  A <a href="https://strapi.io/">Strapi</a> v5 plugin providing a <a href="https://www.maplibre.org/">MapLibre</a> map custom field with POI support, geocoding and multi base maps.
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@premiate/strapi-plugin-maplibre-field"><img src="https://img.shields.io/npm/v/@premiate/strapi-plugin-maplibre-field" alt="npm version"></a>
+  <a href="https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://strapi.io"><img src="https://img.shields.io/badge/Strapi-v5-blue" alt="Strapi v5"></a>
+</p>
 
 ![Map Field](https://raw.githubusercontent.com/Premiate-Edizioni/strapi-plugin-maplibre-field/main/add-or-pin-on-map.png)
 

@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **The field has its own icon** - The Content-Type Builder showed Strapi's generic `PinMap`, the same pin any other plugin could pick, so nothing in the picker said which field was this one. It is now the MapLibre mark.
 
+- **The plugin has a logo of its own** - `logo.png` was a rendering of the Content-Type Builder tile: a light panel with a wide margin, which is right for a field picker and wrong for a Marketplace listing, where the site draws a 1px frame around every logo and a pale, inset image reads as an image lost inside a box. The new one fills its square edge to edge, so that frame sits flush against the artwork instead of standing off it.
+
+  What it shows is the MapLibre mark above the rows of a form: the first row has no label because it is the field the pin fills, the two below are the other fields of the content type. It says "a map field" rather than "a map", which is the one thing that distinguishes this plugin from the other custom fields it sits beside.
+
+  `logo.svg` is versioned next to it as the source. Two spacings in it are load-bearing and are documented in the file: the mark's bar and the form's labels are the same shape, so the bar only keeps belonging to the mark because the gap above the first label is 4.3 times the gap between rows, and because the labels start where the bar ends rather than under it. Evening out either one, for tidiness, breaks the logo in a way that is hard to diagnose afterwards.
+
+- **The README leads with the logo** - It opened on a bare heading and three badges. It now opens with the centred block that 12 of the 14 Strapi plugins and reference projects sampled use: logo, name, one-line description, badges, and left-aligned prose from there down. The image URLs are absolute rather than repository-relative, because the same README is rendered on npm, where relative paths do not resolve. The Content-Type Builder screenshot was retaken: it predated the field icon by two days and still showed the generic pin.
+
 - **The field's description says what the field stores** - It now reads "Geographical point on an interactive MapLibre map". The five translations have been updated.
 
 - **The plugin's description on Settings > Plugins is translated** - It now reads "Add a location field to your content types using MapLibre: pick a point on an interactive map or search for an address.", and is translated into the five languages the plugin ships. Strapi looks that text up in its own `global.plugins.*` namespace, so `prefixPluginTranslations` leaves keys starting with `global.` unprefixed; the `package.json` text stays as the fallback for the other admin locales and for the Marketplace listing.

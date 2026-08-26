@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  Logo di MapLibre Field. Sorgente: modificarlo qui, non ritoccare il PNG.
+  Rigenerare logo.png con:  inkscape logo.svg -o logo.png -w 512 -h 512
+  (oppure con qualsiasi rasterizzatore: e' un SVG 512x512 senza dipendenze esterne)
+
+  IL DISEGNO
+  Il marchio MapLibre ufficiale in alto a sinistra - pin e barretta, path intatti dal logo
+  quadrato di maplibre.org - e sotto le righe di un form. La prima riga non ha etichetta:
+  e' il campo che il pin sopra riempie. Le due sotto sono gli altri campi del content type.
+
+  DUE MISURE DA NON ROMPERE
+  La barretta del marchio e le etichette del form sono la stessa specie visiva (piccoli
+  rettangoli arrotondati), quindi la barretta rischia di smettere di appartenere al marchio
+  e di leggersi come la prima riga del form. Lo impediscono due cose insieme:
+    - in verticale, il vuoto sopra la prima etichetta e' 78px contro i 18px fra una riga
+      e l'altra, cioe' 4,3 volte
+    - in orizzontale, le etichette (147-216) partono dove finisce la barretta (88-156):
+      a scaletta, non incolonnate
+  Basta uno dei due, ma sono entrambi presenti. Uniformare quelle spaziature "per pulizia"
+  rompe il logo in un modo che poi e' difficile diagnosticare.
+
+  PERCHE' IL GRADIENTE STA SOLO SUL FONDO
+  Una versione con il gradiente anche sul contenuto e' stata provata e scartata. Il marchio
+  sta in alto e le righe del form in basso, quindi un gradiente verticale sul contenuto da'
+  il tono piu' debole al marchio e il piu' forte alle righe: gerarchia invertita. Misurato
+  in luminanza sui quattro elementi: 96,1 / 83,8 / 79,6 / 70,3 dal pin all'ultima barra,
+  con l'elemento sbagliato a vincere. Qui il contenuto resta tutto su #4945ff e la
+  profondita' la porta il fondo, che e' l'unica superficie senza compito semantico.
+
+  Il gradiente usa gradientUnits="userSpaceOnUse" sull'intero canvas.
+
+  I margini sono 45/45 orizzontali e 39/39 verticali: la traslazione translate(8.7653541)
+  sul gruppo del contenuto serve a pareggiare i due margini laterali.
+-->
+<svg width="512" height="512" viewBox="0 0 512 512" version="1.1" id="svg1"
+   xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+  <defs id="defs1"><linearGradient id="bg" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="512" y2="512"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dcd9ff"/></linearGradient></defs>
+  <g id="layer1">
+    <rect style="fill:url(#bg);fill-opacity:1" id="rect2-0-5-0" width="512" height="512" x="0" y="0" />
+    <g id="g1-6" transform="translate(8.7653541)" style="fill:#4945ff;fill-opacity:1">
+      <path fill="#82b4fe" fill-rule="evenodd" d="M 115.30604,39.428183 C 71.759653,39.146337 36.119976,72.103381 35.854194,112.8926 c -0.234063,36.1182 17.624713,53.75086 36.964865,72.84468 13.483283,13.31132 27.685371,27.33235 36.977261,48.82202 0.62739,0.50956 1.04618,0.84873 1.22612,1.00958 a 4.5589193,4.5589193 0 0 0 2.99984,1.13535 4.5659819,4.5659819 0 0 0 3.01578,-1.09556 c 0.0478,-0.0478 0.14331,-0.0797 0.24681,-0.12728 0.30096,-0.12727 0.75637,-0.32482 0.99204,-0.86784 9.26083,-21.28504 23.66516,-35.11722 37.42122,-48.326 19.58921,-18.81038 37.8628,-36.35833 38.09671,-72.36713 0.26591,-40.790201 -34.94224,-74.207757 -78.48942,-74.491993 z m -0.75955,116.841227 c 21.56213,0.1433 39.1588,-17.48887 39.30085,-39.37584 0.14332,-21.887134 -17.22311,-39.744002 -38.78603,-39.884449 -21.563095,-0.143312 -39.158813,17.488875 -39.301813,39.375849 -0.143311,21.88713 17.223127,39.744 38.786203,39.88444 z" clip-rule="evenodd" id="path3-9-2-2-9-3-2-1" style="fill:#4945ff;fill-opacity:1;stroke-width:0.882828" />
+      <path fill="#ffffff" fill-rule="evenodd" d="m 86.322726,249.32907 c -3.597613,-0.0318 -6.539964,3.9551 -6.571808,8.88569 l -0.162448,24.95656 c -0.03183,4.93057 2.857798,8.94667 6.456056,8.97037 l 55.075214,0.35828 c 3.59764,0.0167 6.54015,-3.95493 6.57183,-8.88549 l 0.16246,-24.95672 c 0.0318,-4.93155 -2.85767,-8.94747 -6.45607,-8.9704 z" clip-rule="evenodd" id="path4-1-0-8-1-6-5-5" style="fill:#4945ff;fill-opacity:1;stroke-width:0.882828" />
+      <path fill="#ffffff" fill-rule="evenodd" d="m 146.32272,368.74642 c -3.59761,-0.0167 -6.53996,3.9551 -6.5718,8.88569 l -0.16245,24.95654 c -0.0318,4.93059 2.8578,8.94669 6.45605,8.97039 l 55.07525,0.35828 c 3.59745,0.0167 6.53996,-3.9551 6.5718,-8.88566 l 0.16245,-24.95658 c 0.0318,-4.93152 -2.85749,-8.94747 -6.45605,-8.97039 z" clip-rule="evenodd" id="path4-1-0-8-1-6-1-7-9" style="fill:#4945ff;fill-opacity:1;stroke-width:0.882828" />
+      <path fill="#ffffff" fill-rule="evenodd" d="m 145.43549,428.95952 c -3.59762,-0.0167 -6.54,3.95509 -6.57184,8.88568 l -0.16245,24.95656 c -0.0318,4.93075 2.85765,8.94667 6.45606,8.97055 l 55.07523,0.35828 c 3.59763,0.0166 6.53997,-3.95493 6.57182,-8.88552 l 0.16244,-24.95672 c 0.0318,-4.93137 -2.8578,-8.94747 -6.45606,-8.97039 z" clip-rule="evenodd" id="path4-1-0-8-1-6-1-5-4-4" style="fill:#4945ff;fill-opacity:1;stroke-width:0.882828" />
+      <path fill="#ffffff" fill-rule="evenodd" d="m 231.95653,369.18939 c -3.59761,-0.0167 -6.53996,3.9551 -6.5718,8.88569 l -0.16245,24.95654 c -0.0318,4.93059 2.8578,8.94669 6.45605,8.97039 l 220.20452,0.35828 c 3.59745,0.0167 6.53996,-3.9551 6.5718,-8.88566 l 0.16245,-24.95658 c 0.0318,-4.93152 -2.85749,-8.94747 -6.45605,-8.97039 z" clip-rule="evenodd" id="path4-1-0-8-1-6-1-7-3-9" style="fill:#4945ff;fill-opacity:1;stroke-width:0.882828" />
+      <path fill="#ffffff" fill-rule="evenodd" d="m 231.0693,429.40249 c -3.59762,-0.0167 -6.54,3.95509 -6.57184,8.88568 l -0.16245,24.95656 c -0.0318,4.93075 2.85765,8.94667 6.45606,8.97055 l 220.2045,0.35828 c 3.59763,0.0166 6.53997,-3.95493 6.57182,-8.88552 l 0.16244,-24.95672 c 0.0318,-4.93137 -2.8578,-8.94747 -6.45606,-8.97039 z" clip-rule="evenodd" id="path4-1-0-8-1-6-1-5-4-1-0" style="fill:#4945ff;fill-opacity:1;stroke-width:0.882828" />
+      <path fill="#ffffff" fill-rule="evenodd" d="m 231.95653,308.97629 c -3.59761,-0.0167 -6.53996,3.9551 -6.5718,8.88569 l -0.16245,24.95654 c -0.0318,4.93059 2.8578,8.94669 6.45605,8.97039 l 220.20452,0.35828 c 3.59745,0.0167 6.53996,-3.9551 6.5718,-8.88566 l 0.16245,-24.95658 c 0.0318,-4.93152 -2.85749,-8.94747 -6.45605,-8.97039 z" clip-rule="evenodd" id="path4-1-0-8-1-6-1-7-3-8-9" style="fill:#4945ff;fill-opacity:1;stroke-width:0.882828" />
+    </g>
+  </g>
+</svg>
