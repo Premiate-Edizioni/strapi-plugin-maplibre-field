@@ -15,11 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Switching basemap loaded the new style twice** - The style was set once by the basemap control and again by the React wrapper reacting to the same change.
 
+- **POIs from a view the map had already left could replace the current ones** - Moving the map while a POI source was still answering started a second request, and whichever answered last won — so a slow answer for the previous view could overwrite the POIs of the current one. Only the answer for the latest view is drawn now.
+
 ### Changed
 
 - **`react-map-gl` is no longer a dependency** - The field now drives maplibre-gl directly. The wrapper added little over what the field already did through the map's own API, and it had been the cause of two past bugs: a runtime crash against maplibre-gl v6, and a fullscreen option it silently dropped. Installing the plugin no longer pulls `react-map-gl`, its Mapbox counterpart, or the older copy of MapLibre's style specification they depended on. Nothing changes in how the field is configured or in the data it stores.
 
 - **Panning and zooming no longer re-render the field** - The camera used to be mirrored into React state on every frame of a pan or zoom, re-rendering the whole field each time. MapLibre now keeps the camera on its own.
+
+- **`react-intl` is declared as a peer dependency** - The field uses it for every label, but it was declared nowhere, so the build bundled a private copy of it into the plugin. It now comes from your Strapi app, as `@strapi/sdk-plugin` intends, and the admin bundle is about 20 kB smaller.
+
+- **React 17 is no longer listed as supported** - The peer range said `^17.0.0 || ^18.0.0`, but the field is built on `@strapi/design-system` 2, which requires React 18, so a React 17 app could never have run it. The range is now `^18.0.0`; nothing changes for any app that works today.
 
 ## [1.7.0] - 2026-08-26
 
