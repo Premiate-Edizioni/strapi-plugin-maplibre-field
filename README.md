@@ -5,7 +5,7 @@
 <h1 align="center">MapLibre Field</h1>
 
 <p align="center">
-  A <a href="https://strapi.io/">Strapi</a> v5 plugin providing a <a href="https://www.maplibre.org/">MapLibre</a> map custom field with POI support, geocoding and multi base maps.
+  Add a location field to your <a href="https://strapi.io/">Strapi</a> v5 content types. Editors pick a point on a <a href="https://www.maplibre.org/">MapLibre</a> map or search for an address; you get a standard GeoJSON Feature. Works out of the box with free OpenStreetMap maps, no API key or account.
 </p>
 
 <p align="center">
@@ -19,13 +19,13 @@
 ## ✨ Key Features
 
 - **No map provider setup required** - works out of the box with OpenFreeMap tiles; swap in MapTiler, Stadia, PMTiles or a custom style anytime
-- **Interactive MapLibre GL map** with fullscreen, zoom, compass and geolocate controls
+- **GeoJSON Feature** storage (RFC 7946 compliant), ready to use in any frontend map library
 - **Four ways to place a point** - search, POI click, double-click, or drag the marker
 - **OpenStreetMap geocoding** via Nominatim, in the language of the admin panel
 - **Custom POI layers** (GeoJSON or PMTiles) with a layer control panel to toggle sources
 - **Keyboard-accessible search** built on Strapi's Combobox (WAI-ARIA combobox pattern)
-- **GeoJSON Feature** storage (RFC 7946 compliant)
 - **Five UI languages** - English, German, Spanish, French, Italian
+- **Interactive MapLibre GL map** with fullscreen, zoom, compass and geolocate controls
 
 ## 📦 Installation
 
