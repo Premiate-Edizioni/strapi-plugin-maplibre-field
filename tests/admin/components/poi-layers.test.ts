@@ -78,8 +78,8 @@ describe('syncPoiLayers', () => {
     const map = createFakeMap();
 
     syncPoiLayers(map as never, state());
-    expect([...map.sources.keys()]).toEqual(['poi-markers']);
-    expect([...map.layers.keys()]).toEqual(['poi-circles', 'poi-labels']);
+    expect(Array.from(map.sources.keys())).toEqual(['poi-markers']);
+    expect(Array.from(map.layers.keys())).toEqual(['poi-circles', 'poi-labels']);
 
     const next = buildPoiFeatureCollection([poi], poi);
     syncPoiLayers(map as never, state({ geojson: next }));
@@ -100,11 +100,11 @@ describe('syncPoiLayers', () => {
     const map = createFakeMap();
     const withParks = state({ pmtiles: [{ source: pmtilesSource, enabled: true }] });
     syncPoiLayers(map as never, withParks);
-    const before = [...map.layers.keys()];
+    const before = Array.from(map.layers.keys());
 
     map.wipeStyle();
     syncPoiLayers(map as never, withParks);
-    expect([...map.layers.keys()]).toEqual(before);
+    expect(Array.from(map.layers.keys())).toEqual(before);
   });
 
   test('adds a PMTiles source when switched on and takes it off when switched off', () => {

@@ -1,3 +1,4 @@
+import type { FeatureCollection, Point } from 'geojson';
 import type { AddLayerObject, GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl';
 import type { POISource } from '../../../../server/src/types/config';
 import type { POI } from '../../services/poi-service';
@@ -47,7 +48,7 @@ export const buildColorMatchExpression = (layers: LayerConfig[]): CircleColor =>
 export const buildPoiFeatureCollection = (
   pois: POI[],
   selectedPOI: POI | null
-): GeoJSON.FeatureCollection<GeoJSON.Point> => ({
+): FeatureCollection<Point> => ({
   type: 'FeatureCollection',
   features: pois.slice(0, MAX_DRAWN_POIS).map((poi) => ({
     type: 'Feature',
@@ -127,7 +128,7 @@ const removeLayersAndSource = (map: MapLibreMap, layerIds: string[], sourceId: s
 
 export interface PoiLayersState {
   /** GeoJSON POIs to draw, or null to draw none. */
-  geojson: GeoJSON.FeatureCollection<GeoJSON.Point> | null;
+  geojson: FeatureCollection<Point> | null;
   colorExpression: CircleColor;
   /** Every configured PMTiles source, with whether it should currently be drawn. */
   pmtiles: { source: POISource; enabled: boolean }[];
