@@ -494,6 +494,61 @@ describe('MapInput Component', () => {
     }
   });
 
+  test('a pan during a POI fetch loads the new view, and the stale answer is dropped', async () => {
+    const original = {
+      poiDisplayEnabled: mockPluginConfig.poiDisplayEnabled,
+      poiSources: mockPluginConfig.poiSources,
+    };
+    mockPluginConfig.poiDisplayEnabled = true;
+    mockPluginConfig.poiSources = [
+      { id: 'spots', name: 'Skatespots', apiUrl: 'https://poi.test/spots.geojson' },
+    ];
+    mockMapInstance.getZoom.mockReturnValue(12);
+    mockMapInstance.on.mockClear();
+    mockMapInstance.addSource.mockClear();
+
+    const poiNamed = (name: string) => ({
+      id: name,
+      name,
+      type: 'poi',
+      coordinates: [9, 45],
+      address: '',
+      source: 'custom',
+      layerId: 'spots',
+    });
+    let answerFirst: (pois: unknown[]) => void = () => {};
+    vi.mocked(queryPOIsForViewport)
+      .mockClear()
+      .mockImplementationOnce(() => new Promise((resolve) => (answerFirst = resolve as never)))
+      .mockImplementationOnce(() => Promise.resolve([poiNamed('New view')] as never));
+
+    const handler = (event: string) =>
+      mockMapInstance.on.mock.calls.find(([name]) => name === event)![1] as () => void;
+    const drawnNames = () =>
+      mockMapInstance.addSource.mock.calls
+        .filter(([id]) => id === 'poi-markers')
+        .map(([, spec]) => (spec as any).data.features.map((f: any) => f.properties.name));
+
+    try {
+      render(<MockMapInput {...defaultProps} />);
+      act(() => handler('style.load')());
+      await waitFor(() => expect(queryPOIsForViewport).toHaveBeenCalledTimes(1));
+
+      // The user pans while the first request is still out
+      act(() => handler('moveend')());
+      await waitFor(() => expect(queryPOIsForViewport).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(drawnNames().at(-1)).toEqual(['New view']));
+
+      // The first request answers last, for a view the map has already left
+      await act(async () => answerFirst([poiNamed('Old view')]));
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(drawnNames().flat()).not.toContain('Old view');
+    } finally {
+      Object.assign(mockPluginConfig, original);
+      mockMapInstance.getZoom.mockReturnValue(5);
+    }
+  });
+
   test('clicking a PMTiles POI selects it', () => {
     const original = {
       poiDisplayEnabled: mockPluginConfig.poiDisplayEnabled,

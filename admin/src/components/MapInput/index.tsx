@@ -198,7 +198,8 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   // POI state
   const [displayedPOIs, setDisplayedPOIs] = useState<POI[]>([]);
   const [selectedPOI, setSelectedPOI] = useState<POI | null>(null);
-  const [isUpdatingPOIs, setIsUpdatingPOIs] = useState(false);
+  // Bumped by every POI update, so a fetch that returns after a newer one started is discarded
+  const poiRequestIdRef = useRef(0);
   const updatePOITimerRef = useRef<NodeJS.Timeout | null>(null);
   const poiLayersRef = useRef<LayerConfig[]>([]);
 
@@ -332,6 +333,8 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
 
     // Debounce updates to avoid overwhelming MapLibre
     updatePOITimerRef.current = setTimeout(async () => {
+      const requestId = ++poiRequestIdRef.current;
+
       // Use ref to get the most current layer state (not closure state)
       const currentPoiLayers = poiLayersRef.current;
 
@@ -348,11 +351,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         return;
       }
 
-      // Don't block on isUpdatingPOIs - instead, cancel and restart
-      if (isUpdatingPOIs) {
-        return;
-      }
-
       const zoom = map.getZoom();
 
       // Hide POIs when zoomed out
@@ -365,8 +363,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       const center = map.getCenter();
 
       try {
-        setIsUpdatingPOIs(true);
-
         // Get enabled layers from current state
         const enabledLayers = currentPoiLayers.filter((layer) => layer.enabled);
 
@@ -413,14 +409,15 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           }
         }
 
+        // The viewport moved on while this was loading: the newer update owns the result
+        if (requestId !== poiRequestIdRef.current) return;
+
         // Use requestAnimationFrame to update during next render cycle
         requestAnimationFrame(() => {
           setDisplayedPOIs(allPOIs);
-          setIsUpdatingPOIs(false);
         });
       } catch (error) {
         console.error('Failed to load POIs:', error);
-        setIsUpdatingPOIs(false);
       }
     }, 300); // 300ms debounce delay
   };
