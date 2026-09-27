@@ -189,6 +189,9 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     return '';
   });
 
+  // The location pin, once the map exists
+  const markerRef = useRef<maplibregl.Marker | null>(null);
+
   const { containerRef, map, isStyleLoaded } = useMaplibreMap({
     styleUrl: currentStyleUrl,
     center: initialCoordinates,
@@ -677,6 +680,10 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     setAddress(placeAddress(feature));
     setLongitude(feature.geometry.coordinates[0]);
     setLatitude(feature.geometry.coordinates[1]);
+    // Also placed directly: a drag that snaps back onto the point already saved leaves the
+    // coordinates unchanged, so the effect that follows them would leave the pin where it was
+    // dropped.
+    markerRef.current?.setLngLat(feature.geometry.coordinates);
     onChange({ target: { name, value, type: 'json' } });
   };
 
@@ -822,7 +829,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   }, [map]);
 
   // The location pin. Created once per map; the effect below moves it.
-  const markerRef = useRef<maplibregl.Marker | null>(null);
   useEffect(() => {
     if (!map) return;
     const marker = new maplibregl.Marker({ color: '#4945ff' /* primary600 */, draggable: true })

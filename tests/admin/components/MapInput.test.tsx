@@ -342,10 +342,14 @@ describe('MapInput Component', () => {
     render(<MockMapInput {...defaultProps} />);
 
     const added = mockMapInstance.addControl.mock.calls.map(([control]) => control);
+    const lastInstance = (ctor: unknown) => {
+      const { instances } = vi.mocked(ctor as () => unknown).mock;
+      return instances[instances.length - 1];
+    };
     expect(added.slice(0, 3)).toEqual([
-      vi.mocked(maplibregl.FullscreenControl).mock.instances.at(-1),
-      vi.mocked(maplibregl.NavigationControl).mock.instances.at(-1),
-      vi.mocked(maplibregl.GeolocateControl).mock.instances.at(-1),
+      lastInstance(maplibregl.FullscreenControl),
+      lastInstance(maplibregl.NavigationControl),
+      lastInstance(maplibregl.GeolocateControl),
     ]);
     expect(maplibregl.FullscreenControl).toHaveBeenLastCalledWith({ pseudo: true });
     // Without tracking, the geolocate button only re-centres and the user can never switch the
@@ -450,6 +454,29 @@ describe('MapInput Component', () => {
     expect(feature.properties.inputMethod).toBe('poi_click');
   });
 
+  test('a drag that snaps back onto the saved point puts the pin back on it', async () => {
+    const value = JSON.stringify({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [9.2, 45.47] },
+      properties: { name: 'Skatespot Centro' },
+    });
+    // The snap lands exactly where the field already is, so no coordinate changes
+    vi.mocked(findNearestPOI).mockReturnValueOnce({
+      id: 'poi-1',
+      name: 'Skatespot Centro',
+      type: 'skating_spot',
+      coordinates: [9.2, 45.47],
+      distance: 3,
+    } as any);
+
+    render(<MockMapInput {...defaultProps} value={value} />);
+    const marker = mockMarkers[mockMarkers.length - 1];
+    dragMarkerTo(9.20003, 45.47002);
+
+    await waitFor(() => expect(mockOnChange).toHaveBeenCalledTimes(1));
+    expect(marker.lngLat).toEqual({ lng: 9.2, lat: 45.47 });
+  });
+
   test('a snapped POI raises one localized notification, not two', async () => {
     vi.mocked(findNearestPOI).mockReturnValueOnce({
       id: 'poi-1',
@@ -537,7 +564,7 @@ describe('MapInput Component', () => {
       // The user pans while the first request is still out
       act(() => handler('moveend')());
       await waitFor(() => expect(queryPOIsForViewport).toHaveBeenCalledTimes(2));
-      await waitFor(() => expect(drawnNames().at(-1)).toEqual(['New view']));
+      await waitFor(() => expect(drawnNames().slice(-1)).toEqual([['New view']]));
 
       // The first request answers last, for a view the map has already left
       await act(async () => answerFirst([poiNamed('Old view')]));
