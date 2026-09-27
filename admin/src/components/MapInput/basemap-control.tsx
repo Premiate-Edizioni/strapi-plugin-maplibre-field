@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
-import { useControl } from 'react-map-gl/maplibre';
 import * as maplibregl from 'maplibre-gl';
 import type { MapStyle } from '../../../../server/src/types/config';
+import { useMapControl } from './useMapControl';
 
 interface BasemapControlProps {
+  map: maplibregl.Map | null;
   mapStyles: MapStyle[];
   currentStyleUrl: string;
   onStyleChange: (styleUrl: string) => void;
@@ -108,22 +109,21 @@ class BasemapControl implements maplibregl.IControl {
 }
 
 export default function BasemapControlComponent({
+  map,
   mapStyles,
   currentStyleUrl,
   onStyleChange,
 }: BasemapControlProps) {
-  const controlRef = useControl(
+  const controlRef = useMapControl(
+    map,
     () => new BasemapControl(mapStyles, currentStyleUrl, onStyleChange),
-    {
-      position: 'bottom-left',
-    }
+    'bottom-left',
+    [mapStyles]
   );
 
   // Update active button when currentStyleUrl changes externally
   useEffect(() => {
-    if (controlRef && 'updateCurrentStyle' in controlRef) {
-      (controlRef as BasemapControl).updateCurrentStyle(currentStyleUrl);
-    }
+    controlRef.current?.updateCurrentStyle(currentStyleUrl);
   }, [currentStyleUrl, controlRef]);
 
   return null;

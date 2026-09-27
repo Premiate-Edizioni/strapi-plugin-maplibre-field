@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useIntl } from 'react-intl';
-import type { MapRef } from 'react-map-gl/maplibre';
 import type { IControl, Map as MapLibreMap } from 'maplibre-gl';
 import getTranslation from '../../utils/getTrad';
+import { useMapControl } from './useMapControl';
 
 export interface LayerConfig {
   id: string;
@@ -13,7 +13,7 @@ export interface LayerConfig {
 }
 
 interface LayerControlProps {
-  mapRef: React.RefObject<MapRef>;
+  map: MapLibreMap | null;
   layers: LayerConfig[];
   onLayerToggle: (layerId: string, enabled: boolean) => void;
 }
@@ -213,8 +213,7 @@ class LayerControlImpl implements IControl {
 /**
  * React wrapper for MapLibre Layer Control
  */
-const LayerControl: React.FC<LayerControlProps> = ({ mapRef, layers, onLayerToggle }) => {
-  const controlRef = useRef<LayerControlImpl | null>(null);
+const LayerControl: React.FC<LayerControlProps> = ({ map, layers, onLayerToggle }) => {
   const { formatMessage } = useIntl();
 
   const title = formatMessage({ id: getTranslation('layers.title'), defaultMessage: 'POI layers' });
@@ -223,32 +222,18 @@ const LayerControl: React.FC<LayerControlProps> = ({ mapRef, layers, onLayerTogg
     defaultMessage: 'Toggle POI layers',
   });
 
+  // Labels are compared by value, so a locale change rebuilds the control. Layers are not a
+  // dependency: toggling one updates the existing panel below instead of recreating it.
+  const controlRef = useMapControl(
+    map,
+    () => new LayerControlImpl(layers, onLayerToggle, { title, toggle }),
+    'top-right',
+    [onLayerToggle, title, toggle]
+  );
+
   useEffect(() => {
-    if (!mapRef.current || layers.length === 0) return;
-
-    const map = mapRef.current.getMap();
-
-    // Create and add control
-    const control = new LayerControlImpl(layers, onLayerToggle, { title, toggle });
-    controlRef.current = control;
-
-    map.addControl(control, 'top-right');
-
-    return () => {
-      if (controlRef.current) {
-        map.removeControl(controlRef.current);
-        controlRef.current = null;
-      }
-    };
-    // Labels are compared by value, so a locale change rebuilds the control and nothing else does.
-  }, [mapRef, onLayerToggle, title, toggle]); // Don't include layers to avoid recreation
-
-  // Update control when layers change
-  useEffect(() => {
-    if (controlRef.current) {
-      controlRef.current.updateLayers(layers);
-    }
-  }, [layers]);
+    controlRef.current?.updateLayers(layers);
+  }, [layers, controlRef]);
 
   return null;
 };

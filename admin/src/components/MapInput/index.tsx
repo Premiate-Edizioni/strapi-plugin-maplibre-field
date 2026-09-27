@@ -4,20 +4,21 @@ import { useNotification } from '@strapi/strapi/admin';
 import SearchBox from './SearchBox';
 import BasemapControlComponent from './basemap-control';
 import LayerControl, { LayerConfig } from './layer-control';
-import { Flex, Grid, Field } from '@strapi/design-system';
-import Map, {
-  Marker,
-  Source,
-  Layer,
-  useControl,
-  type MapLayerMouseEvent,
-  type MapRef,
-  type MarkerDragEvent,
-} from 'react-map-gl/maplibre';
+import { Box, Grid, Field } from '@strapi/design-system';
 import getTranslation from '../../utils/getTrad';
 import { Protocol } from 'pmtiles';
 import * as maplibregl from 'maplibre-gl';
 import { configureMaplibreWorker } from '../../utils/maplibreWorker';
+import { useMaplibreMap } from './useMaplibreMap';
+import { useMapControl } from './useMapControl';
+import {
+  PMTILES_CIRCLE_PREFIX,
+  POI_CIRCLE_LAYER_ID,
+  buildColorMatchExpression,
+  buildPoiFeatureCollection,
+  pmtilesCircleLayerId,
+  syncPoiLayers,
+} from './poi-layers';
 
 import { usePluginConfig } from '../../hooks/usePluginConfig';
 import {
@@ -97,35 +98,27 @@ const SELECTION_MESSAGES = {
  *
  * They live in one component on purpose. MapLibre has no ordering API — `addControl` appends in call
  * order — so as long as each control is its own React component the stack order is decided by which
- * one happens to mount first. Declaring the three `useControl` calls together makes the order
- * explicit in the source instead of a side effect of mount timing.
+ * one happens to mount first. Declaring the three controls together makes the order explicit in the
+ * source instead of a side effect of mount timing.
  *
- * Fullscreen is built by hand rather than with react-map-gl's <FullscreenControl>, whose prop types
- * accept `pseudo` but which only ever constructs `new FullscreenControl({ container })` — the option
- * is silently dropped. That left `useFullscreenPseudo` dead and every map on the native Fullscreen
- * API, which on Firefox/Linux returns a full-screen but frozen, uninteractive map.
+ * Fullscreen passes `pseudo` straight to MapLibre: the native Fullscreen API on Firefox/Linux
+ * returns a full-screen but frozen, uninteractive map.
  */
-const MapControls: React.FC<{ pseudo: boolean }> = ({ pseudo }) => {
-  useControl(({ mapLib }) => new mapLib.FullscreenControl({ pseudo }), { position: 'top-right' });
-  useControl(({ mapLib }) => new mapLib.NavigationControl({}), { position: 'top-right' });
-  useControl(
-    ({ mapLib }) => {
-      // `trackUserLocation` makes the button a switch rather than a one-shot action, the way
-      // openstreetmap.org's locate control behaves: pressing it again turns location off and takes
-      // the dot and the accuracy circle off the map. Without it MapLibre only ever re-centres, and
-      // the user has no way to dismiss the overlay short of reloading the page. It costs a
-      // `watchPosition` while active — but only while the user has chosen to keep it on.
-      const geolocate = new mapLib.GeolocateControl({ trackUserLocation: true });
-      // Ported from react-map-gl's own GeolocateControl: StrictMode adds the control twice, and
-      // its UI setup is async, so without this guard the button's contents are created twice.
-      const control = geolocate as unknown as { _setupUI: () => void; _container: HTMLElement };
-      const setupUI = control._setupUI;
-      control._setupUI = () => {
-        if (!control._container.hasChildNodes()) setupUI();
-      };
-      return geolocate;
-    },
-    { position: 'top-right' }
+const MapControls: React.FC<{ map: maplibregl.Map | null; pseudo: boolean }> = ({
+  map,
+  pseudo,
+}) => {
+  useMapControl(map, () => new maplibregl.FullscreenControl({ pseudo }), 'top-right');
+  useMapControl(map, () => new maplibregl.NavigationControl({}), 'top-right');
+  // `trackUserLocation` makes the button a switch rather than a one-shot action, the way
+  // openstreetmap.org's locate control behaves: pressing it again turns location off and takes
+  // the dot and the accuracy circle off the map. Without it MapLibre only ever re-centres, and
+  // the user has no way to dismiss the overlay short of reloading the page. It costs a
+  // `watchPosition` while active — but only while the user has chosen to keep it on.
+  useMapControl(
+    map,
+    () => new maplibregl.GeolocateControl({ trackUserLocation: true }),
+    'top-right'
   );
   return null;
 };
@@ -142,7 +135,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   const { formatMessage, locale } = useIntl();
   const { toggleNotification } = useNotification();
   const config = usePluginConfig();
-  const mapRef = useRef<MapRef>(null);
 
   // Ensure intlLabel has the correct format for formatMessage
   const label = intlLabel || { id: 'maplibre-field.label', defaultMessage: 'Map' };
@@ -186,12 +178,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   const [locationName, setLocationName] = useState(initialName);
   const [address, setAddress] = useState(result ? placeAddress(result) : '');
 
-  const [viewState, setViewState] = useState({
-    longitude: initialCoordinates[0],
-    latitude: initialCoordinates[1],
-    zoom: isDefaultViewState ? config.defaultZoom || 4.5 : 15, // Use zoom 15 when coordinates are saved
-  });
-
   // Initialize current style from config (prefer isDefault, fallback to first)
   const [currentStyleUrl, setCurrentStyleUrl] = useState(() => {
     if (config.mapStyles && config.mapStyles.length > 0) {
@@ -201,6 +187,12 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     }
     // No fallback - if config is missing, MapLibre will fail with a clear error
     return '';
+  });
+
+  const { containerRef, map, isStyleLoaded } = useMaplibreMap({
+    styleUrl: currentStyleUrl,
+    center: initialCoordinates,
+    zoom: isDefaultViewState ? config.defaultZoom || 4.5 : 15, // Use zoom 15 when coordinates are saved
   });
 
   // POI state
@@ -233,15 +225,12 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     poiLayersRef.current = poiLayers;
   }, [poiLayers]);
 
-  // Update zoom when config is loaded
+  // The map opens before the plugin config has arrived; move it to the configured view once it has
+  // (only when no value is saved — a saved point decides the view on its own).
   useEffect(() => {
-    if (config.defaultZoom && isDefaultViewState) {
-      setViewState((prev) => ({
-        ...prev,
-        zoom: config.defaultZoom ?? prev.zoom,
-      }));
-    }
-  }, [config.defaultZoom, isDefaultViewState]);
+    if (!map || !isDefaultViewState) return;
+    map.jumpTo({ center: config.defaultCenter, zoom: config.defaultZoom });
+  }, [map, config.defaultCenter, config.defaultZoom, isDefaultViewState]);
 
   // Update coordinates and address when config.defaultCenter is loaded (only when no value is saved)
   useEffect(() => {
@@ -252,11 +241,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       setLatitude(lat);
       setLocationName(isNullIsland ? 'Null Island' : '');
       setAddress('');
-      setViewState((prev) => ({
-        ...prev,
-        longitude: lng,
-        latitude: lat,
-      }));
     }
   }, [config.defaultCenter, isDefaultViewState]);
 
@@ -297,25 +281,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     setPoiLayers([]);
   }, [config.poiDisplayEnabled, config.poiSources]);
 
-  const handleStyleChange = (newStyleUrl: string) => {
-    if (!mapRef.current) return;
-
-    const map = mapRef.current.getMap();
-    const currentCenter = map.getCenter();
-    const currentZoom = map.getZoom();
-
-    // Change style while preserving view state
-    map.setStyle(newStyleUrl);
-
-    // Wait for style to load, then restore view
-    map.once('styledata', () => {
-      map.setCenter(currentCenter);
-      map.setZoom(currentZoom);
-    });
-
-    setCurrentStyleUrl(newStyleUrl);
-  };
-
   // Handle layer toggle from layer control
   const handleLayerToggle = useCallback((layerId: string, enabled: boolean) => {
     setPoiLayers((prevLayers) =>
@@ -330,7 +295,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       .filter(
         (s) => s.type === 'pmtiles' && poiLayersRef.current.find((l) => l.id === s.id)?.enabled
       )
-      .map((s) => `pmtiles-circle-${s.id}`);
+      .map((s) => pmtilesCircleLayerId(s.id));
 
   // POI sources for SearchBox, with `enabled` reflecting the live layer-control toggle
   // rather than each source's static default from plugin config
@@ -345,8 +310,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
 
   // Callback passed to SearchBox so it can query features loaded in the map (for PMTiles sources)
   const queryMapFeatures = (sourceId: string, sourceLayer: string) => {
-    if (!mapRef.current) return [];
-    const map = mapRef.current.getMap();
+    if (!map) return [];
     try {
       return map.querySourceFeatures(sourceId, { sourceLayer }) as {
         geometry: { type: string; coordinates: number[] };
@@ -373,7 +337,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       // Check if any layer is enabled (calculate inside the async function to get latest state)
       const hasEnabledLayers = currentPoiLayers.some((layer) => layer.enabled);
 
-      if (!mapRef.current || !config.poiDisplayEnabled) {
+      if (!map || !config.poiDisplayEnabled) {
         return;
       }
 
@@ -388,7 +352,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         return;
       }
 
-      const map = mapRef.current.getMap();
       const zoom = map.getZoom();
 
       // Hide POIs when zoomed out
@@ -463,8 +426,8 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
 
   // Handle main marker drag - reposition the point directly on the map.
   // Snaps to a nearby POI just like double-clicking the map does.
-  const handleMainMarkerDragEnd = async (evt: MarkerDragEvent) => {
-    await setLocationWithPOISnap([evt.lngLat.lng, evt.lngLat.lat], 'marker_drag');
+  const handleMainMarkerDragEnd = async (lngLat: maplibregl.LngLat) => {
+    await setLocationWithPOISnap([lngLat.lng, lngLat.lat], 'marker_drag');
   };
 
   /**
@@ -506,15 +469,13 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   };
 
   // Handle map click - check for POI marker clicks (GeoJSON and PMTiles layers)
-  const handleMapClick = (evt: MapLayerMouseEvent) => {
-    if (!mapRef.current) return;
-
-    const map = mapRef.current.getMap();
+  const handleMapClick = (evt: maplibregl.MapMouseEvent) => {
+    if (!map) return;
 
     // Collect all queryable layers (GeoJSON + PMTiles)
     const pmtilesLayerIds = getPMTilesLayerIds().filter((id) => map.getLayer(id));
     const allQueryLayers = [
-      ...(map.getLayer('poi-circles') ? ['poi-circles'] : []),
+      ...(map.getLayer(POI_CIRCLE_LAYER_ID) ? [POI_CIRCLE_LAYER_ID] : []),
       ...pmtilesLayerIds,
     ];
 
@@ -526,8 +487,8 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     const feature = features[0];
 
     // Handle click on a PMTiles vector tile feature
-    if (feature.layer?.id?.startsWith('pmtiles-circle-')) {
-      const sourceId = feature.layer.id.replace('pmtiles-circle-', '');
+    if (feature.layer?.id?.startsWith(PMTILES_CIRCLE_PREFIX)) {
+      const sourceId = feature.layer.id.replace(PMTILES_CIRCLE_PREFIX, '');
       const sourceConfig = config.poiSources?.find((s) => s.id === sourceId);
       const coords = (feature.geometry as unknown as { coordinates: [number, number] }).coordinates;
       const poi: POI = {
@@ -565,7 +526,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   };
 
   // Double-click handler - searches for nearby POI or saves coordinates only
-  const handleMapDoubleClick = async (evt: MapLayerMouseEvent) => {
+  const handleMapDoubleClick = async (evt: maplibregl.MapMouseEvent) => {
     evt.preventDefault();
     await setLocationWithPOISnap([evt.lngLat.lng, evt.lngLat.lat], 'map_click');
   };
@@ -636,8 +597,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       }
 
       // Snap on PMTiles sources via queryRenderedFeatures
-      if (mapRef.current) {
-        const map = mapRef.current.getMap();
+      if (map) {
         const pmtilesLayerIds = getPMTilesLayerIds().filter((id) => map.getLayer(id));
         if (pmtilesLayerIds.length > 0) {
           const pixelPoint = map.project({ lng: clickCoords[0], lat: clickCoords[1] });
@@ -651,7 +611,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
             const coords = (f.geometry as unknown as { coordinates: [number, number] }).coordinates;
             const dist = calculateDistance(clickCoords, coords);
             if (dist <= snapRadius) {
-              const sourceId = f.layer.id.replace('pmtiles-circle-', '');
+              const sourceId = f.layer.id.replace(PMTILES_CIRCLE_PREFIX, '');
               const sourceConfig = config.poiSources?.find((s) => s.id === sourceId);
               allNearbyPOIs.push({
                 id: String(f.id ?? `pmtiles-snap-${Date.now()}`),
@@ -730,7 +690,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       // down, or its easeTo would cancel the flight a frame later and the arc would be lost.
       cameraMovedBySearchRef.current = true;
       const [lng, lat] = feature.geometry.coordinates;
-      mapRef.current?.flyTo({
+      map?.flyTo({
         // Zoom 15, not 16: flyTo derives both the duration and the height of its arc from the
         // length of the flight path, and the extra level made the camera climb higher and take
         // noticeably longer. 15 is also what the map opens at for a saved value.
@@ -765,24 +725,22 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       cameraMovedBySearchRef.current = false;
       return;
     }
-    if (!isDefaultViewState && mapRef.current) {
-      const map = mapRef.current.getMap();
-      map?.easeTo({ center: [longitude, latitude] });
+    if (!isDefaultViewState && map) {
+      map.easeTo({ center: [longitude, latitude] });
     }
   }, [longitude, latitude, isDefaultViewState]);
 
   // Load POIs when map moves or zooms
   useEffect(() => {
-    if (!mapRef.current || !config.poiDisplayEnabled) return;
-
-    const map = mapRef.current.getMap();
+    if (!map || !config.poiDisplayEnabled) return;
 
     const handleMapUpdate = () => {
       updatePOIMarkers();
     };
 
-    // Load POIs on initial load
-    map.once('load', handleMapUpdate);
+    // Load POIs for the view the map opened on. Only the camera is needed for that, not the style,
+    // so there is no reason to wait for 'load' — which would never fire had it already happened.
+    handleMapUpdate();
 
     // Reload POIs when map moves or zooms
     map.on('moveend', handleMapUpdate);
@@ -796,11 +754,11 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         clearTimeout(updatePOITimerRef.current);
       }
     };
-  }, [config.poiDisplayEnabled, config.poiMinZoom, config.poiMaxDisplay, config.poiSources]);
+  }, [map, config.poiDisplayEnabled, config.poiMinZoom, config.poiMaxDisplay, config.poiSources]);
 
   // Reload POIs when layers are toggled
   useEffect(() => {
-    if (!mapRef.current || !config.poiDisplayEnabled) return;
+    if (!map || !config.poiDisplayEnabled) return;
 
     // Trigger POI reload when layer state changes
     updatePOIMarkers();
@@ -808,9 +766,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
 
   // Add cursor pointer on POI hover (GeoJSON and PMTiles layers)
   useEffect(() => {
-    if (!mapRef.current || !config.poiDisplayEnabled) return;
-
-    const map = mapRef.current.getMap();
+    if (!map || !config.poiDisplayEnabled) return;
 
     const handleMouseEnter = () => {
       map.getCanvas().style.cursor = 'pointer';
@@ -820,30 +776,95 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       map.getCanvas().style.cursor = '';
     };
 
-    const registerHoverHandlers = () => {
-      map.on('mouseenter', 'poi-circles', handleMouseEnter);
-      map.on('mouseleave', 'poi-circles', handleMouseLeave);
-      for (const layerId of getPMTilesLayerIds()) {
-        map.on('mouseenter', layerId, handleMouseEnter);
-        map.on('mouseleave', layerId, handleMouseLeave);
-      }
-    };
-
-    if (map.loaded()) {
-      registerHoverHandlers();
-    } else {
-      map.on('load', registerHoverHandlers);
+    // Listeners bound to a layer id need no loaded style and tolerate a layer that does not exist
+    // yet, so they can go on straight away. The ids are fixed here so cleanup removes exactly the
+    // listeners that were added, whatever the layer toggles say by then.
+    const layerIds = [POI_CIRCLE_LAYER_ID, ...getPMTilesLayerIds()];
+    for (const layerId of layerIds) {
+      map.on('mouseenter', layerId, handleMouseEnter);
+      map.on('mouseleave', layerId, handleMouseLeave);
     }
 
     return () => {
-      map.off('mouseenter', 'poi-circles', handleMouseEnter);
-      map.off('mouseleave', 'poi-circles', handleMouseLeave);
-      for (const layerId of getPMTilesLayerIds()) {
+      for (const layerId of layerIds) {
         map.off('mouseenter', layerId, handleMouseEnter);
         map.off('mouseleave', layerId, handleMouseLeave);
       }
     };
-  }, [config.poiDisplayEnabled, JSON.stringify(getPMTilesLayerIds())]);
+  }, [map, config.poiDisplayEnabled, JSON.stringify(getPMTilesLayerIds())]);
+
+  // Map and marker listeners are attached once, and call whatever the latest render defined, so they
+  // never act on the state of the render that happened to attach them.
+  const mapHandlersRef = useRef({
+    click: handleMapClick,
+    dblclick: handleMapDoubleClick,
+    markerDragEnd: handleMainMarkerDragEnd,
+  });
+  mapHandlersRef.current = {
+    click: handleMapClick,
+    dblclick: handleMapDoubleClick,
+    markerDragEnd: handleMainMarkerDragEnd,
+  };
+
+  useEffect(() => {
+    if (!map) return;
+    const onClick = (evt: maplibregl.MapMouseEvent) => mapHandlersRef.current.click(evt);
+    const onDblClick = (evt: maplibregl.MapMouseEvent) => mapHandlersRef.current.dblclick(evt);
+    map.on('click', onClick);
+    map.on('dblclick', onDblClick);
+    return () => {
+      map.off('click', onClick);
+      map.off('dblclick', onDblClick);
+    };
+  }, [map]);
+
+  // The location pin. Created once per map; the effect below moves it.
+  const markerRef = useRef<maplibregl.Marker | null>(null);
+  useEffect(() => {
+    if (!map) return;
+    const marker = new maplibregl.Marker({ color: '#4945ff' /* primary600 */, draggable: true })
+      .setLngLat([longitude, latitude])
+      .addTo(map);
+    marker.on('dragend', () => mapHandlersRef.current.markerDragEnd(marker.getLngLat()));
+    markerRef.current = marker;
+    return () => {
+      marker.remove();
+      markerRef.current = null;
+    };
+  }, [map]);
+
+  useEffect(() => {
+    markerRef.current?.setLngLat([longitude, latitude]);
+  }, [longitude, latitude]);
+
+  // Draw the POI layers, and draw them again whenever a style swap has wiped them.
+  useEffect(() => {
+    if (!map || !isStyleLoaded) return;
+    const displayEnabled = Boolean(config.poiDisplayEnabled);
+    syncPoiLayers(map, {
+      geojson:
+        displayEnabled && displayedPOIs.length > 0
+          ? buildPoiFeatureCollection(displayedPOIs, selectedPOI)
+          : null,
+      colorExpression: buildColorMatchExpression(poiLayers),
+      pmtiles: (config.poiSources || [])
+        .filter((source) => source.type === 'pmtiles')
+        .map((source) => ({
+          source,
+          enabled: displayEnabled && Boolean(poiLayers.find((l) => l.id === source.id)?.enabled),
+        })),
+      pmtilesMinZoom: config.poiMinZoom ?? 10,
+    });
+  }, [
+    map,
+    isStyleLoaded,
+    displayedPOIs,
+    selectedPOI,
+    poiLayers,
+    config.poiDisplayEnabled,
+    config.poiSources,
+    config.poiMinZoom,
+  ]);
 
   return (
     // Field.Root/Field.Label rather than a Typography reproducing `variant="pi"`,
@@ -864,193 +885,28 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
 
       {/* hasRadius, not borderRadius: '4px' — the literal was the theme's borderRadius token
           spelled out, so the map corners would have drifted from every other boxed surface. */}
-      <Flex
-        direction="column"
-        alignItems="stretch"
-        height="500px"
-        width="100%"
-        hasRadius
-        overflow="hidden"
-      >
-        <Map
-          ref={mapRef}
-          {...viewState}
-          onMove={(evt) => setViewState(evt.viewState)}
-          onClick={handleMapClick}
-          onDblClick={handleMapDoubleClick}
-          mapStyle={currentStyleUrl}
-        >
-          {/* keyed so a late-arriving config value rebuilds the controls with the right mode */}
-          <MapControls
-            key={String(config.useFullscreenPseudo ?? true)}
-            pseudo={config.useFullscreenPseudo ?? true}
-          />
-          {config.mapStyles && config.mapStyles.length > 1 && (
-            <BasemapControlComponent
-              mapStyles={config.mapStyles}
-              currentStyleUrl={currentStyleUrl}
-              onStyleChange={handleStyleChange}
-            />
-          )}
+      <Box height="500px" width="100%" hasRadius overflow="hidden">
+        <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      </Box>
 
-          {/* Layer Control for POIs */}
-          {poiLayers.length > 0 && (
-            <LayerControl mapRef={mapRef} layers={poiLayers} onLayerToggle={handleLayerToggle} />
-          )}
-
-          {/* POI Markers Layer */}
-          {config.poiDisplayEnabled &&
-            displayedPOIs.length > 0 &&
-            (() => {
-              // Create color mapping from layer configuration
-              const layerColorMap: Record<string, string> = {};
-              poiLayers.forEach((layer) => {
-                if (layer.color) {
-                  layerColorMap[layer.id] = layer.color;
-                }
-              });
-
-              // Build MapLibre match expression for dynamic colors
-              // Format: ['match', ['get', 'layerId'], 'layer1', 'color1', 'layer2', 'color2', ..., 'fallback']
-              const colorMatchExpression: (string | string[])[] = ['match', ['get', 'layerId']];
-              Object.entries(layerColorMap).forEach(([layerId, color]) => {
-                colorMatchExpression.push(layerId, color);
-              });
-              colorMatchExpression.push('#999999'); // Fallback color for POIs without layerId
-
-              return (
-                <Source
-                  key={`poi-source-${displayedPOIs.length}-${selectedPOI?.id || 'none'}`}
-                  id="poi-markers"
-                  type="geojson"
-                  data={{
-                    type: 'FeatureCollection',
-                    features: displayedPOIs.slice(0, 100).map((poi) => ({
-                      type: 'Feature',
-                      id: poi.id,
-                      geometry: {
-                        type: 'Point',
-                        coordinates: poi.coordinates,
-                      },
-                      properties: {
-                        name: poi.name || 'Unknown',
-                        type: poi.type || 'poi',
-                        source: poi.source,
-                        layerId: poi.layerId || '', // Include layerId for color mapping
-                        isSelected: selectedPOI?.id === poi.id,
-                      },
-                    })),
-                  }}
-                >
-                  <Layer
-                    id="poi-circles"
-                    type="circle"
-                    paint={{
-                      'circle-radius': [
-                        'case',
-                        ['get', 'isSelected'],
-                        12, // Larger radius for selected
-                        10, // Regular radius
-                      ],
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      'circle-color': colorMatchExpression as any, // Use dynamic color mapping based on layerId per POI
-                      'circle-stroke-width': 2,
-                      'circle-stroke-color': '#ffffff',
-                      'circle-opacity': [
-                        'case',
-                        ['get', 'isSelected'],
-                        0.8, // Selected POI opacity
-                        1.0, // Regular POI opacity
-                      ],
-                    }}
-                  />
-                  <Layer
-                    id="poi-labels"
-                    type="symbol"
-                    minzoom={12}
-                    layout={{
-                      'text-field': ['get', 'name'],
-                      'text-size': 12,
-                      'text-offset': [0, 1.5],
-                      'text-anchor': 'top',
-                      'text-optional': true,
-                      'symbol-placement': 'point',
-                      'text-allow-overlap': false,
-                      'text-ignore-placement': false,
-                    }}
-                    paint={{
-                      'text-color': '#333333',
-                      'text-halo-color': '#ffffff',
-                      'text-halo-width': 2,
-                    }}
-                  />
-                </Source>
-              );
-            })()}
-
-          {/* PMTiles Vector Tile POI Layers */}
-          {config.poiDisplayEnabled &&
-            (config.poiSources || [])
-              .filter((source) => source.type === 'pmtiles')
-              .map((source) => {
-                const layer = poiLayers.find((l) => l.id === source.id);
-                if (!layer?.enabled) return null;
-                const pmtilesUrl = source.apiUrl.startsWith('pmtiles://')
-                  ? source.apiUrl
-                  : `pmtiles://${source.apiUrl}`;
-                return (
-                  <Source
-                    key={`pmtiles-source-${source.id}`}
-                    id={`pmtiles-source-${source.id}`}
-                    type="vector"
-                    url={pmtilesUrl}
-                  >
-                    <Layer
-                      id={`pmtiles-circle-${source.id}`}
-                      type="circle"
-                      source-layer={source.sourceLayer}
-                      minzoom={config.poiMinZoom ?? 10}
-                      paint={{
-                        'circle-radius': 10,
-                        'circle-color': source.color ?? '#999999',
-                        'circle-stroke-width': 2,
-                        'circle-stroke-color': '#ffffff',
-                        'circle-opacity': 1.0,
-                      }}
-                    />
-                    <Layer
-                      id={`pmtiles-label-${source.id}`}
-                      type="symbol"
-                      source-layer={source.sourceLayer}
-                      minzoom={12}
-                      layout={{
-                        'text-field': ['get', 'name'],
-                        'text-size': 12,
-                        'text-offset': [0, 1.5],
-                        'text-anchor': 'top',
-                        'text-optional': true,
-                        'symbol-placement': 'point',
-                        'text-allow-overlap': false,
-                      }}
-                      paint={{
-                        'text-color': '#333333',
-                        'text-halo-color': '#ffffff',
-                        'text-halo-width': 2,
-                      }}
-                    />
-                  </Source>
-                );
-              })}
-
-          <Marker
-            longitude={longitude}
-            latitude={latitude}
-            color="#4945ff" /* primary600 */
-            draggable
-            onDragEnd={handleMainMarkerDragEnd}
-          />
-        </Map>
-      </Flex>
+      {/* The controls render nothing themselves: each one adds itself to the map above. */}
+      {/* keyed so a late-arriving config value rebuilds the controls with the right mode */}
+      <MapControls
+        key={String(config.useFullscreenPseudo ?? true)}
+        map={map}
+        pseudo={config.useFullscreenPseudo ?? true}
+      />
+      {config.mapStyles && config.mapStyles.length > 1 && (
+        <BasemapControlComponent
+          map={map}
+          mapStyles={config.mapStyles}
+          currentStyleUrl={currentStyleUrl}
+          onStyleChange={setCurrentStyleUrl}
+        />
+      )}
+      {poiLayers.length > 0 && (
+        <LayerControl map={map} layers={poiLayers} onLayerToggle={handleLayerToggle} />
+      )}
 
       <Grid.Root gap={2} marginTop={1}>
         {/* Row 1: Name (half) + Longitude (quarter) + Latitude (quarter) */}

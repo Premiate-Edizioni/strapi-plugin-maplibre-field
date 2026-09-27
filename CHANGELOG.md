@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Closing one map field broke PMTiles layers in the others** - Each field unregistered the `pmtiles://` protocol when it unmounted, and maplibre-gl keeps one protocol table for the whole page. With two map fields on screen — a repeatable component, or two fields on one content type — removing one left the rest unable to load PMTiles POI layers. The protocol is now registered once and never removed.
+
+- **POIs did not appear until the map was moved** - The field loaded the POIs for the opening view on the map's `load` event, subscribing only after the map existed; when the map had already loaded by then, the event never came and the layers stayed empty until the first pan or zoom. They are now loaded as soon as the map is there.
+
+- **Switching basemap loaded the new style twice** - The style was set once by the basemap control and again by the React wrapper reacting to the same change.
+
+### Changed
+
+- **`react-map-gl` is no longer a dependency** - The field now drives maplibre-gl directly. The wrapper added little over what the field already did through the map's own API, and it had been the cause of two past bugs: a runtime crash against maplibre-gl v6, and a fullscreen option it silently dropped. Installing the plugin no longer pulls `react-map-gl`, its Mapbox counterpart, or the older copy of MapLibre's style specification they depended on. Nothing changes in how the field is configured or in the data it stores.
+
+- **Panning and zooming no longer re-render the field** - The camera used to be mirrored into React state on every frame of a pan or zoom, re-rendering the whole field each time. MapLibre now keeps the camera on its own.
+
 ## [1.7.0] - 2026-08-26
 
 ### Fixed
