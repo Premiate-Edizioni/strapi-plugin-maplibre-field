@@ -35,6 +35,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // Must run before the first map is created (see utils/maplibreWorker.ts).
 configureMaplibreWorker();
 
+// Registered once for the whole page, never per field: the protocol is global to maplibre-gl, so a
+// field that removed it on unmount would break every other map field still on screen.
 const protocol = new Protocol();
 maplibregl.addProtocol('pmtiles', protocol.tile);
 
@@ -768,14 +770,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       map?.easeTo({ center: [longitude, latitude] });
     }
   }, [longitude, latitude, isDefaultViewState]);
-
-  useEffect(() => {
-    const protocol = new Protocol();
-    maplibregl.addProtocol('pmtiles', protocol.tile);
-    return () => {
-      maplibregl.removeProtocol('pmtiles');
-    };
-  }, []);
 
   // Load POIs when map moves or zooms
   useEffect(() => {
