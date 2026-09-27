@@ -32,6 +32,7 @@ export const useMapControl = <T extends IControl>(
       controlRef.current = null;
     };
     // `create` is a fresh closure every render; `deps` is what decides when it is called again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, position, ...deps]);
 
   return controlRef;

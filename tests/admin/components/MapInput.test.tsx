@@ -494,6 +494,47 @@ describe('MapInput Component', () => {
     }
   });
 
+  test('clicking a PMTiles POI selects it', () => {
+    const original = {
+      poiDisplayEnabled: mockPluginConfig.poiDisplayEnabled,
+      poiSources: mockPluginConfig.poiSources,
+    };
+    mockPluginConfig.poiDisplayEnabled = true;
+    mockPluginConfig.poiSources = [
+      {
+        id: 'parks',
+        name: 'Parks',
+        apiUrl: 'https://tiles.test/parks.pmtiles',
+        type: 'pmtiles',
+        sourceLayer: 'parks',
+      } as any,
+    ];
+    mockMapInstance.getLayer.mockImplementation(((id: string) =>
+      id === 'pmtiles-circle-parks' ? {} : null) as any);
+    mockMapInstance.queryRenderedFeatures.mockReturnValueOnce([
+      {
+        id: 7,
+        layer: { id: 'pmtiles-circle-parks' },
+        geometry: { coordinates: [9.18, 45.47] },
+        properties: { name: 'Parco Sempione', address: 'Milano' },
+      },
+    ] as any);
+    mockMapInstance.on.mockClear();
+
+    try {
+      render(<MockMapInput {...defaultProps} />);
+      const [, onClick] = mockMapInstance.on.mock.calls.find(([event]) => event === 'click')!;
+      act(() => (onClick as (evt: unknown) => void)({ point: { x: 0, y: 0 } }));
+
+      const feature = JSON.parse(mockOnChange.mock.calls[0][0].target.value);
+      expect(feature.geometry.coordinates).toEqual([9.18, 45.47]);
+      expect(feature.properties).toMatchObject({ name: 'Parco Sempione', source: 'parks' });
+    } finally {
+      Object.assign(mockPluginConfig, original);
+      mockMapInstance.getLayer.mockImplementation(() => null);
+    }
+  });
+
   describe('search sees the live layer-control toggle, not just the config default', () => {
     const originalPoiSources = mockPluginConfig.poiSources;
     const originalPoiDisplayEnabled = mockPluginConfig.poiDisplayEnabled;

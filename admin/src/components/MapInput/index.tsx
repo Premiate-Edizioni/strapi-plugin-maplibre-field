@@ -250,8 +250,8 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       // Use style marked as default, or fallback to first style
       const defaultStyle = config.mapStyles.find((s) => s.isDefault);
       const newStyleUrl = defaultStyle?.url || config.mapStyles[0].url;
-      // Only update if the style URL has changed and is not empty
-      if (newStyleUrl && newStyleUrl !== currentStyleUrl) {
+      // Setting the URL already in use is a no-op, so there is nothing to compare against
+      if (newStyleUrl) {
         setCurrentStyleUrl(newStyleUrl);
       }
     }
@@ -289,13 +289,14 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     // Note: updatePOIMarkers() will be triggered by the useEffect that watches poiLayers
   }, []);
 
-  // Helper: collect active PMTiles circle layer IDs
-  const getPMTilesLayerIds = (): string[] =>
-    (config.poiSources || [])
-      .filter(
-        (s) => s.type === 'pmtiles' && poiLayersRef.current.find((l) => l.id === s.id)?.enabled
-      )
-      .map((s) => pmtilesCircleLayerId(s.id));
+  // Circle layer ids of the PMTiles sources currently switched on
+  const pmtilesLayerIds = useMemo(
+    () =>
+      (config.poiSources || [])
+        .filter((s) => s.type === 'pmtiles' && poiLayers.find((l) => l.id === s.id)?.enabled)
+        .map((s) => pmtilesCircleLayerId(s.id)),
+    [config.poiSources, poiLayers]
+  );
 
   // POI sources for SearchBox, with `enabled` reflecting the live layer-control toggle
   // rather than each source's static default from plugin config
@@ -473,10 +474,10 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     if (!map) return;
 
     // Collect all queryable layers (GeoJSON + PMTiles)
-    const pmtilesLayerIds = getPMTilesLayerIds().filter((id) => map.getLayer(id));
+    const drawnPmtilesLayerIds = pmtilesLayerIds.filter((id) => map.getLayer(id));
     const allQueryLayers = [
       ...(map.getLayer(POI_CIRCLE_LAYER_ID) ? [POI_CIRCLE_LAYER_ID] : []),
-      ...pmtilesLayerIds,
+      ...drawnPmtilesLayerIds,
     ];
 
     if (allQueryLayers.length === 0) return;
@@ -598,15 +599,15 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
 
       // Snap on PMTiles sources via queryRenderedFeatures
       if (map) {
-        const pmtilesLayerIds = getPMTilesLayerIds().filter((id) => map.getLayer(id));
-        if (pmtilesLayerIds.length > 0) {
+        const drawnPmtilesLayerIds = pmtilesLayerIds.filter((id) => map.getLayer(id));
+        if (drawnPmtilesLayerIds.length > 0) {
           const pixelPoint = map.project({ lng: clickCoords[0], lat: clickCoords[1] });
           const pixelRadius = 20;
           const bbox: [[number, number], [number, number]] = [
             [pixelPoint.x - pixelRadius, pixelPoint.y - pixelRadius],
             [pixelPoint.x + pixelRadius, pixelPoint.y + pixelRadius],
           ];
-          const rendered = map.queryRenderedFeatures(bbox, { layers: pmtilesLayerIds });
+          const rendered = map.queryRenderedFeatures(bbox, { layers: drawnPmtilesLayerIds });
           for (const f of rendered) {
             const coords = (f.geometry as unknown as { coordinates: [number, number] }).coordinates;
             const dist = calculateDistance(clickCoords, coords);
@@ -728,14 +729,19 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     if (!isDefaultViewState && map) {
       map.easeTo({ center: [longitude, latitude] });
     }
-  }, [longitude, latitude, isDefaultViewState]);
+  }, [map, longitude, latitude, isDefaultViewState]);
+
+  // Listeners registered below outlive the render that registered them; going through this ref
+  // they always run the latest updatePOIMarkers, with the latest config and state.
+  const updatePOIMarkersRef = useRef(updatePOIMarkers);
+  updatePOIMarkersRef.current = updatePOIMarkers;
 
   // Load POIs when map moves or zooms
   useEffect(() => {
     if (!map || !config.poiDisplayEnabled) return;
 
     const handleMapUpdate = () => {
-      updatePOIMarkers();
+      updatePOIMarkersRef.current();
     };
 
     // Load POIs for the view the map opened on. Only the camera is needed for that, not the style,
@@ -756,13 +762,13 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     };
   }, [map, config.poiDisplayEnabled, config.poiMinZoom, config.poiMaxDisplay, config.poiSources]);
 
-  // Reload POIs when layers are toggled
+  // Reload POIs when layers are toggled. Keyed on the on/off states alone, so a new array with the
+  // same toggles does not refetch.
+  const poiLayerToggles = poiLayers.map((l) => `${l.id}:${l.enabled}`).join(',');
   useEffect(() => {
     if (!map || !config.poiDisplayEnabled) return;
-
-    // Trigger POI reload when layer state changes
-    updatePOIMarkers();
-  }, [JSON.stringify(poiLayers.map((l) => ({ id: l.id, enabled: l.enabled })))]);
+    updatePOIMarkersRef.current();
+  }, [map, config.poiDisplayEnabled, poiLayerToggles]);
 
   // Add cursor pointer on POI hover (GeoJSON and PMTiles layers)
   useEffect(() => {
@@ -779,7 +785,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     // Listeners bound to a layer id need no loaded style and tolerate a layer that does not exist
     // yet, so they can go on straight away. The ids are fixed here so cleanup removes exactly the
     // listeners that were added, whatever the layer toggles say by then.
-    const layerIds = [POI_CIRCLE_LAYER_ID, ...getPMTilesLayerIds()];
+    const layerIds = [POI_CIRCLE_LAYER_ID, ...pmtilesLayerIds];
     for (const layerId of layerIds) {
       map.on('mouseenter', layerId, handleMouseEnter);
       map.on('mouseleave', layerId, handleMouseLeave);
@@ -791,7 +797,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         map.off('mouseleave', layerId, handleMouseLeave);
       }
     };
-  }, [map, config.poiDisplayEnabled, JSON.stringify(getPMTilesLayerIds())]);
+  }, [map, config.poiDisplayEnabled, pmtilesLayerIds]);
 
   // Map and marker listeners are attached once, and call whatever the latest render defined, so they
   // never act on the state of the render that happened to attach them.
@@ -831,6 +837,9 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       marker.remove();
       markerRef.current = null;
     };
+    // The position is only the starting point; the effect below follows it from then on, and
+    // recreating the marker on every move would drop a drag in progress.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map]);
 
   useEffect(() => {
