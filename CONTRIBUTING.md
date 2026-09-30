@@ -430,8 +430,8 @@ Open an issue with:
 
 - Network tab: check API requests to POI sources and Nominatim
 - React DevTools: inspect `MapInput` state
-- [MapLibre GL JS Docs](https://maplibre.org/maplibre-gl-js/docs/) and
-  [React Map GL Docs](https://visgl.github.io/react-map-gl/) for API reference
+- [MapLibre GL JS Docs](https://maplibre.org/maplibre-gl-js/docs/) for API reference — the field
+  drives maplibre-gl directly, with no React wrapper in between
 
 ### Working with Nominatim
 

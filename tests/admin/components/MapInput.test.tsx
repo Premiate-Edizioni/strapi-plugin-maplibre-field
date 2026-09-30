@@ -1,22 +1,28 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import MapInput from '../../../admin/src/components/MapInput';
-import { findNearestPOI } from '../../../admin/src/services/poi-service';
+import { findNearestPOI, queryPOIsForViewport } from '../../../admin/src/services/poi-service';
 import { IntlProvider } from 'react-intl';
 import { DesignSystemProvider } from '@strapi/design-system';
+import * as maplibregl from 'maplibre-gl';
 
 // vi.mock factories run before the module body, so anything they close over has to be hoisted too.
 const {
   mockPluginConfig,
   mockMapInstance,
+  mockMarkers,
   mockSearchBoxProps,
   mockToggleNotification,
-  mockUseControl,
 } = vi.hoisted(() => ({
   mockSearchBoxProps: vi.fn(),
   mockToggleNotification: vi.fn(),
-  mockUseControl: vi.fn(),
+  // Every Marker the component creates, newest last
+  mockMarkers: [] as {
+    options: { draggable?: boolean; color?: string };
+    lngLat: { lng: number; lat: number };
+    handlers: Record<string, () => void>;
+  }[],
   // Stable config object: a new reference on every render would retrigger the map effects.
   mockPluginConfig: {
     mapStyles: [
@@ -59,14 +65,18 @@ const {
     getLayer: vi.fn(() => null), // POI layer doesn't exist in tests
     queryRenderedFeatures: vi.fn(() => []),
     getCanvas: vi.fn(() => ({ style: {} })),
+    project: vi.fn(() => ({ x: 0, y: 0 })),
     setStyle: vi.fn(),
-    setCenter: vi.fn(),
-    setZoom: vi.fn(),
+    jumpTo: vi.fn(),
     flyTo: vi.fn(),
     easeTo: vi.fn(),
     addControl: vi.fn(),
     removeControl: vi.fn(),
-    getContainer: vi.fn(() => document.createElement('div')),
+    hasControl: vi.fn(() => true),
+    getSource: vi.fn(() => undefined),
+    addSource: vi.fn(),
+    addLayer: vi.fn(),
+    remove: vi.fn(),
   },
 }));
 
@@ -87,36 +97,6 @@ vi.mock('@strapi/strapi/admin', () => ({
 // Mock usePluginConfig hook with stable reference
 vi.mock('../../../admin/src/hooks/usePluginConfig', () => ({
   usePluginConfig: () => mockPluginConfig,
-}));
-
-// Mock react-map-gl with ref forwarding
-vi.mock('react-map-gl/maplibre', () => ({
-  __esModule: true,
-  default: React.forwardRef(({ children }: any, ref: any) => {
-    React.useImperativeHandle(ref, () => ({
-      getMap: () => mockMapInstance,
-      // MapRef proxies the map's camera methods; handleSearchResult calls flyTo through it.
-      flyTo: mockMapInstance.flyTo,
-    }));
-    return <div data-testid="mock-map">{children}</div>;
-  }),
-  // MapInput builds its own FullscreenControl on top of useControl (see index.tsx)
-  useControl: mockUseControl,
-  GeolocateControl: () => <div>GeolocateControl</div>,
-  Marker: ({ draggable, onDragEnd }: any) => (
-    <div
-      data-testid="main-marker"
-      data-draggable={draggable ? 'true' : 'false'}
-      // `dragEnd` has no DOM equivalent; blur stands in for it so the test can
-      // fire the marker's drag path.
-      onBlur={() => onDragEnd?.({ lngLat: { lng: 9.19, lat: 45.4642 } })}
-    >
-      Marker
-    </div>
-  ),
-  NavigationControl: () => <div>NavigationControl</div>,
-  Source: ({ children }: any) => <div>{children}</div>,
-  Layer: () => null,
 }));
 
 // Mock SearchBox component, capturing the props it receives (e.g. poiSources)
@@ -176,12 +156,50 @@ vi.mock('pmtiles', () => ({
   },
 }));
 
-// Mock maplibre-gl
-vi.mock('maplibre-gl', () => ({
-  addProtocol: vi.fn(),
-  removeProtocol: vi.fn(),
-  setWorkerUrl: vi.fn(),
-}));
+// Mock maplibre-gl. Everything MapInput constructs has to be constructible — no arrow functions.
+vi.mock('maplibre-gl', () => {
+  function Marker(this: any, options: { draggable?: boolean; color?: string }) {
+    const record = { options, lngLat: { lng: 0, lat: 0 }, handlers: {} as Record<string, any> };
+    mockMarkers.push(record);
+    this.setLngLat = (lngLat: [number, number]) => {
+      record.lngLat = { lng: lngLat[0], lat: lngLat[1] };
+      return this;
+    };
+    this.getLngLat = () => record.lngLat;
+    this.addTo = () => this;
+    this.on = (event: string, handler: () => void) => {
+      record.handlers[event] = handler;
+      return this;
+    };
+    this.remove = vi.fn();
+  }
+  const control = () =>
+    vi.fn(function (this: any, options: unknown) {
+      this.options = options;
+    });
+
+  return {
+    addProtocol: vi.fn(),
+    removeProtocol: vi.fn(),
+    setWorkerUrl: vi.fn(),
+    Map: vi.fn(function () {
+      return mockMapInstance;
+    }),
+    Marker,
+    FullscreenControl: control(),
+    NavigationControl: control(),
+    GeolocateControl: control(),
+  };
+});
+
+/** What MapLibre does at the end of a pin drag: move the marker, then fire `dragend`. */
+const dragMarkerTo = (lng: number, lat: number) => {
+  const marker = mockMarkers[mockMarkers.length - 1];
+  act(() => {
+    marker.lngLat = { lng, lat };
+    marker.handlers.dragend();
+  });
+};
 
 const MockMapInput = (props: any) => (
   <DesignSystemProvider locale="en">
@@ -216,9 +234,16 @@ describe('MapInput Component', () => {
     expect(screen.getByText('Map').tagName).toBe('LABEL');
   });
 
-  test('displays map component', () => {
+  test('creates a MapLibre map in its own container, on the configured view', () => {
+    vi.mocked(maplibregl.Map).mockClear();
     render(<MockMapInput {...defaultProps} />);
-    expect(screen.getByTestId('mock-map')).toBeInTheDocument();
+
+    expect(maplibregl.Map).toHaveBeenCalledTimes(1);
+    const [options] = vi.mocked(maplibregl.Map).mock.calls[0] as any[];
+    expect(options.container).toBeInstanceOf(HTMLDivElement);
+    expect(options.style).toBe('https://test-map-style.com/style.json');
+    expect(options.center).toEqual([10, 45]);
+    expect(options.zoom).toBe(5);
   });
 
   test('displays initial coordinates when value is null', () => {
@@ -309,37 +334,27 @@ describe('MapInput Component', () => {
     expect(screen.getByDisplayValue('Skatespot Centro')).toBeInTheDocument();
   });
 
-  test('map controls are built in a fixed order, with the configured fullscreen mode', () => {
+  test('map controls are added in a fixed order, with the configured fullscreen mode', () => {
     // MapLibre appends controls in addControl order, so this order is the on-screen stack order:
     // fullscreen (acts on the container) above zoom/compass/geolocate (act on the view).
-    const built: string[] = [];
-    // `new` is used on these, so they have to be constructible — no arrow functions.
-    const record = (name: string) =>
-      function () {
-        built.push(name);
-        return { _setupUI: () => {}, _container: document.createElement('div') };
-      };
-    const mapLib = {
-      FullscreenControl: vi.fn(record('fullscreen')),
-      NavigationControl: vi.fn(record('navigation')),
-      GeolocateControl: vi.fn(record('geolocate')),
-    };
-    mockUseControl.mockClear();
+    mockMapInstance.addControl.mockClear();
 
     render(<MockMapInput {...defaultProps} />);
 
-    // useControl is mocked, so it records one call per control per render; the real hook memoizes.
-    // The first render's three calls are the ones that define the stack order.
-    for (const [onCreate] of mockUseControl.mock.calls.slice(0, 3)) {
-      onCreate({ mapLib });
-    }
-
-    expect(built).toEqual(['fullscreen', 'navigation', 'geolocate']);
-    // react-map-gl's own FullscreenControl silently drops `pseudo`; ours must not.
-    expect(mapLib.FullscreenControl).toHaveBeenCalledWith({ pseudo: true });
+    const added = mockMapInstance.addControl.mock.calls.map(([control]) => control);
+    const lastInstance = (ctor: unknown) => {
+      const { instances } = vi.mocked(ctor as () => unknown).mock;
+      return instances[instances.length - 1];
+    };
+    expect(added.slice(0, 3)).toEqual([
+      lastInstance(maplibregl.FullscreenControl),
+      lastInstance(maplibregl.NavigationControl),
+      lastInstance(maplibregl.GeolocateControl),
+    ]);
+    expect(maplibregl.FullscreenControl).toHaveBeenLastCalledWith({ pseudo: true });
     // Without tracking, the geolocate button only re-centres and the user can never switch the
     // location overlay back off.
-    expect(mapLib.GeolocateControl).toHaveBeenCalledWith({ trackUserLocation: true });
+    expect(maplibregl.GeolocateControl).toHaveBeenLastCalledWith({ trackUserLocation: true });
   });
 
   test('placing a point recentres the map without changing the zoom', async () => {
@@ -352,7 +367,7 @@ describe('MapInput Component', () => {
     mockMapInstance.easeTo.mockClear();
 
     render(<MockMapInput {...defaultProps} value={value} />);
-    fireEvent.blur(screen.getByTestId('main-marker'));
+    dragMarkerTo(9.19, 45.4642);
 
     await waitFor(() => expect(mockMapInstance.easeTo).toHaveBeenCalled());
     // The zoom is the user's working context — choosing a point must not throw them back out.
@@ -391,15 +406,14 @@ describe('MapInput Component', () => {
 
   test('main marker is draggable', () => {
     render(<MockMapInput {...defaultProps} />);
-    expect(screen.getByTestId('main-marker')).toHaveAttribute('data-draggable', 'true');
+    expect(mockMarkers[mockMarkers.length - 1].options.draggable).toBe(true);
   });
 
   test('dragging the main marker updates coordinates when no POI is nearby', async () => {
     // findNearestPOI is mocked to return null, i.e. nothing within snap radius
     render(<MockMapInput {...defaultProps} />);
 
-    // The mocked Marker fires onDragEnd with [9.19, 45.4642] on blur
-    fireEvent.blur(screen.getByTestId('main-marker'));
+    dragMarkerTo(9.19, 45.4642);
 
     await waitFor(() => expect(mockOnChange).toHaveBeenCalledTimes(1));
 
@@ -429,7 +443,7 @@ describe('MapInput Component', () => {
 
     render(<MockMapInput {...defaultProps} />);
 
-    fireEvent.blur(screen.getByTestId('main-marker'));
+    dragMarkerTo(9.19, 45.4642);
 
     await waitFor(() => expect(mockOnChange).toHaveBeenCalledTimes(1));
 
@@ -438,6 +452,29 @@ describe('MapInput Component', () => {
     expect(feature.geometry.coordinates).toEqual([9.2, 45.47]);
     expect(feature.properties.name).toBe('Skatespot Centro');
     expect(feature.properties.inputMethod).toBe('poi_click');
+  });
+
+  test('a drag that snaps back onto the saved point puts the pin back on it', async () => {
+    const value = JSON.stringify({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [9.2, 45.47] },
+      properties: { name: 'Skatespot Centro' },
+    });
+    // The snap lands exactly where the field already is, so no coordinate changes
+    vi.mocked(findNearestPOI).mockReturnValueOnce({
+      id: 'poi-1',
+      name: 'Skatespot Centro',
+      type: 'skating_spot',
+      coordinates: [9.2, 45.47],
+      distance: 3,
+    } as any);
+
+    render(<MockMapInput {...defaultProps} value={value} />);
+    const marker = mockMarkers[mockMarkers.length - 1];
+    dragMarkerTo(9.20003, 45.47002);
+
+    await waitFor(() => expect(mockOnChange).toHaveBeenCalledTimes(1));
+    expect(marker.lngLat).toEqual({ lng: 9.2, lat: 45.47 });
   });
 
   test('a snapped POI raises one localized notification, not two', async () => {
@@ -452,13 +489,132 @@ describe('MapInput Component', () => {
 
     render(<MockMapInput {...defaultProps} />);
 
-    fireEvent.blur(screen.getByTestId('main-marker'));
+    dragMarkerTo(9.19, 45.4642);
 
     await waitFor(() => expect(mockToggleNotification).toHaveBeenCalledTimes(1));
     expect(mockToggleNotification).toHaveBeenCalledWith({
       type: 'success',
       message: 'Selected Skatespot Centro from Skatespots (3m away)',
     });
+  });
+
+  test('loads the POIs for the opening view without waiting for a load event', async () => {
+    const original = {
+      poiDisplayEnabled: mockPluginConfig.poiDisplayEnabled,
+      poiSources: mockPluginConfig.poiSources,
+    };
+    mockPluginConfig.poiDisplayEnabled = true;
+    mockPluginConfig.poiSources = [
+      { id: 'spots', name: 'Skatespots', apiUrl: 'https://poi.test/spots.geojson' },
+    ];
+    // 'load' may already be over by the time the field subscribes, and then never fires again.
+    mockMapInstance.once.mockImplementation(() => {});
+    mockMapInstance.getZoom.mockReturnValue(12);
+    vi.mocked(queryPOIsForViewport).mockClear();
+
+    try {
+      render(<MockMapInput {...defaultProps} />);
+      await waitFor(() => expect(queryPOIsForViewport).toHaveBeenCalled());
+    } finally {
+      Object.assign(mockPluginConfig, original);
+      mockMapInstance.getZoom.mockReturnValue(5);
+    }
+  });
+
+  test('a pan during a POI fetch loads the new view, and the stale answer is dropped', async () => {
+    const original = {
+      poiDisplayEnabled: mockPluginConfig.poiDisplayEnabled,
+      poiSources: mockPluginConfig.poiSources,
+    };
+    mockPluginConfig.poiDisplayEnabled = true;
+    mockPluginConfig.poiSources = [
+      { id: 'spots', name: 'Skatespots', apiUrl: 'https://poi.test/spots.geojson' },
+    ];
+    mockMapInstance.getZoom.mockReturnValue(12);
+    mockMapInstance.on.mockClear();
+    mockMapInstance.addSource.mockClear();
+
+    const poiNamed = (name: string) => ({
+      id: name,
+      name,
+      type: 'poi',
+      coordinates: [9, 45],
+      address: '',
+      source: 'custom',
+      layerId: 'spots',
+    });
+    let answerFirst: (pois: unknown[]) => void = () => {};
+    vi.mocked(queryPOIsForViewport)
+      .mockClear()
+      .mockImplementationOnce(() => new Promise((resolve) => (answerFirst = resolve as never)))
+      .mockImplementationOnce(() => Promise.resolve([poiNamed('New view')] as never));
+
+    const handler = (event: string) =>
+      mockMapInstance.on.mock.calls.find(([name]) => name === event)![1] as () => void;
+    const drawnNames = () =>
+      mockMapInstance.addSource.mock.calls
+        .filter(([id]) => id === 'poi-markers')
+        .map(([, spec]) => (spec as any).data.features.map((f: any) => f.properties.name));
+
+    try {
+      render(<MockMapInput {...defaultProps} />);
+      act(() => handler('style.load')());
+      await waitFor(() => expect(queryPOIsForViewport).toHaveBeenCalledTimes(1));
+
+      // The user pans while the first request is still out
+      act(() => handler('moveend')());
+      await waitFor(() => expect(queryPOIsForViewport).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(drawnNames().slice(-1)).toEqual([['New view']]));
+
+      // The first request answers last, for a view the map has already left
+      await act(async () => answerFirst([poiNamed('Old view')]));
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(drawnNames().flat()).not.toContain('Old view');
+    } finally {
+      Object.assign(mockPluginConfig, original);
+      mockMapInstance.getZoom.mockReturnValue(5);
+    }
+  });
+
+  test('clicking a PMTiles POI selects it', () => {
+    const original = {
+      poiDisplayEnabled: mockPluginConfig.poiDisplayEnabled,
+      poiSources: mockPluginConfig.poiSources,
+    };
+    mockPluginConfig.poiDisplayEnabled = true;
+    mockPluginConfig.poiSources = [
+      {
+        id: 'parks',
+        name: 'Parks',
+        apiUrl: 'https://tiles.test/parks.pmtiles',
+        type: 'pmtiles',
+        sourceLayer: 'parks',
+      } as any,
+    ];
+    mockMapInstance.getLayer.mockImplementation(((id: string) =>
+      id === 'pmtiles-circle-parks' ? {} : null) as any);
+    mockMapInstance.queryRenderedFeatures.mockReturnValueOnce([
+      {
+        id: 7,
+        layer: { id: 'pmtiles-circle-parks' },
+        geometry: { coordinates: [9.18, 45.47] },
+        properties: { name: 'Parco Sempione', address: 'Milano' },
+      },
+    ] as any);
+    mockMapInstance.on.mockClear();
+
+    try {
+      render(<MockMapInput {...defaultProps} />);
+      const [, onClick] = mockMapInstance.on.mock.calls.find(([event]) => event === 'click')!;
+      act(() => (onClick as (evt: unknown) => void)({ point: { x: 0, y: 0 } }));
+
+      const feature = JSON.parse(mockOnChange.mock.calls[0][0].target.value);
+      expect(feature.geometry.coordinates).toEqual([9.18, 45.47]);
+      expect(feature.properties).toMatchObject({ name: 'Parco Sempione', source: 'parks' });
+    } finally {
+      Object.assign(mockPluginConfig, original);
+      mockMapInstance.getLayer.mockImplementation(() => null);
+    }
   });
 
   describe('search sees the live layer-control toggle, not just the config default', () => {

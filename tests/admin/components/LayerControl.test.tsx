@@ -17,6 +17,7 @@ const mountControlOn = (container: HTMLElement) => {
       container.appendChild(control.onAdd(map));
     }),
     removeControl: vi.fn(),
+    hasControl: vi.fn(() => true),
   };
   return map;
 };
@@ -28,12 +29,11 @@ const layers: LayerConfig[] = [
 const renderControl = (locale: string, messages: Record<string, string>) => {
   const host = document.createElement('div');
   document.body.appendChild(host);
-  const map = mountControlOn(host);
-  const mapRef = { current: { getMap: () => map } } as never;
+  const map = mountControlOn(host) as never;
 
   render(
     <IntlProvider locale={locale} messages={messages} onError={() => {}}>
-      <LayerControl mapRef={mapRef} layers={layers} onLayerToggle={vi.fn()} />
+      <LayerControl map={map} layers={layers} onLayerToggle={vi.fn()} />
     </IntlProvider>
   );
 
