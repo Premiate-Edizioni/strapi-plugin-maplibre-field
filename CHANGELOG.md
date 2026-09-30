@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-09-30
+
 ### Fixed
 
 - **Closing one map field broke PMTiles layers in the others** - Each field unregistered the `pmtiles://` protocol when it unmounted, and maplibre-gl keeps one protocol table for the whole page. With two map fields on screen — a repeatable component, or two fields on one content type — removing one left the rest unable to load PMTiles POI layers. The protocol is now registered once and never removed.
