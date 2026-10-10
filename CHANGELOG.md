@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Tested against maplibre-gl 6.13** - Its worker no longer needs `maplibre-gl-shared.mjs`, which now ships empty. The plugin still serves it for apps on an older 6.x.
+
 ## [1.8.0] - 2026-09-30
 
 ### Fixed

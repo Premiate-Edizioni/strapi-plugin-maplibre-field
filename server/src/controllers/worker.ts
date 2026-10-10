@@ -12,7 +12,9 @@ import type { Core } from '@strapi/strapi';
  * Serving the files from the plugin keeps the worker same-origin and — because they are read from
  * the maplibre-gl copy the app actually installed — always in sync with the bundled main thread.
  *
- * The worker imports `./maplibre-gl-shared.mjs`, so both files are served from the same path.
+ * Up to maplibre-gl 6.12 the worker imports `./maplibre-gl-shared.mjs`, so both files are served
+ * from the same path. From 6.13 the worker is self-contained and the shared file ships empty, but
+ * apps still on an older 6.x need it.
  */
 const ALLOWED_FILES = ['maplibre-gl-worker.mjs', 'maplibre-gl-shared.mjs'];
 

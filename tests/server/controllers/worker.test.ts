@@ -53,9 +53,16 @@ describe('worker controller', () => {
 
         expect(ctx.type).toBe('text/javascript');
         expect(typeof ctx.body).toBe('string');
-        expect((ctx.body as string).length).toBeGreaterThan(0);
       }
     );
+
+    test('serves a non-empty worker', async () => {
+      const { ctx, run } = getWorker('maplibre-gl-worker.mjs');
+      await run();
+
+      // Only the worker: since maplibre-gl 6.13 the shared file ships empty on purpose.
+      expect((ctx.body as string).length).toBeGreaterThan(0);
+    });
 
     test('serves the file installed in node_modules, not a bundled copy', async () => {
       const { ctx, run } = getWorker('maplibre-gl-worker.mjs');
