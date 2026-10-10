@@ -126,6 +126,7 @@ The selected location is saved as a GeoJSON Feature with coordinates, name, addr
 - **[Usage Guide](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/docs/USAGE.md)** - Adding fields, selecting locations, localization
 - **[POI Integration](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/docs/POI.md)** - Custom POI sources, layer control, GeoJSON API
 - **[Data Model](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/docs/DATA-MODEL.md)** - GeoJSON structure, properties reference
+- **[Changelog](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/CHANGELOG.md)** - Release notes and migration steps
 
 ## 🗺️ Map Providers
 

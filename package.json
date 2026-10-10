@@ -19,9 +19,7 @@
   "files": [
     "dist/",
     "LICENSE",
-    "README.md",
-    "CHANGELOG.md",
-    "logo.png"
+    "README.md"
   ],
   "types": "./dist/server/src/index.d.ts",
   "exports": {
