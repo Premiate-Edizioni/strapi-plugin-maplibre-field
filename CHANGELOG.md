@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **City, region and country as separate fields** - Locations now carry `properties.addressDetails` (`city`, `county`, `state`, `postcode`, `country`, `country_code`, the OSM `admin` levels, and the `language` the names came in), so content can be grouped and filtered by place. A double-click or marker drop away from any POI now keeps them too, without the postcode, from the lookup it already made. Custom POI sources get them from one Nominatim lookup at the point. `address` is unchanged, and locations saved earlier are not filled in. See [DATA-MODEL.md](docs/DATA-MODEL.md#addressdetails-object-optional).
+- **City, region and country as separate fields** - Locations now carry `properties.addressDetails` (`city`, `county`, `state`, `postcode`, `country`, `country_code`, the OSM `admin` levels, and the `language` the names came in), so content can be grouped and filtered by place. A double-click or marker drop away from any POI now keeps them too, without the postcode, from the lookup it already made. Custom POI sources get them from one Nominatim lookup at the point, also without the postcode. `address` is unchanged, and locations saved earlier are not filled in. See [DATA-MODEL.md](docs/DATA-MODEL.md#addressdetails-object-optional).
 
 ### Fixed
 

@@ -157,7 +157,7 @@ filtering — which `address`, a single string, does not allow.
 | `city` | City, town or village | `"Perugia"` |
 | `county` | Province | `"Perugia"` |
 | `state` | Region | `"Umbria"` |
-| `postcode` | Postcode | `"06124"` |
+| `postcode` | Postcode — only when Nominatim's own place is within `poiSnapRadius` (see below) | `"06124"` |
 | `country` | Country | `"Italia"` |
 | `country_code` | ISO 3166-1 alpha-2, lowercase | `"it"` |
 | `admin` | The boundaries containing the place, keyed by OSM [`admin_level`](https://wiki.openstreetmap.org/wiki/Key:admin_level) | `{ "level4": "Umbria", "level6": "Perugia", "level8": "Perugia" }` |
@@ -182,7 +182,11 @@ comune; the table on the OSM wiki covers the rest.
 - Map double-click / marker drag, away from any POI: from the nearest place Nominatim found. Too far
   for its street to be the point's, so no `address` is saved, but almost always in the same city.
   No `postcode` either: in a city with several, the nearest place may lie in the next area
-- Custom POI sources: one reverse lookup at the POI's point
+- Custom POI sources: one reverse lookup at the POI's point, or the one the snap already made. No
+  `postcode`, for the same reason: the place Nominatim finds there is its own, not the POI
+
+The postcode is therefore present only for Nominatim search results and for snaps onto a basemap
+POI — the cases where the place it belongs to is the place that was picked.
 - Locations saved before this field existed: not included
 
 **Notes**:
