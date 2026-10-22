@@ -511,6 +511,44 @@ Strapi v5 responses are flat — no `data.attributes` wrapping:
 }
 ```
 
+### Filtering by Place
+
+Strapi's `$jsonSupersetOf` operator matches entries whose stored value *contains* the JSON you
+pass, so any part of the feature can be filtered on — `addressDetails` included:
+
+```bash
+GET /api/articles?filters[location][$jsonSupersetOf]={"properties":{"addressDetails":{"city":"Milano"}}}
+```
+
+For a map field inside a component, add the component to the path:
+`filters[location][map][$jsonSupersetOf]=…`, repeatable components included.
+
+Build the value with `JSON.stringify` and let the URL API encode it:
+
+```typescript
+const params = new URLSearchParams({
+  'filters[location][$jsonSupersetOf]': JSON.stringify({
+    properties: { addressDetails: { country_code: 'it', admin: { level8: 'Milano' } } },
+  }),
+});
+const response = await fetch(`${STRAPI_URL}/api/articles?${params}`);
+```
+
+**Notes**:
+- **The value must be a JSON string.** Strapi's bracket syntax
+  (`…[$jsonSupersetOf][properties][addressDetails][city]=Milano`) is **ignored without an error**:
+  the filter drops out and every entry comes back.
+- Malformed JSON answers `500 Internal Server Error`, not `400`.
+- Values match exactly, case included. There is no "contains" on a name, and names follow the
+  saving editor's language (see [`addressDetails`](#addressdetails-object-optional)): filter on
+  `country_code` when you need a key that does not depend on it.
+- Drafts need `status=draft`, as with any other filter.
+- The operator is translated by knex to `@>` on PostgreSQL. Checked on Strapi 5.59 with
+  PostgreSQL; other databases are untested.
+- The column has no JSON index. For large collections, a GIN index on it is a database-level
+  addition of your own.
+- Locations saved before `addressDetails` existed have none, so they never match a filter on it.
+
 ### TypeScript/JavaScript Examples
 
 **Extract coordinates**:
