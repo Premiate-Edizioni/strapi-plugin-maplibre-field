@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A custom POI picked from the search was saved with the wrong source fields** - It got `source: "custom"` instead of the layer's id, the layer's id in `sourceId` instead of the POI's, and, for PMTiles sources, the vector layer name in `sourceLayer` instead of the source's name. It now saves the same three values as a click on the same POI. Locations saved earlier keep the old values.
+
 - **A slow answer could overwrite a newer pick** - Two quick double-clicks or marker drops in a row could leave the field on the first point, when its Nominatim answer arrived last. The latest pick now always wins.
 
 ### Changed

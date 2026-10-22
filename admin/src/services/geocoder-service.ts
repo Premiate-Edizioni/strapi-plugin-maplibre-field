@@ -95,9 +95,10 @@ export async function performSearch(query: string, config: SearchConfig): Promis
                     properties: {
                       name: f.properties?.name as string | undefined,
                       address: sourceAddress(f.properties),
-                      source: 'custom',
-                      sourceId: source.id,
-                      sourceLayer: source.sourceLayer,
+                      // The same three fields a click on this POI saves
+                      source: source.id,
+                      sourceId: f.id === undefined ? undefined : String(f.id),
+                      sourceLayer: source.name,
                       category: f.properties?.type as string | undefined,
                       inputMethod: 'search' as const,
                     },
@@ -136,8 +137,9 @@ export async function performSearch(query: string, config: SearchConfig): Promis
               properties: {
                 name: poi.name,
                 address: poi.address,
-                source: 'custom',
-                sourceId: source.id,
+                // The same three fields a click on this POI saves
+                source: source.id,
+                sourceId: poi.id,
                 sourceLayer: source.name,
                 category: poi.type, // POI.type is the category
                 inputMethod: 'search' as const,

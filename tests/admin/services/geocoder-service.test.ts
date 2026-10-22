@@ -189,6 +189,7 @@ describe('performSearch', () => {
           type: 'FeatureCollection',
           features: [
             {
+              id: 'spot-7',
               type: 'Feature',
               geometry: { type: 'Point', coordinates: [9.19, 45.46] },
               properties: {
@@ -228,8 +229,9 @@ describe('performSearch', () => {
           properties: {
             name: 'Velasca Skatespot',
             address: 'Via Velasca 1',
-            source: 'custom',
-            sourceId: 'skatespots',
+            // The same three fields a click on this POI saves: the layer, the POI, the layer's name
+            source: 'skatespots',
+            sourceId: 'spot-7',
             sourceLayer: 'Skatespots',
             category: 'skating_spot',
             inputMethod: 'search',
@@ -292,6 +294,7 @@ describe('performSearch', () => {
       const fetchMock = stubFetch({ [NOMINATIM_URL]: nominatimResponse() });
       const queryMapFeatures = vi.fn(() => [
         {
+          id: 'spot-7',
           geometry: { type: 'Point', coordinates: [9.19, 45.46] },
           properties: { name: 'Velasca Skatespot', address: 'Via Velasca 1', type: 'skating_spot' },
         },
@@ -311,9 +314,9 @@ describe('performSearch', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(results.map((result) => result.place_name)).toEqual(['Velasca Skatespot']);
       expect(results[0].feature.properties).toMatchObject({
-        source: 'custom',
-        sourceId: 'skatespots',
-        sourceLayer: 'spots',
+        source: 'skatespots',
+        sourceId: 'spot-7',
+        sourceLayer: 'Skatespots',
         category: 'skating_spot',
         inputMethod: 'search',
       });
