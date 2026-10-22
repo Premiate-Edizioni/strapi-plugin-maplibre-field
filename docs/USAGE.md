@@ -86,9 +86,11 @@ its source on a second line — `OpenStreetMap`, or the name of one of your own 
 - "Central Park"
 - "45.4601, 9.1901" — coordinates, latitude first
 
-**Coordinates are handed to Nominatim like any other query**, and it answers with the nearest
-OpenStreetMap object. The saved point is that object's, not the exact one you pasted: to keep the
-exact coordinates, double-click the map or drag the marker there instead.
+**Coordinates skip the search.** Two decimal numbers, latitude first, separated by a comma or a
+space, are placed exactly like a double-click there: the point snaps to a POI within
+`poiSnapRadius`, otherwise the coordinates themselves are saved (`inputMethod: "coordinates"`).
+Any other format — degrees and minutes, the decimal comma — is sent to Nominatim like a place name,
+which answers with the nearest OpenStreetMap object rather than the exact point.
 
 ### 2. Clicking on a POI Marker
 

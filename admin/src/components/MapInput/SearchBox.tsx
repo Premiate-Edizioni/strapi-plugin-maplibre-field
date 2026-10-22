@@ -3,6 +3,7 @@
  *
  * Provides a search interface for geocoding (Nominatim) and custom POI search.
  * Displays results in a dropdown and calls onSelectResult when user selects a location.
+ * Coordinates typed or pasted into the box skip the search and go to onSelectCoordinates.
  *
  * Built on the design system's Combobox, which implements the WAI-ARIA combobox pattern for us:
  * arrow-key navigation, Enter to pick, Escape to dismiss, the listbox/option roles and the live
@@ -18,12 +19,18 @@ import React, { useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Box, Combobox, ComboboxOption, Flex, Typography } from '@strapi/design-system';
 import { Search } from '@strapi/icons';
-import { performSearch, type SearchResult } from '../../services/geocoder-service';
+import {
+  parseCoordinates,
+  performSearch,
+  type SearchResult,
+} from '../../services/geocoder-service';
 import type { LocationFeature } from '../../services/poi-service';
 import getTranslation from '../../utils/getTrad';
 
 export interface SearchBoxProps {
   onSelectResult: (result: LocationFeature) => void;
+  /** Called with `[lng, lat]` when the query is a pair of coordinates */
+  onSelectCoordinates: (coordinates: [number, number]) => void;
   nominatimUrl: string;
   poiSearchEnabled?: boolean;
   poiSources?: Array<{
@@ -47,6 +54,7 @@ export interface SearchBoxProps {
 
 const SearchBox: React.FC<SearchBoxProps> = ({
   onSelectResult,
+  onSelectCoordinates,
   nominatimUrl,
   poiSearchEnabled,
   poiSources,
@@ -111,6 +119,14 @@ const SearchBox: React.FC<SearchBoxProps> = ({
     if (!query.trim()) {
       setResults([]);
       setIsOpen(false);
+      return;
+    }
+
+    // Coordinates are the point itself: a search would answer with the nearest named place instead
+    const coordinates = parseCoordinates(query);
+    if (coordinates) {
+      onSelectCoordinates(coordinates);
+      handleClear();
       return;
     }
 

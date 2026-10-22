@@ -7,7 +7,8 @@ import { DesignSystemProvider } from '@strapi/design-system';
 import SearchBox from '../../../admin/src/components/MapInput/SearchBox';
 import { performSearch } from '../../../admin/src/services/geocoder-service';
 
-vi.mock('../../../admin/src/services/geocoder-service', () => ({
+vi.mock('../../../admin/src/services/geocoder-service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../admin/src/services/geocoder-service')>()),
   performSearch: vi.fn(),
 }));
 
@@ -48,6 +49,7 @@ const Wrapper = (props: any) => (
 
 const defaultProps = {
   onSelectResult: vi.fn(),
+  onSelectCoordinates: vi.fn(),
   nominatimUrl: 'https://nominatim.test',
   poiSources: [
     {
@@ -70,6 +72,17 @@ describe('SearchBox', () => {
   beforeEach(() => {
     vi.mocked(performSearch).mockReset();
     defaultProps.onSelectResult.mockClear();
+    defaultProps.onSelectCoordinates.mockClear();
+  });
+
+  test('pasted coordinates are used as they are, without asking Nominatim', async () => {
+    render(<Wrapper {...defaultProps} />);
+    const input = await searchFor('45.4601, 9.1901');
+
+    expect(defaultProps.onSelectCoordinates).toHaveBeenCalledWith([9.1901, 45.4601]);
+    expect(performSearch).not.toHaveBeenCalled();
+    expect(input).toHaveValue('');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
   test('does not search while typing — Nominatim forbids autocomplete querying', async () => {

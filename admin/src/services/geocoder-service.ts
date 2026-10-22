@@ -57,6 +57,26 @@ export interface SearchConfig {
   queryMapFeatures?: (sourceId: string, sourceLayer: string) => MapFeature[];
 }
 
+// Two decimal numbers, separated by a comma or a space. Whole numbers and the decimal comma are
+// left to the search: "12, 20100" is part of an address far more often than it is a point.
+const COORDINATES_PATTERN = /^\s*(-?\d{1,3}\.\d+)\s*(?:,\s*|\s+)(-?\d{1,3}\.\d+)\s*$/;
+
+/**
+ * Read a query as coordinates, latitude first — the order Google Maps and openstreetmap.org copy.
+ * A pair is never swapped to make it valid: there is no telling which order was meant.
+ * @returns `[lng, lat]`, or `null` when the query is not a pair of coordinates
+ */
+export function parseCoordinates(query: string): [number, number] | null {
+  const match = COORDINATES_PATTERN.exec(query);
+  if (!match) return null;
+
+  const lat = Number(match[1]);
+  const lng = Number(match[2]);
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+
+  return [lng, lat];
+}
+
 /**
  * Perform unified search across Nominatim and custom POI sources
  * @param query Search query string
