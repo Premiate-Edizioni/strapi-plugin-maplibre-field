@@ -319,6 +319,28 @@ describe('performSearch', () => {
       });
     });
 
+    test('composes the address of a PMTiles POI from its OSM addr:* tags', async () => {
+      stubFetch({ [NOMINATIM_URL]: nominatimResponse() });
+      const queryMapFeatures = vi.fn(() => [
+        {
+          geometry: { type: 'Point', coordinates: [12.51, 41.93] },
+          properties: {
+            name: 'SkateShop Roma',
+            'addr:street': 'Via Nemorense',
+            'addr:housenumber': '130',
+            'addr:city': 'Roma',
+          },
+        },
+      ]);
+
+      const [result] = await performSearch(
+        'skateshop',
+        config({ poiSearchEnabled: true, poiSources: [pmtilesSource], queryMapFeatures })
+      );
+
+      expect(result.feature.properties.address).toBe('Via Nemorense 130, Roma');
+    });
+
     test('yields no PMTiles results when the map cannot be queried', async () => {
       stubFetch({ [NOMINATIM_URL]: nominatimResponse() });
 

@@ -170,6 +170,11 @@ Your POI API must:
 
 - `features[].id` - Unique identifier (recommended)
 - `features[].properties.name` - POI name; missing or empty falls back to "Unnamed Location" in the UI
+- `features[].properties.address` - The POI's address, as one string. Without it, the OSM
+  [`addr:*`](https://wiki.openstreetmap.org/wiki/Key:addr:*) tags are used — `addr:street` (or
+  `addr:place`), `addr:housenumber`, `addr:postcode`, `addr:city`, `addr:province`, `addr:state` —
+  so a source exported from OpenStreetMap needs no conversion. `addr:country`, an ISO code, is not
+  part of the composed string
 - `features[].properties.*` - Any custom metadata you want to preserve
 
 All properties are saved when a user selects the POI and can be accessed in your frontend.
@@ -361,7 +366,7 @@ When a user selects a POI, all data is preserved:
 ```
 
 **Automatic Fields**:
-- `address` - The source's own `properties.address`, when it has one
+- `address` - The source's own `properties.address`, or its `addr:*` tags, when it has either
 - `addressDetails` - City, province, region and country at the POI, from Nominatim
 - `source` - Your POI source ID (e.g., "skatespots")
 - `sourceId` - Original ID from your API

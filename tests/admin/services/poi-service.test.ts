@@ -16,6 +16,7 @@ import {
   queryNominatim,
   queryPOIsForViewport,
   searchNearbyCustomPOIs,
+  sourceAddress,
   type GeoJSONFeature,
   type POI,
   type POIServiceConfig,
@@ -143,6 +144,20 @@ describe('geoJSONFeatureToPOI', () => {
     });
   });
 
+  test('composes the address from OSM addr:* tags when the source has no address', () => {
+    const poi = geoJSONFeatureToPOI(
+      pointFeature([12.51, 41.93], {
+        name: 'SkateShop Roma',
+        'addr:street': 'Via Nemorense',
+        'addr:housenumber': '130',
+        'addr:postcode': '00199',
+        'addr:city': 'Roma',
+      })
+    );
+
+    expect(poi!.address).toBe('Via Nemorense 130, 00199 Roma');
+  });
+
   test('falls back to placeholders when name and address are missing', () => {
     const poi = geoJSONFeatureToPOI(pointFeature([9.19, 45.46], { name: null }));
 
@@ -161,6 +176,52 @@ describe('geoJSONFeatureToPOI', () => {
   test('adds a distance only when reference coordinates are given', () => {
     expect(geoJSONFeatureToPOI(pointFeature([9.19, 45.46]))!.distance).toBeUndefined();
     expect(geoJSONFeatureToPOI(pointFeature([9.19, 45.46]), [9.19, 45.46])!.distance).toBe(0);
+  });
+});
+
+describe('sourceAddress', () => {
+  test("uses the source's own address string first", () => {
+    expect(
+      sourceAddress({ address: 'Via Roma 1, Milano', 'addr:street': 'Via Verdi', 'addr:city': 'X' })
+    ).toBe('Via Roma 1, Milano');
+  });
+
+  test('composes OSM addr:* tags in the same order as a Nominatim address', () => {
+    expect(
+      sourceAddress({
+        'addr:street': 'via Portici',
+        'addr:housenumber': '244',
+        'addr:postcode': '39012',
+        'addr:city': 'Meran - Merano',
+      })
+    ).toBe('via Portici 244, 39012 Meran - Merano');
+  });
+
+  test('skips the tags a source leaves out', () => {
+    // A real OSM shop: no postcode tagged
+    expect(
+      sourceAddress({
+        'addr:street': 'Via Giuseppe Garibaldi',
+        'addr:housenumber': '134',
+        'addr:city': 'Cagliari',
+      })
+    ).toBe('Via Giuseppe Garibaldi 134, Cagliari');
+  });
+
+  test('takes addr:place for the street on addresses that have none', () => {
+    expect(sourceAddress({ 'addr:place': 'Frazione Vetta', 'addr:housenumber': '3' })).toBe(
+      'Frazione Vetta 3'
+    );
+  });
+
+  test('leaves out addr:country, an ISO code rather than a name', () => {
+    expect(sourceAddress({ 'addr:city': 'Pescara', 'addr:country': 'IT' })).toBe('Pescara');
+  });
+
+  test('is empty when the source has no address of any kind', () => {
+    expect(sourceAddress({ name: 'Ledge Milano District', surface: 'granite' })).toBe('');
+    expect(sourceAddress({ address: '   ' })).toBe('');
+    expect(sourceAddress(null)).toBe('');
   });
 });
 

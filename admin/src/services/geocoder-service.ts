@@ -10,6 +10,7 @@ import {
   formatLabel,
   formatName,
   searchPOIsForGeocoder,
+  sourceAddress,
   type POI,
 } from './poi-service';
 import type { LocationFeature, NominatimGeocoding } from './poi-service';
@@ -93,7 +94,7 @@ export async function performSearch(query: string, config: SearchConfig): Promis
                     geometry: { type: 'Point' as const, coordinates: coords },
                     properties: {
                       name: f.properties?.name as string | undefined,
-                      address: f.properties?.address as string | undefined,
+                      address: sourceAddress(f.properties),
                       source: 'custom',
                       sourceId: source.id,
                       sourceLayer: source.sourceLayer,

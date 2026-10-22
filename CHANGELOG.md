@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **City, region and country as separate fields** - Locations now carry `properties.addressDetails` (`city`, `county`, `state`, `postcode`, `country`, `country_code`, the OSM `admin` levels, and the `language` the names came in), so content can be grouped and filtered by place. A double-click or marker drop away from any POI now keeps them too, without the postcode, from the lookup it already made. Custom POI sources get them from one Nominatim lookup at the point, also without the postcode. `address` is unchanged, and locations saved earlier are not filled in. See [DATA-MODEL.md](docs/DATA-MODEL.md#addressdetails-object-optional).
 
+- **Addresses from OpenStreetMap sources** - A custom POI source without an `address` property now gets one from its OSM `addr:*` tags (`addr:street`, `addr:housenumber`, `addr:postcode`, `addr:city`…), composed like a Nominatim address. Sources exported from OpenStreetMap used to be saved with no address at all. A source's own `address` still wins. See [POI.md](docs/POI.md#optional-fields).
+
 ### Fixed
 
 - **A slow answer could overwrite a newer pick** - Two quick double-clicks or marker drops in a row could leave the field on the first point, when its Nominatim answer arrived last. The latest pick now always wins.

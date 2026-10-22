@@ -134,8 +134,11 @@ vi.mock('../../../admin/src/components/MapInput/layer-control', () => ({
 }));
 
 // Mock POI service
-vi.mock('../../../admin/src/services/poi-service', () => ({
+vi.mock('../../../admin/src/services/poi-service', async (importOriginal) => ({
   __esModule: true,
+  // Pure, so the real one: it is what turns a source's properties into the saved address
+  sourceAddress: (await importOriginal<typeof import('../../../admin/src/services/poi-service')>())
+    .sourceAddress,
   createLocationFeature: vi.fn(
     (coords: [number, number], properties: Record<string, any> = {}) => ({
       type: 'Feature',

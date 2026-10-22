@@ -105,7 +105,9 @@ A POI without a name is saved with a placeholder: `"Unnamed Location"` (GeoJSON 
 **Source**:
 - Nominatim search, or a double-click / marker drop within `poiSnapRadius` of a basemap POI:
   composed by the plugin from the Nominatim result (see below)
-- Custom POI sources: the source's own `properties.address`, verbatim; absent if it has none
+- Custom POI sources: the source's own `properties.address`, verbatim; else composed, like a
+  Nominatim address, from its OSM `addr:*` tags (see [POI.md](POI.md#optional-fields)); absent if it
+  has neither
 - Double-click / marker drop away from any POI: not included — see
   [USAGE.md](USAGE.md#3-double-clicking-on-the-map) for why the threshold exists
 

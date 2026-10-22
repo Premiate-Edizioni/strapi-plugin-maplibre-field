@@ -384,6 +384,38 @@ export function formatLabel(geocoding: NominatimGeocoding | null | undefined): s
 }
 
 /**
+ * The address of a custom POI, from its source's properties.
+ *
+ * A source's own `address` string wins. Otherwise a source built from OpenStreetMap carries the
+ * address as OSM tags, composed here with the same rules as a Nominatim address. `addr:place`
+ * stands in for the street on addresses that have none, as OSM uses it. `addr:country` is left
+ * out: in OSM it is an ISO code ("IT"), not a name.
+ *
+ * @see https://wiki.openstreetmap.org/wiki/Key:addr:*
+ * @param properties The source feature's properties, or null/undefined
+ * @returns The address, or an empty string when the source has none
+ */
+export function sourceAddress(properties: Record<string, unknown> | null | undefined): string {
+  if (!properties) {
+    return '';
+  }
+
+  const address = clean(properties.address);
+  if (address) {
+    return address;
+  }
+
+  return formatAddress({
+    street: clean(properties['addr:street']) || clean(properties['addr:place']),
+    housenumber: clean(properties['addr:housenumber']),
+    postcode: clean(properties['addr:postcode']),
+    city: clean(properties['addr:city']),
+    county: clean(properties['addr:province']),
+    state: clean(properties['addr:state']),
+  });
+}
+
+/**
  * Calculate distance between two coordinates using Haversine formula
  * @param coord1 First coordinate [lng, lat]
  * @param coord2 Second coordinate [lng, lat]
@@ -588,7 +620,7 @@ export function geoJSONFeatureToPOI(
       getString(properties.leisure) ||
       'poi',
     coordinates,
-    address: getString(properties.address) || '', // Leave empty if not provided
+    address: sourceAddress(properties),
     metadata: properties,
     source: 'custom',
     mapName, // Include the custom map name
