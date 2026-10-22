@@ -240,6 +240,30 @@ describe('performSearch', () => {
       });
     });
 
+    test('leaves the address out when the POI has none, rather than saving ""', async () => {
+      stubFetch({
+        [CUSTOM_API_URL]: {
+          type: 'FeatureCollection',
+          features: [
+            {
+              id: 'spot-8',
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [9.18, 45.48] },
+              properties: { name: 'Bump al Monumentale' },
+            },
+          ],
+        },
+        [NOMINATIM_URL]: nominatimResponse(),
+      });
+
+      const [result] = await performSearch(
+        'bump',
+        config({ poiSearchEnabled: true, poiSources: [geojsonSource()] })
+      );
+
+      expect(JSON.parse(JSON.stringify(result.feature.properties))).not.toHaveProperty('address');
+    });
+
     test('skips sources that are explicitly disabled', async () => {
       const fetchMock = stubFetch({ [NOMINATIM_URL]: nominatimResponse() });
 
@@ -342,6 +366,23 @@ describe('performSearch', () => {
       );
 
       expect(result.feature.properties.address).toBe('Via Nemorense 130, Roma');
+    });
+
+    test('leaves the address out when the POI has none, rather than saving ""', async () => {
+      stubFetch({ [NOMINATIM_URL]: nominatimResponse() });
+      const queryMapFeatures = vi.fn(() => [
+        {
+          geometry: { type: 'Point', coordinates: [9.18, 45.48] },
+          properties: { name: 'Bump al Monumentale' },
+        },
+      ]);
+
+      const [result] = await performSearch(
+        'bump',
+        config({ poiSearchEnabled: true, poiSources: [pmtilesSource], queryMapFeatures })
+      );
+
+      expect(JSON.parse(JSON.stringify(result.feature.properties))).not.toHaveProperty('address');
     });
 
     test('yields no PMTiles results when the map cannot be queried', async () => {

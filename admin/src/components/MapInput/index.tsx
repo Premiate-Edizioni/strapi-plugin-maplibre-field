@@ -434,15 +434,20 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     await setLocationWithPOISnap([lngLat.lng, lngLat.lat], 'marker_drag');
   };
 
+  // How close, in meters, a double-click or marker drop has to land to a POI to pick it (default 5)
+  const snapRadius = typeof config.poiSnapRadius === 'number' ? config.poiSnapRadius : 5;
+
   /**
    * City, region and country at a point, from Nominatim. Custom POI sources carry at most an
    * address string of their own, so their places are looked up here.
    */
   const lookupAddressDetails = async ([lng, lat]: [number, number]) => {
+    // The snap radius, as for a double-click: Nominatim's place within it is the POI itself (a
+    // source exported from OSM shares its coordinates), and keeps its postcode
     const { addressDetails } = await queryNominatim(
       lat,
       lng,
-      0,
+      snapRadius,
       config.nominatimUrl || 'https://nominatim.openstreetmap.org',
       locale
     );
@@ -566,8 +571,6 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     inputMethod: 'map_click' | 'marker_drag'
   ) => {
     const selectionId = ++selectionIdRef.current;
-    // Get snap radius from config (default: 5 meters)
-    const snapRadius = typeof config.poiSnapRadius === 'number' ? config.poiSnapRadius : 5;
 
     // Try to find nearby POI within snap radius from all enabled sources
     try {

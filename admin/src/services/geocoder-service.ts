@@ -94,7 +94,8 @@ export async function performSearch(query: string, config: SearchConfig): Promis
                     geometry: { type: 'Point' as const, coordinates: coords },
                     properties: {
                       name: f.properties?.name as string | undefined,
-                      address: sourceAddress(f.properties),
+                      // Absent rather than "": a search result is saved as is, not cleaned
+                      address: sourceAddress(f.properties) || undefined,
                       // The same three fields a click on this POI saves
                       source: source.id,
                       sourceId: f.id === undefined ? undefined : String(f.id),
@@ -136,7 +137,8 @@ export async function performSearch(query: string, config: SearchConfig): Promis
               },
               properties: {
                 name: poi.name,
-                address: poi.address,
+                // Absent rather than "": a search result is saved as is, not cleaned
+                address: poi.address || undefined,
                 // The same three fields a click on this POI saves
                 source: source.id,
                 sourceId: poi.id,

@@ -173,7 +173,8 @@ OpenStreetMap records it, and the only place levels below the city appear (`leve
 - Nominatim search, or a snap onto a basemap POI: the same Nominatim result that gives `address`
 - Double-click / marker drop away from any POI: the nearest place Nominatim found. Almost always in
   the same city, but too far for its street or postcode to be the point's, so neither is kept
-- Custom POI sources: a Nominatim lookup at the POI's point, likewise without `postcode`
+- Custom POI sources: a Nominatim lookup at the POI's point. `postcode` only when Nominatim's place
+  is within `poiSnapRadius` — typically the same object, in a source exported from OpenStreetMap
 - Locations saved before this field existed, or when Nominatim fails: not included
 
 So `postcode` is present only when the place it belongs to is the place that was picked.

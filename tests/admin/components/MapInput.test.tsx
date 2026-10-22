@@ -685,6 +685,9 @@ describe('MapInput Component', () => {
         source: 'parks',
         addressDetails,
       });
+      // Within the snap radius, Nominatim's place is the POI itself, and its postcode is the POI's
+      const [lat, lng, radius] = vi.mocked(queryNominatim).mock.lastCall!;
+      expect([lat, lng, radius]).toEqual([45.47, 9.18, 5]);
     } finally {
       Object.assign(mockPluginConfig, original);
       mockMapInstance.getLayer.mockImplementation(() => null);
