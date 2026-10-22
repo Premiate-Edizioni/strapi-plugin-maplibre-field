@@ -38,10 +38,45 @@ export interface LocationProperties {
   sourceLayer?: string;
   /** POI category/type: "skating_spot", "bus_stop", etc. */
   category?: string;
+  /** City, region, country and other administrative levels, one field each */
+  addressDetails?: AddressDetails;
   /** How the location was created: "search" | "poi_click" | "map_click" | "marker_drag" */
   inputMethod?: 'search' | 'poi_click' | 'map_click' | 'marker_drag';
   /** Original metadata preserved from the source */
   metadata?: Record<string, unknown>;
+}
+
+/**
+ * The administrative levels of a location, kept as separate fields so they can be grouped and
+ * filtered on, which the one-line `address` cannot be. Keys are GeocodeJSON's, unchanged.
+ *
+ * Names are labels in the language they were requested in, not stable keys: the same city can be
+ * stored as "Milano" by one editor and "Milan" by another. `country_code` is the only field that
+ * does not depend on it.
+ */
+export interface AddressDetails {
+  city?: string;
+  /** Province in Italy and much of Europe */
+  county?: string;
+  /** Region */
+  state?: string;
+  postcode?: string;
+  country?: string;
+  /**
+   * ISO 3166-1 alpha-2, lowercase: "it". A Nominatim extension, not part of GeocodeJSON (Photon
+   * calls it `countrycode`)
+   */
+  country_code?: string;
+  /**
+   * The administrative boundaries containing the place, keyed by OSM `admin_level`: in Italy
+   * `level4` is the region, `level6` the province, `level8` the comune. What each level means
+   * differs by country.
+   *
+   * @see https://wiki.openstreetmap.org/wiki/Key:admin_level
+   */
+  admin?: Record<string, string>;
+  /** The `accept-language` the names were requested in */
+  language?: string;
 }
 
 /**
@@ -97,6 +132,7 @@ export interface POI {
   source: 'nominatim' | 'custom'; // Track data source
   mapName?: string; // Display name of the custom map source
   layerId?: string; // ID of the layer this POI belongs to
+  addressDetails?: AddressDetails;
 }
 
 export interface GeoJSONFeature {
@@ -158,6 +194,8 @@ export interface NominatimGeocoding {
   country_code?: string | null;
   /** Nominatim's suggested label: every administrative level, comma-joined */
   label?: string | null;
+  /** Administrative boundaries keyed by OSM `admin_level`: `{ level4: "Lombardia", … }` */
+  admin?: Record<string, unknown> | null;
   place_id?: number;
   osm_id?: number;
   osm_type?: string;
@@ -184,6 +222,18 @@ const repeats = (a: string, b: string): boolean => {
 };
 
 /**
+ * The city of a GeocodeJSON result.
+ *
+ * GeocodeJSON's `type` names the level the result *is*, and on that level Nominatim leaves the
+ * matching field null and carries the value in `name`: a city result has no `city`. Without the
+ * fallback a search for "Rivoli" would have no comune at all.
+ */
+const cityOf = (geocoding: NominatimGeocoding): string =>
+  clean(geocoding.city) ||
+  clean(geocoding.locality) ||
+  (geocoding.type === 'city' || geocoding.type === 'locality' ? clean(geocoding.name) : '');
+
+/**
  * Build a readable address string from a Nominatim GeocodeJSON object.
  *
  * Nominatim does no postal formatting of its own: its `label` (and the `display_name` of the other
@@ -205,18 +255,13 @@ export function formatAddress(geocoding: NominatimGeocoding | null | undefined):
     return '';
   }
 
-  // GeocodeJSON's `type` names the level the result *is*, and on that level Nominatim leaves the
-  // matching field null and carries the value in `name`: a street result has no `street`, a city
-  // result has no `city`. Without these fallbacks the address loses the very thing it is about —
-  // a search for "Rivoli" would format as "10098, Piemonte, Italia", a postcode with no comune.
-  const name = clean(geocoding.name);
-  const street = clean(geocoding.street) || (geocoding.type === 'street' ? name : '');
+  // A street result has no `street` and carries it in `name`, as a city result does its city (see
+  // cityOf). Without the fallback the address loses the very thing it is about.
+  const street =
+    clean(geocoding.street) || (geocoding.type === 'street' ? clean(geocoding.name) : '');
   const housenumber = clean(geocoding.housenumber);
   const postcode = clean(geocoding.postcode);
-  const city =
-    clean(geocoding.city) ||
-    clean(geocoding.locality) ||
-    (geocoding.type === 'city' || geocoding.type === 'locality' ? name : '');
+  const city = cityOf(geocoding);
   const country = clean(geocoding.country);
 
   // `state` repeats the city for city-states and city-provinces (e.g. New York, Berlin).
@@ -238,6 +283,53 @@ export function formatAddress(geocoding: NominatimGeocoding | null | undefined):
   ]
     .filter(Boolean)
     .join(', ');
+}
+
+/**
+ * Pick the administrative levels of a Nominatim GeocodeJSON object, one field each.
+ *
+ * Unlike {@link formatAddress} this drops nothing that repeats: a province named like its city is
+ * still the province, and a consumer grouping by `county` needs it there.
+ *
+ * @param geocoding The `properties.geocoding` object, or null/undefined
+ * @param language The `accept-language` the request was made with, recorded alongside the names
+ * @returns The fields Nominatim filled in, or undefined when it filled in none
+ */
+export function extractAddressDetails(
+  geocoding: NominatimGeocoding | null | undefined,
+  language?: string
+): AddressDetails | undefined {
+  if (!geocoding) {
+    return undefined;
+  }
+
+  const fields: AddressDetails = {
+    city: cityOf(geocoding),
+    county: clean(geocoding.county),
+    state: clean(geocoding.state),
+    postcode: clean(geocoding.postcode),
+    country: clean(geocoding.country),
+    country_code: clean(geocoding.country_code).toLowerCase(),
+  };
+  const details = Object.fromEntries(
+    Object.entries(fields).filter(([, value]) => value !== '')
+  ) as AddressDetails;
+
+  const admin = Object.fromEntries(
+    Object.entries(geocoding.admin ?? {})
+      .filter(([level]) => /^level\d+$/.test(level))
+      .map(([level, value]) => [level, clean(value)])
+      .filter(([, value]) => value !== '')
+  );
+  if (Object.keys(admin).length > 0) {
+    details.admin = admin;
+  }
+
+  if (Object.keys(details).length === 0) {
+    return undefined;
+  }
+
+  return language ? { ...details, language } : details;
 }
 
 /**
@@ -357,6 +449,18 @@ export async function queryCustomAPI(
   }
 }
 
+/** The answer of {@link queryNominatim} */
+export interface NominatimReverseResult {
+  /** The place Nominatim found, when it lies within the radius */
+  pois: POI[];
+  /**
+   * The administrative levels at the point, whether or not a place was within the radius: the
+   * nearest place may be too far away for its street to be the point's, but it is almost always in
+   * the same city. Without a place within the radius there is no postcode either.
+   */
+  addressDetails?: AddressDetails;
+}
+
 /**
  * Query POIs near coordinates from Nominatim
  * Uses /reverse endpoint with high zoom level to get specific POIs
@@ -365,7 +469,7 @@ export async function queryCustomAPI(
  * @param radius Search radius in meters
  * @param nominatimUrl Nominatim API base URL
  * @param language Optional `accept-language` value; Nominatim localises place names accordingly
- * @returns Array of POIs
+ * @returns The POI within the radius, if any, and the administrative levels at the point
  */
 export async function queryNominatim(
   lat: number,
@@ -373,7 +477,7 @@ export async function queryNominatim(
   radius: number,
   nominatimUrl: string,
   language?: string
-): Promise<POI[]> {
+): Promise<NominatimReverseResult> {
   try {
     // Use zoom=18 to get building/POI level detail (higher zoom = more specific)
     // zoom 3: country, zoom 10: city, zoom 18: building
@@ -401,16 +505,21 @@ export async function queryNominatim(
     const geocoding: NominatimGeocoding | undefined = feature?.properties?.geocoding;
 
     if (!feature?.geometry?.coordinates || !geocoding) {
-      return [];
+      return { pois: [] };
     }
 
+    const addressDetails = extractAddressDetails(geocoding, language);
     const [lon, latitude] = feature.geometry.coordinates;
     const coordinates: [number, number] = [Number(lon), Number(latitude)];
     const distance = calculateDistance([lng, lat], coordinates);
 
-    // Only return if within radius
+    // Only return the place if within radius. Its postcode goes with it: in a city with several,
+    // the nearest place may lie in the next postcode area.
     if (distance > radius) {
-      return [];
+      const context = { ...addressDetails };
+      delete context.postcode;
+      const hasLevels = Object.keys(context).some((key) => key !== 'language');
+      return hasLevels ? { pois: [], addressDetails: context } : { pois: [] };
     }
 
     const address = formatAddress(geocoding);
@@ -432,12 +541,13 @@ export async function queryNominatim(
         category: geocoding.osm_value,
       },
       source: 'nominatim',
+      addressDetails,
     };
 
-    return [poi];
+    return { pois: [poi], addressDetails };
   } catch (error) {
     console.error('Nominatim query error:', error);
-    return [];
+    return { pois: [] };
   }
 }
 

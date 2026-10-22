@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   calculateDistance,
   createLocationFeature,
+  extractAddressDetails,
   filterByDistance,
   findNearestPOI,
   formatAddress,
@@ -460,6 +461,69 @@ describe('formatAddress', () => {
   });
 });
 
+describe('extractAddressDetails', () => {
+  test('keeps each administrative level as its own field', () => {
+    expect(
+      extractAddressDetails({
+        type: 'house',
+        street: 'Via Baldassarre Orsini',
+        housenumber: '3',
+        postcode: '06124',
+        city: 'Perugia',
+        county: 'Perugia',
+        state: 'Umbria',
+        country: 'Italia',
+        country_code: 'it',
+      })
+    ).toEqual({
+      city: 'Perugia',
+      // Repeats the city, which formatAddress drops; a consumer grouping by province still needs it
+      county: 'Perugia',
+      state: 'Umbria',
+      postcode: '06124',
+      country: 'Italia',
+      country_code: 'it',
+    });
+  });
+
+  test('keeps the OSM admin levels as Nominatim names them', () => {
+    expect(
+      extractAddressDetails({
+        admin: { level4: 'Trentino-Alto Adige', level6: 'Bolzano', level8: 'Merano', level9: '' },
+      })?.admin
+    ).toEqual({ level4: 'Trentino-Alto Adige', level6: 'Bolzano', level8: 'Merano' });
+  });
+
+  test('takes the city from the name of a city result', () => {
+    // On the level a result is, Nominatim leaves the matching field null and carries it in `name`
+    expect(extractAddressDetails({ type: 'city', name: 'Rivoli', city: null })?.city).toBe(
+      'Rivoli'
+    );
+  });
+
+  test('falls back to the locality when there is no city', () => {
+    expect(extractAddressDetails({ type: 'house', locality: 'Cervinia' })?.city).toBe('Cervinia');
+  });
+
+  test('leaves out the fields Nominatim left null or blank', () => {
+    expect(extractAddressDetails({ country: 'Italia', state: null, city: '  ' })).toEqual({
+      country: 'Italia',
+    });
+  });
+
+  test('records the language the names were requested in', () => {
+    expect(extractAddressDetails({ city: 'Mailand' }, 'de')).toEqual({
+      city: 'Mailand',
+      language: 'de',
+    });
+  });
+
+  test('is undefined when there is no administrative level to keep', () => {
+    expect(extractAddressDetails({ street: 'Via Roma' }, 'it')).toBeUndefined();
+    expect(extractAddressDetails(null)).toBeUndefined();
+  });
+});
+
 describe('queryNominatim', () => {
   const reverseResult = (
     overrides: Record<string, unknown> = {},
@@ -525,7 +589,9 @@ describe('queryNominatim', () => {
   test('maps a reverse-geocoding hit onto a POI', async () => {
     stubFetch({ [NOMINATIM_URL]: reverseResult() });
 
-    const [poi] = await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL);
+    const {
+      pois: [poi],
+    } = await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL);
 
     expect(poi).toMatchObject({
       id: 'nominatim-42',
@@ -541,13 +607,42 @@ describe('queryNominatim', () => {
     // Nominatim answers with the nearest match at any distance, so the radius is enforced here.
     stubFetch({ [NOMINATIM_URL]: reverseResult({}, [9.1901, 45.6]) });
 
-    expect(await queryNominatim(45.4601, 9.1901, 100, NOMINATIM_URL)).toEqual([]);
+    const { pois } = await queryNominatim(45.4601, 9.1901, 100, NOMINATIM_URL);
+
+    expect(pois).toEqual([]);
+  });
+
+  test('keeps the administrative levels of a hit outside the radius', async () => {
+    // Too far for its street to be the point's, but almost always in the same city.
+    stubFetch({ [NOMINATIM_URL]: reverseResult({}, [9.1901, 45.6]) });
+
+    const { addressDetails } = await queryNominatim(45.4601, 9.1901, 100, NOMINATIM_URL, 'it');
+
+    // No postcode: in a city with several, the nearest place may lie in the next postcode area
+    expect(addressDetails).toEqual({
+      city: 'Milano',
+      state: 'Lombardia',
+      country: 'Italia',
+      language: 'it',
+    });
+  });
+
+  test('gives a hit within the radius its administrative levels', async () => {
+    stubFetch({ [NOMINATIM_URL]: reverseResult({ country_code: 'it' }) });
+
+    const {
+      pois: [poi],
+    } = await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL);
+
+    expect(poi.addressDetails).toMatchObject({ city: 'Milano', country_code: 'it' });
   });
 
   test('names an unnamed place after its street, not its whole address', async () => {
     stubFetch({ [NOMINATIM_URL]: reverseResult({ name: null }) });
 
-    const [poi] = await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL);
+    const {
+      pois: [poi],
+    } = await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL);
 
     expect(poi.name).toBe('Piazza Velasca');
     expect(poi.address).toBe('Piazza Velasca, 20122 Milano, Lombardia, Italia');
@@ -556,7 +651,7 @@ describe('queryNominatim', () => {
   test('degrades to an empty list when the response carries no feature', async () => {
     stubFetch({ [NOMINATIM_URL]: { type: 'FeatureCollection', features: [] } });
 
-    expect(await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL)).toEqual([]);
+    expect(await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL)).toEqual({ pois: [] });
   });
 
   test('degrades to an empty list when the request fails', async () => {
@@ -567,7 +662,7 @@ describe('queryNominatim', () => {
       })
     );
 
-    expect(await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL)).toEqual([]);
+    expect(await queryNominatim(45.4601, 9.1901, 1000, NOMINATIM_URL)).toEqual({ pois: [] });
   });
 });
 

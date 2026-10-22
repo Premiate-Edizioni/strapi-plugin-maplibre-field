@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **City, region and country as separate fields** - Locations now carry `properties.addressDetails` (`city`, `county`, `state`, `postcode`, `country`, `country_code`, the OSM `admin` levels, and the `language` the names came in), so content can be grouped and filtered by place. A double-click or marker drop away from any POI now keeps them too, without the postcode, from the lookup it already made. Custom POI sources get them from one Nominatim lookup at the point. `address` is unchanged, and locations saved earlier are not filled in. See [DATA-MODEL.md](docs/DATA-MODEL.md#addressdetails-object-optional).
+
+### Fixed
+
+- **A slow answer could overwrite a newer pick** - Two quick double-clicks or marker drops in a row could leave the field on the first point, when its Nominatim answer arrived last. The latest pick now always wins.
+
 ### Changed
 
 - **Smaller npm package** - `CHANGELOG.md` and `logo.png` are no longer shipped; neither was read from the package. The changelog is linked from the README.

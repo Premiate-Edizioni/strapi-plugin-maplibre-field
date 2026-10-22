@@ -127,6 +127,12 @@ describe('performSearch', () => {
             properties: {
               name: 'Piazza Velasca',
               address: 'Piazza Velasca, 20122 Milano, Lombardia, Italia',
+              addressDetails: {
+                city: 'Milano',
+                state: 'Lombardia',
+                postcode: '20122',
+                country: 'Italia',
+              },
               source: 'nominatim',
               inputMethod: 'search',
             },

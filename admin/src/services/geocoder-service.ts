@@ -5,6 +5,7 @@
  */
 
 import {
+  extractAddressDetails,
   formatAddress,
   formatLabel,
   formatName,
@@ -191,6 +192,7 @@ export async function performSearch(query: string, config: SearchConfig): Promis
               properties: {
                 name,
                 address,
+                addressDetails: extractAddressDetails(geocoding, config.language),
                 source: 'nominatim',
                 inputMethod: 'search' as const,
               },

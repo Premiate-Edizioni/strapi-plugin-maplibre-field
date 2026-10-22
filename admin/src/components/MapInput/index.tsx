@@ -203,6 +203,8 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   const [selectedPOI, setSelectedPOI] = useState<POI | null>(null);
   // Bumped by every POI update, so a fetch that returns after a newer one started is discarded
   const poiRequestIdRef = useRef(0);
+  // Bumped by every pick of a location, so a lookup that returns after a newer pick is discarded
+  const selectionIdRef = useRef(0);
   const updatePOITimerRef = useRef<NodeJS.Timeout | null>(null);
   const poiLayersRef = useRef<LayerConfig[]>([]);
 
@@ -432,14 +434,33 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   };
 
   /**
+   * City, region and country at a point, from Nominatim. Custom POI sources carry at most an
+   * address string of their own, so their places are looked up here.
+   */
+  const lookupAddressDetails = async ([lng, lat]: [number, number]) => {
+    const { addressDetails } = await queryNominatim(
+      lat,
+      lng,
+      0,
+      config.nominatimUrl || 'https://nominatim.openstreetmap.org',
+      locale
+    );
+    return addressDetails;
+  };
+
+  /**
    * `distance` is set when the POI was snapped to rather than clicked directly, so the notification
    * can say how far the picked point ended up from where the user actually pointed.
    */
   const handlePOIClick = async (poi: POI, distance?: number) => {
     setSelectedPOI(poi);
 
-    // Use existing address from POI (NO additional reverse geocoding)
+    // The address stays the POI's own; only the administrative levels are looked up when missing
     const address = poi.address || '';
+    const selectionId = ++selectionIdRef.current;
+    const addressDetails = poi.addressDetails ?? (await lookupAddressDetails(poi.coordinates));
+    // The user picked something else while this was loading: the newer pick owns the field
+    if (selectionId !== selectionIdRef.current) return;
 
     // Update field values with POI data as GeoJSON Feature
     updateValues(
@@ -451,6 +472,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         sourceLayer: poi.mapName,
         category: poi.type,
         inputMethod: 'poi_click',
+        addressDetails,
         metadata: poi.metadata,
       })
     );
@@ -542,6 +564,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     clickCoords: [number, number],
     inputMethod: 'map_click' | 'marker_drag'
   ) => {
+    const selectionId = ++selectionIdRef.current;
     // Get snap radius from config (default: 5 meters)
     const snapRadius = typeof config.poiSnapRadius === 'number' ? config.poiSnapRadius : 5;
 
@@ -552,7 +575,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
 
       // Nominatim covers the basemap's own POIs, so it is queried once per gesture — independently
       // of how many custom sources are configured, and also when none is.
-      const basemapPOIs = await queryNominatim(
+      const { pois: basemapPOIs, addressDetails } = await queryNominatim(
         clickCoords[1], // lat
         clickCoords[0], // lng
         snapRadius,
@@ -631,17 +654,26 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         }
       }
 
+      // The user picked something else while this was loading: the newer pick owns the field
+      if (selectionId !== selectionIdRef.current) return;
+
       // Find the nearest POI
       const nearestPOI = findNearestPOI(clickCoords, allNearbyPOIs);
 
       if (nearestPOI && nearestPOI.distance !== undefined && nearestPOI.distance <= snapRadius) {
-        // Found a POI within snap radius - handlePOIClick does the processing and the notification
-        await handlePOIClick(nearestPOI, nearestPOI.distance);
+        // Found a POI within snap radius - handlePOIClick does the processing and the notification.
+        // A custom POI takes the administrative levels of the reverse lookup just made.
+        await handlePOIClick(
+          { ...nearestPOI, addressDetails: nearestPOI.addressDetails ?? addressDetails },
+          nearestPOI.distance
+        );
       } else {
-        // No POI found nearby - save coordinates only as minimal GeoJSON Feature
+        // No POI found nearby - save the coordinates and the administrative levels only. The
+        // nearest place is too far for its street to be this point's, but not its city.
         updateValues(
           createLocationFeature(clickCoords, {
             inputMethod,
+            addressDetails,
           })
         );
 
@@ -655,6 +687,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       }
     } catch (error) {
       console.error('Failed to search nearby POIs:', error);
+      if (selectionId !== selectionIdRef.current) return;
 
       // Fallback: save coordinates only as minimal GeoJSON Feature
       updateValues(
@@ -688,7 +721,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   };
 
   // Handle search result selection from SearchBox
-  const handleSearchResult = (feature: LocationFeature) => {
+  const handleSearchResult = async (feature: LocationFeature) => {
     // Update map position
     if (feature.geometry?.coordinates) {
       // The flyTo below is the camera move for this change; tell the recentring effect to stand
@@ -705,8 +738,21 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       });
     }
 
+    const selectionId = ++selectionIdRef.current;
+    // Nominatim results carry their administrative levels already; custom POIs need a lookup
+    const addressDetails =
+      feature.properties.addressDetails ??
+      (feature.properties.source === 'nominatim'
+        ? undefined
+        : await lookupAddressDetails(feature.geometry.coordinates));
+    if (selectionId !== selectionIdRef.current) return;
+
     // Update form values - this will call onChange ONCE
-    updateValues(feature);
+    updateValues(
+      addressDetails
+        ? { ...feature, properties: { ...feature.properties, addressDetails } }
+        : feature
+    );
 
     // Show notification
     toggleNotification({

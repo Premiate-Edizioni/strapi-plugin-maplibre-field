@@ -2,7 +2,11 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import MapInput from '../../../admin/src/components/MapInput';
-import { findNearestPOI, queryPOIsForViewport } from '../../../admin/src/services/poi-service';
+import {
+  findNearestPOI,
+  queryNominatim,
+  queryPOIsForViewport,
+} from '../../../admin/src/services/poi-service';
 import { IntlProvider } from 'react-intl';
 import { DesignSystemProvider } from '@strapi/design-system';
 import * as maplibregl from 'maplibre-gl';
@@ -143,7 +147,7 @@ vi.mock('../../../admin/src/services/poi-service', () => ({
   ),
   queryPOIsForViewport: vi.fn(() => Promise.resolve([])),
   searchNearbyCustomPOIs: vi.fn(() => []),
-  queryNominatim: vi.fn(() => Promise.resolve([])),
+  queryNominatim: vi.fn(() => Promise.resolve({ pois: [] })),
   findNearestPOI: vi.fn(() => null),
   calculateDistance: vi.fn(() => 0),
 }));
@@ -430,6 +434,64 @@ describe('MapInput Component', () => {
     expect(screen.getByDisplayValue('45.4642')).toBeInTheDocument();
   });
 
+  test('a drop away from any POI keeps the city of the point, but no address', async () => {
+    const addressDetails = { city: 'Perugia', country: 'Italia', country_code: 'it' };
+    vi.mocked(queryNominatim).mockResolvedValueOnce({ pois: [], addressDetails });
+
+    render(<MockMapInput {...defaultProps} />);
+
+    dragMarkerTo(12.39, 43.11);
+
+    await waitFor(() => expect(mockOnChange).toHaveBeenCalledTimes(1));
+
+    const { properties } = JSON.parse(mockOnChange.mock.calls[0][0].target.value);
+    expect(properties).toEqual({ inputMethod: 'marker_drag', addressDetails });
+  });
+
+  test('a custom POI snapped to takes the city from the reverse lookup', async () => {
+    const addressDetails = { city: 'Milano', country_code: 'it' };
+    vi.mocked(queryNominatim).mockClear();
+    vi.mocked(queryNominatim).mockResolvedValueOnce({ pois: [], addressDetails });
+    vi.mocked(findNearestPOI).mockReturnValueOnce({
+      id: 'poi-1',
+      name: 'Skatespot Centro',
+      type: 'skating_spot',
+      coordinates: [9.2, 45.47],
+      source: 'custom',
+      distance: 3,
+    } as any);
+
+    render(<MockMapInput {...defaultProps} />);
+
+    dragMarkerTo(9.19, 45.4642);
+
+    await waitFor(() => expect(mockOnChange).toHaveBeenCalledTimes(1));
+
+    const { properties } = JSON.parse(mockOnChange.mock.calls[0][0].target.value);
+    expect(properties.addressDetails).toEqual(addressDetails);
+    // One reverse lookup per gesture: the snap's own answer is reused
+    expect(queryNominatim).toHaveBeenCalledTimes(1);
+  });
+
+  test('a late lookup for an earlier drop does not overwrite a later one', async () => {
+    let answerFirst!: (value: { pois: [] }) => void;
+    vi.mocked(queryNominatim)
+      .mockReturnValueOnce(new Promise((resolve) => (answerFirst = resolve)) as any)
+      .mockResolvedValueOnce({ pois: [] });
+
+    render(<MockMapInput {...defaultProps} />);
+
+    dragMarkerTo(9.19, 45.4642);
+    dragMarkerTo(9.25, 45.5);
+    await waitFor(() => expect(mockOnChange).toHaveBeenCalledTimes(1));
+
+    await act(async () => answerFirst({ pois: [] }));
+
+    expect(mockOnChange).toHaveBeenCalledTimes(1);
+    const feature = JSON.parse(mockOnChange.mock.calls[0][0].target.value);
+    expect(feature.geometry.coordinates).toEqual([9.25, 45.5]);
+  });
+
   test('dragging the main marker snaps to a nearby POI', async () => {
     // A POI sits within the snap radius of the drop point
     vi.mocked(findNearestPOI).mockReturnValueOnce({
@@ -576,7 +638,7 @@ describe('MapInput Component', () => {
     }
   });
 
-  test('clicking a PMTiles POI selects it', () => {
+  test('clicking a PMTiles POI selects it', async () => {
     const original = {
       poiDisplayEnabled: mockPluginConfig.poiDisplayEnabled,
       poiSources: mockPluginConfig.poiSources,
@@ -602,15 +664,76 @@ describe('MapInput Component', () => {
       },
     ] as any);
     mockMapInstance.on.mockClear();
+    // A custom POI carries no administrative levels, so the click looks them up at its point
+    const addressDetails = { city: 'Milano', country_code: 'it' };
+    vi.mocked(queryNominatim).mockResolvedValueOnce({ pois: [], addressDetails });
 
     try {
       render(<MockMapInput {...defaultProps} />);
       const [, onClick] = mockMapInstance.on.mock.calls.find(([event]) => event === 'click')!;
       act(() => (onClick as (evt: unknown) => void)({ point: { x: 0, y: 0 } }));
 
+      await waitFor(() => expect(mockOnChange).toHaveBeenCalledTimes(1));
       const feature = JSON.parse(mockOnChange.mock.calls[0][0].target.value);
       expect(feature.geometry.coordinates).toEqual([9.18, 45.47]);
-      expect(feature.properties).toMatchObject({ name: 'Parco Sempione', source: 'parks' });
+      expect(feature.properties).toMatchObject({
+        name: 'Parco Sempione',
+        address: 'Milano',
+        source: 'parks',
+        addressDetails,
+      });
+    } finally {
+      Object.assign(mockPluginConfig, original);
+      mockMapInstance.getLayer.mockImplementation(() => null);
+    }
+  });
+
+  test('a late lookup for an earlier click does not overwrite a later one', async () => {
+    const original = {
+      poiDisplayEnabled: mockPluginConfig.poiDisplayEnabled,
+      poiSources: mockPluginConfig.poiSources,
+    };
+    mockPluginConfig.poiDisplayEnabled = true;
+    mockPluginConfig.poiSources = [
+      {
+        id: 'parks',
+        name: 'Parks',
+        apiUrl: 'https://tiles.test/parks.pmtiles',
+        type: 'pmtiles',
+        sourceLayer: 'parks',
+      } as any,
+    ];
+    mockMapInstance.getLayer.mockImplementation(((id: string) =>
+      id === 'pmtiles-circle-parks' ? {} : null) as any);
+    const park = (id: number, name: string, coordinates: [number, number]) => [
+      {
+        id,
+        layer: { id: 'pmtiles-circle-parks' },
+        geometry: { coordinates },
+        properties: { name },
+      },
+    ];
+    mockMapInstance.queryRenderedFeatures
+      .mockReturnValueOnce(park(1, 'Parco Sempione', [9.18, 45.47]) as any)
+      .mockReturnValueOnce(park(2, 'Parco Lambro', [9.25, 45.5]) as any);
+    mockMapInstance.on.mockClear();
+    // The first click's lookup answers last
+    let answerFirst!: (value: { pois: []; addressDetails: { city: string } }) => void;
+    vi.mocked(queryNominatim)
+      .mockReturnValueOnce(new Promise((resolve) => (answerFirst = resolve)) as any)
+      .mockResolvedValueOnce({ pois: [], addressDetails: { city: 'Milano' } });
+
+    try {
+      render(<MockMapInput {...defaultProps} />);
+      const [, onClick] = mockMapInstance.on.mock.calls.find(([event]) => event === 'click')!;
+      act(() => (onClick as (evt: unknown) => void)({ point: { x: 0, y: 0 } }));
+      act(() => (onClick as (evt: unknown) => void)({ point: { x: 1, y: 1 } }));
+      await waitFor(() => expect(mockOnChange).toHaveBeenCalledTimes(1));
+
+      await act(async () => answerFirst({ pois: [], addressDetails: { city: 'Milano' } }));
+
+      const last = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0].target.value;
+      expect(JSON.parse(last).properties.name).toBe('Parco Lambro');
     } finally {
       Object.assign(mockPluginConfig, original);
       mockMapInstance.getLayer.mockImplementation(() => null);

@@ -361,7 +361,8 @@ When a user selects a POI, all data is preserved:
 ```
 
 **Automatic Fields**:
-- `address` - Reverse geocoded via Nominatim
+- `address` - The source's own `properties.address`, when it has one
+- `addressDetails` - City, province, region and country at the POI, from Nominatim
 - `source` - Your POI source ID (e.g., "skatespots")
 - `sourceId` - Original ID from your API
 - `sourceLayer` - Human-readable source name (e.g., "Skatespots")

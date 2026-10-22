@@ -37,6 +37,16 @@ interface LocationFeature {
   properties: {
     name?: string;        // POI name or location name
     address?: string;     // Full formatted address
+    addressDetails?: {    // Administrative levels, one field each
+      city?: string;
+      county?: string;
+      state?: string;
+      postcode?: string;
+      country?: string;
+      country_code?: string;
+      admin?: { [level: string]: string }; // "level4", "level6", …
+      language?: string;
+    };
     source?: string;      // Data source identifier
     sourceId?: string;    // Original ID from source
     sourceLayer?: string; // Human-readable source name
@@ -132,6 +142,54 @@ repeats the city (city-states such as Berlin, city-provinces such as New York).
 - The language of the place names follows the admin panel locale — see
   [CONFIGURATION.md](CONFIGURATION.md#geocoding-language).
 - Empty if reverse geocoding fails or returns no postal field.
+
+---
+
+### `addressDetails` (object, optional)
+
+**Description**: The administrative levels of the location, one field each, for grouping and
+filtering — which `address`, a single string, does not allow.
+
+**Fields** (keys are Nominatim's GeocodeJSON keys, unchanged):
+
+| Field | Meaning | Example |
+| --- | --- | --- |
+| `city` | City, town or village | `"Perugia"` |
+| `county` | Province | `"Perugia"` |
+| `state` | Region | `"Umbria"` |
+| `postcode` | Postcode | `"06124"` |
+| `country` | Country | `"Italia"` |
+| `country_code` | ISO 3166-1 alpha-2, lowercase | `"it"` |
+| `admin` | The boundaries containing the place, keyed by OSM [`admin_level`](https://wiki.openstreetmap.org/wiki/Key:admin_level) | `{ "level4": "Umbria", "level6": "Perugia", "level8": "Perugia" }` |
+| `language` | The language the names were requested in | `"it"` |
+
+Only the fields Nominatim filled in are present. Unlike `address`, nothing is dropped for
+repeating another level: a province named like its city is still listed under `county`.
+
+`city`, `county`, `state`, `postcode` and `country` are [GeocodeJSON](https://github.com/geocoders/geocodejson-spec)
+fields, as is `admin`. `country_code` is a Nominatim extension to it (Photon calls it
+`countrycode`), and `language` is the plugin's own.
+
+**Which to use**: `city`, `county` and `state` are the geocoder's reading of the hierarchy and are
+enough for most uses. `admin` is the hierarchy as OpenStreetMap records it, and the only place the
+levels below the city appear (`level10` is a *municipio* in Rome or Milan). What each level means
+depends on the country — in Italy `level4` is the region, `level6` the province, `level8` the
+comune; the table on the OSM wiki covers the rest.
+
+**Source**:
+- Nominatim search, POI click, map double-click / marker drag: from the same Nominatim answer that
+  gives the address
+- Map double-click / marker drag, away from any POI: from the nearest place Nominatim found. Too far
+  for its street to be the point's, so no `address` is saved, but almost always in the same city.
+  No `postcode` either: in a city with several, the nearest place may lie in the next area
+- Custom POI sources: one reverse lookup at the POI's point
+- Locations saved before this field existed: not included
+
+**Notes**:
+- Names follow the saving editor's language, so the same city can be stored as `"Milano"` and
+  `"Milan"`. Treat them as labels: group by `country_code`, which does not depend on the language,
+  or normalise names on your side using `language`.
+- Absent if the Nominatim request fails; the location is saved anyway.
 
 ---
 
@@ -399,12 +457,26 @@ does carry `sourceId`, `sourceLayer` and `category` — see Example 2.
     "coordinates": [9.190252, 45.459891]
   },
   "properties": {
-    "inputMethod": "map_click"
+    "inputMethod": "map_click",
+    "addressDetails": {
+      "city": "Milano",
+      "state": "Lombardia",
+      "country": "Italia",
+      "country_code": "it",
+      "admin": {
+        "level4": "Lombardia",
+        "level6": "Milano",
+        "level8": "Milano",
+        "level10": "Municipio 1"
+      },
+      "language": "it"
+    }
   }
 }
 ```
 
-**Note**: Only coordinates and input method are saved. No name, address, or metadata.
+**Note**: No name, address, or metadata: no place lies close enough to be the one picked. The
+administrative levels are kept, since the point is in the same city as the nearest place.
 
 ---
 
