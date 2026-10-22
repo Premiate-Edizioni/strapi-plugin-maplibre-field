@@ -84,6 +84,11 @@ its source on a second line — `OpenStreetMap`, or the name of one of your own 
 - "Eiffel Tower"
 - "123 Main Street, New York"
 - "Central Park"
+- "45.4601, 9.1901" — coordinates, latitude first
+
+**Coordinates are handed to Nominatim like any other query**, and it answers with the nearest
+OpenStreetMap object. The saved point is that object's, not the exact one you pasted: to keep the
+exact coordinates, double-click the map or drag the marker there instead.
 
 ### 2. Clicking on a POI Marker
 

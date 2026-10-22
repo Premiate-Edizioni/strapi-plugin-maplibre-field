@@ -113,7 +113,7 @@ In the Strapi Content-Type Builder pick up your Collection Type, Single Type or 
 
 There are four ways to select a location:
 
-- **Search box** - Type an address or place name, then press **Enter**
+- **Search box** - Type an address, a place name or coordinates (`45.4601, 9.1901`), then press **Enter**
 - **Click POI marker** - Select pre-defined points of interest
 - **Double-click map** - Place marker at exact coordinates
 - **Drag the marker** - Reposition an existing point directly on the map
