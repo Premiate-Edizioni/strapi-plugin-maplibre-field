@@ -139,6 +139,10 @@ vi.mock('../../../admin/src/services/poi-service', async (importOriginal) => ({
   // Pure, so the real one: it is what turns a source's properties into the saved address
   sourceAddress: (await importOriginal<typeof import('../../../admin/src/services/poi-service')>())
     .sourceAddress,
+  // Pure, so the real one: it decides the precision a point is saved with
+  roundCoordinates: (
+    await importOriginal<typeof import('../../../admin/src/services/poi-service')>()
+  ).roundCoordinates,
   createLocationFeature: vi.fn(
     (coords: [number, number], properties: Record<string, any> = {}) => ({
       type: 'Feature',
@@ -256,8 +260,7 @@ describe('MapInput Component', () => {
   test('displays initial coordinates when value is null', () => {
     render(<MockMapInput {...defaultProps} />);
     // With our mocked config, defaultCenter is [10, 45]
-    expect(screen.getByDisplayValue('10')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('45')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('45, 10')).toBeInTheDocument();
     // With no location picked yet, Name and Address are both there but empty
     expect(screen.getAllByDisplayValue('')).toHaveLength(2);
   });
@@ -271,9 +274,55 @@ describe('MapInput Component', () => {
     });
 
     render(<MockMapInput {...defaultProps} value={value} />);
-    expect(screen.getByDisplayValue('9.195')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('45.464')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('45.464, 9.195')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Milano, Italia')).toBeInTheDocument();
+  });
+
+  test('shows the coordinates latitude first, in the one field the copy button copies', () => {
+    render(<MockMapInput {...defaultProps} />);
+    expect(screen.getByLabelText('Latitude, longitude')).toHaveValue('45, 10');
+  });
+
+  describe('copy coordinates', () => {
+    const value = JSON.stringify({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [14.4802381, 42.2456351] },
+      properties: { name: 'Fossacesia' },
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    test('copies "lat, lon", the order a map site accepts pasted', async () => {
+      const writeText = vi.fn(() => Promise.resolve());
+      vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+      render(<MockMapInput {...defaultProps} value={value} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Copy coordinates' }));
+
+      await waitFor(() =>
+        expect(mockToggleNotification).toHaveBeenCalledWith(
+          expect.objectContaining({ type: 'info', message: 'Coordinates copied' })
+        )
+      );
+      expect(writeText).toHaveBeenCalledWith('42.2456351, 14.4802381');
+    });
+
+    test('says so when the clipboard is unavailable, as on an admin served over http', async () => {
+      vi.stubGlobal('navigator', { ...navigator, clipboard: undefined });
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      render(<MockMapInput {...defaultProps} value={value} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Copy coordinates' }));
+
+      await waitFor(() =>
+        expect(mockToggleNotification).toHaveBeenCalledWith(
+          expect.objectContaining({ type: 'danger', message: 'Could not copy the coordinates' })
+        )
+      );
+      consoleError.mockRestore();
+    });
   });
 
   test('shows the same Name and Address fields whether or not the value is a POI', () => {
@@ -434,6 +483,17 @@ describe('MapInput Component', () => {
     expect(mockMarkers[mockMarkers.length - 1].options.draggable).toBe(true);
   });
 
+  test('a point placed on the map is saved and shown with 7 decimals, not floating-point noise', async () => {
+    render(<MockMapInput {...defaultProps} />);
+
+    dragMarkerTo(12.4685157063123, 41.85624318419025);
+
+    await waitFor(() => expect(mockOnChange).toHaveBeenCalledTimes(1));
+    const saved = JSON.parse(mockOnChange.mock.calls[0][0].target.value);
+    expect(saved.geometry.coordinates).toEqual([12.4685157, 41.8562432]);
+    expect(screen.getByLabelText('Latitude, longitude')).toHaveValue('41.8562432, 12.4685157');
+  });
+
   test('dragging the main marker updates coordinates when no POI is nearby', async () => {
     // findNearestPOI is mocked to return null, i.e. nothing within snap radius
     render(<MockMapInput {...defaultProps} />);
@@ -451,8 +511,7 @@ describe('MapInput Component', () => {
     expect(feature.properties.inputMethod).toBe('marker_drag');
 
     // Coordinate fields reflect the dragged position
-    expect(screen.getByDisplayValue('9.19')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('45.4642')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('45.4642, 9.19')).toBeInTheDocument();
   });
 
   test('a drop away from any POI keeps the city of the point, but no address', async () => {

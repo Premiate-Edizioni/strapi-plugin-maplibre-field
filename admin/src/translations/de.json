@@ -13,13 +13,15 @@
   "layers.toggle": "POI-Ebenen ein- oder ausblenden",
   "fields.name": "Name",
   "fields.address": "Adresse",
-  "fields.longitude": "Längengrad",
-  "fields.latitude": "Breitengrad",
+  "fields.coordinates": "Breitengrad, Längengrad",
+  "fields.copy-coordinates": "Koordinaten kopieren",
   "coordinates-saved": "Koordinaten gespeichert",
   "notification.selected": "{name} ausgewählt",
   "notification.selected-from-layer": "{name} aus {layer} ausgewählt",
   "notification.snapped": "{name} ausgewählt ({distance} m entfernt)",
   "notification.snapped-from-layer": "{name} aus {layer} ausgewählt ({distance} m entfernt)",
+  "notification.coordinates-copied": "Koordinaten kopiert",
+  "notification.copy-failed": "Koordinaten konnten nicht kopiert werden",
   "i18n.localized.label": "Lokalisierung für dieses Feld aktivieren",
   "i18n.localized.description": "Das Feld kann in jeder Sprache unterschiedliche Werte haben"
 }

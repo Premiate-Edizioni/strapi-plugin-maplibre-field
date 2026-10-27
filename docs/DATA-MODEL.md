@@ -20,6 +20,7 @@ The MapLibre Field stores location data as a **GeoJSON Feature** object followin
 - Only includes properties when available (no null or empty values)
 - Always uses Point geometry (no Polygons or LineStrings)
 - Coordinates are always `[longitude, latitude]` (X, Y order)
+- Coordinates have at most 7 decimals (about 1 cm), the precision OpenStreetMap stores. Locations saved before 1.10.0 may carry more until they are edited
 - All properties are optional except `geometry.coordinates`
 - Properties vary based on how the location was selected
 

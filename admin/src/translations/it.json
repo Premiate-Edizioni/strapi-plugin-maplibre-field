@@ -13,13 +13,15 @@
   "layers.toggle": "Mostra o nascondi i livelli POI",
   "fields.name": "Nome",
   "fields.address": "Indirizzo",
-  "fields.longitude": "Longitudine",
-  "fields.latitude": "Latitudine",
+  "fields.coordinates": "Latitudine, longitudine",
+  "fields.copy-coordinates": "Copia coordinate",
   "coordinates-saved": "Coordinate impostate",
   "notification.selected": "Selezionato {name}",
   "notification.selected-from-layer": "Selezionato {name} da {layer}",
   "notification.snapped": "Selezionato {name} (a {distance} m)",
   "notification.snapped-from-layer": "Selezionato {name} da {layer} (a {distance} m)",
+  "notification.coordinates-copied": "Coordinate copiate",
+  "notification.copy-failed": "Impossibile copiare le coordinate",
   "i18n.localized.label": "Abilita la localizzazione per questo campo",
   "i18n.localized.description": "Il campo può avere valori diversi in ogni lingua"
 }

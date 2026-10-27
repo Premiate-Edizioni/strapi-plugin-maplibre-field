@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   calculateDistance,
   createLocationFeature,
+  roundCoordinates,
   extractAddressDetails,
   filterByDistance,
   findNearestPOI,
@@ -112,6 +113,19 @@ describe('createLocationFeature', () => {
     });
 
     expect(feature.properties).toEqual({ name: 'Piazza Velasca' });
+  });
+});
+
+describe('roundCoordinates', () => {
+  test('keeps 7 decimals, the precision OpenStreetMap stores', () => {
+    expect(roundCoordinates([12.4685157063123, 41.85624318419025])).toEqual([
+      12.4685157, 41.8562432,
+    ]);
+  });
+
+  test('leaves coordinates that already have 7 decimals or fewer as they are', () => {
+    expect(roundCoordinates([14.4802381, 42.2456351])).toEqual([14.4802381, 42.2456351]);
+    expect(roundCoordinates([9.19, -45.46])).toEqual([9.19, -45.46]);
   });
 });
 

@@ -4,7 +4,8 @@ import { useNotification } from '@strapi/strapi/admin';
 import SearchBox from './SearchBox';
 import BasemapControlComponent from './basemap-control';
 import LayerControl, { LayerConfig } from './layer-control';
-import { Box, Grid, Field } from '@strapi/design-system';
+import { Box, Grid, Field, IconButton } from '@strapi/design-system';
+import { Duplicate } from '@strapi/icons';
 import getTranslation from '../../utils/getTrad';
 import { Protocol } from 'pmtiles';
 import * as maplibregl from 'maplibre-gl';
@@ -25,6 +26,7 @@ import {
   POI,
   LocationFeature,
   createLocationFeature,
+  roundCoordinates,
   queryPOIsForViewport,
   queryNominatim,
   sourceAddress,
@@ -710,8 +712,13 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     }
   };
 
-  const updateValues = (feature: LocationFeature) => {
-    if (!feature) return;
+  const updateValues = (picked: LocationFeature) => {
+    if (!picked) return;
+    // Every way of placing a point ends here, so this is where the saved precision is decided.
+    const feature: LocationFeature = {
+      ...picked,
+      geometry: { ...picked.geometry, coordinates: roundCoordinates(picked.geometry.coordinates) },
+    };
     const value = JSON.stringify(feature);
     setLocationName(placeName(feature));
     setAddress(placeAddress(feature));
@@ -906,6 +913,33 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     markerRef.current?.setLngLat([longitude, latitude]);
   }, [longitude, latitude]);
 
+  // "lat, lon" is what Google Maps, openstreetmap.org's search and our own search box accept pasted.
+  const coordinatesText = `${latitude}, ${longitude}`;
+
+  // The clipboard API is missing outside a secure context (an admin served over plain http), so a
+  // failure is reported rather than leaving the user to paste whatever was there before.
+  const handleCopyCoordinates = async () => {
+    try {
+      await navigator.clipboard.writeText(coordinatesText);
+      toggleNotification({
+        type: 'info',
+        message: formatMessage({
+          id: getTranslation('notification.coordinates-copied'),
+          defaultMessage: 'Coordinates copied',
+        }),
+      });
+    } catch (error) {
+      console.error('MapField: could not copy the coordinates', error);
+      toggleNotification({
+        type: 'danger',
+        message: formatMessage({
+          id: getTranslation('notification.copy-failed'),
+          defaultMessage: 'Could not copy the coordinates',
+        }),
+      });
+    }
+  };
+
   // Draw the POI layers, and draw them again whenever a style swap has wiped them.
   useEffect(() => {
     if (!map || !isStyleLoaded) return;
@@ -979,8 +1013,13 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       )}
 
       <Grid.Root gap={2} marginTop={1}>
-        {/* Row 1: Name (half) + Longitude (quarter) + Latitude (quarter) */}
-        <Grid.Item col={6} direction="column" alignItems="stretch">
+        {/* Row 1: Name (half) + Coordinates (half), each on its own row on narrow screens as in the
+            edit view. Not a third: a read-only field must not cut what it shows, and "lat, lon" with
+            7 decimals, a minus and a 3-digit longitude does not fit one. One field, latitude first,
+            because it shows exactly what its copy button copies: the "lat, lon" that
+            openstreetmap.org, Google Maps and our search box accept pasted. The stored value stays
+            [lng, lat] (GeoJSON). */}
+        <Grid.Item col={6} s={12} xs={12} direction="column" alignItems="stretch">
           <Field.Root>
             <Field.Label>
               {formatMessage({ id: getTranslation('fields.name'), defaultMessage: 'Name' })}
@@ -988,23 +1027,31 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
             <Field.Input name="place_name" value={locationName} placeholder="—" disabled />
           </Field.Root>
         </Grid.Item>
-        <Grid.Item col={3} direction="column" alignItems="stretch">
+        <Grid.Item col={6} s={12} xs={12} direction="column" alignItems="stretch">
           <Field.Root>
             <Field.Label>
               {formatMessage({
-                id: getTranslation('fields.longitude'),
-                defaultMessage: 'Longitude',
+                id: getTranslation('fields.coordinates'),
+                defaultMessage: 'Latitude, longitude',
               })}
             </Field.Label>
-            <Field.Input name="longitude" value={longitude} disabled />
-          </Field.Root>
-        </Grid.Item>
-        <Grid.Item col={3} direction="column" alignItems="stretch">
-          <Field.Root>
-            <Field.Label>
-              {formatMessage({ id: getTranslation('fields.latitude'), defaultMessage: 'Latitude' })}
-            </Field.Label>
-            <Field.Input name="latitude" value={latitude} disabled />
+            <Field.Input
+              name="coordinates"
+              value={coordinatesText}
+              disabled
+              endAction={
+                <IconButton
+                  label={formatMessage({
+                    id: getTranslation('fields.copy-coordinates'),
+                    defaultMessage: 'Copy coordinates',
+                  })}
+                  variant="ghost"
+                  onClick={handleCopyCoordinates}
+                >
+                  <Duplicate />
+                </IconButton>
+              }
+            />
           </Field.Root>
         </Grid.Item>
 

@@ -93,6 +93,14 @@ export interface LocationFeature {
 }
 
 /**
+ * Round [lng, lat] to 7 decimals (about 1 cm), the precision OpenStreetMap stores. A point placed
+ * on the map comes from a pixel and carries ~15 decimals of floating-point noise.
+ */
+export function roundCoordinates([lng, lat]: [number, number]): [number, number] {
+  return [Math.round(lng * 1e7) / 1e7, Math.round(lat * 1e7) / 1e7];
+}
+
+/**
  * Create a LocationFeature with clean properties (no null/empty values)
  * @param coordinates [lng, lat] coordinates
  * @param properties Optional properties to include

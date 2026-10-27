@@ -13,13 +13,15 @@
   "layers.toggle": "Afficher ou masquer les couches de POI",
   "fields.name": "Nom",
   "fields.address": "Adresse",
-  "fields.longitude": "Longitude",
-  "fields.latitude": "Latitude",
+  "fields.coordinates": "Latitude, longitude",
+  "fields.copy-coordinates": "Copier les coordonnées",
   "coordinates-saved": "Coordonnées enregistrées",
   "notification.selected": "{name} sélectionné",
   "notification.selected-from-layer": "{name} sélectionné dans {layer}",
   "notification.snapped": "{name} sélectionné (à {distance} m)",
   "notification.snapped-from-layer": "{name} sélectionné dans {layer} (à {distance} m)",
+  "notification.coordinates-copied": "Coordonnées copiées",
+  "notification.copy-failed": "Impossible de copier les coordonnées",
   "i18n.localized.label": "Activer la localisation pour ce champ",
   "i18n.localized.description": "Le champ peut avoir des valeurs différentes dans chaque langue"
 }
