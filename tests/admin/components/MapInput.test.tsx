@@ -256,8 +256,7 @@ describe('MapInput Component', () => {
   test('displays initial coordinates when value is null', () => {
     render(<MockMapInput {...defaultProps} />);
     // With our mocked config, defaultCenter is [10, 45]
-    expect(screen.getByDisplayValue('10')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('45')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('45, 10')).toBeInTheDocument();
     // With no location picked yet, Name and Address are both there but empty
     expect(screen.getAllByDisplayValue('')).toHaveLength(2);
   });
@@ -271,16 +270,13 @@ describe('MapInput Component', () => {
     });
 
     render(<MockMapInput {...defaultProps} value={value} />);
-    expect(screen.getByDisplayValue('9.195')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('45.464')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('45.464, 9.195')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Milano, Italia')).toBeInTheDocument();
   });
 
-  test('shows latitude before longitude, as openstreetmap.org and Google Maps do', () => {
+  test('shows the coordinates latitude first, in the one field the copy button copies', () => {
     render(<MockMapInput {...defaultProps} />);
-    const latitude = screen.getByLabelText('Latitude');
-    const longitude = screen.getByLabelText('Longitude');
-    expect(latitude.compareDocumentPosition(longitude)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.getByLabelText('Latitude, longitude')).toHaveValue('45, 10');
   });
 
   describe('copy coordinates', () => {
@@ -482,8 +478,7 @@ describe('MapInput Component', () => {
     expect(feature.properties.inputMethod).toBe('marker_drag');
 
     // Coordinate fields reflect the dragged position
-    expect(screen.getByDisplayValue('9.19')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('45.4642')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('45.4642, 9.19')).toBeInTheDocument();
   });
 
   test('a drop away from any POI keeps the city of the point, but no address', async () => {

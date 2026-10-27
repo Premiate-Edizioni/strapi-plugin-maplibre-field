@@ -9,11 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Copy coordinates** - A button at the end of the coordinate fields copies the point as `latitude, longitude`, ready to paste into openstreetmap.org, Google Maps or the field's own search box. See [USAGE.md](docs/USAGE.md#readonly-fields).
+- **Copy coordinates** - A button in the coordinates field copies the point as `latitude, longitude`, ready to paste into openstreetmap.org, Google Maps or the field's own search box. See [USAGE.md](docs/USAGE.md#readonly-fields).
 
 ### Changed
 
-- **Latitude is shown before longitude** - The read-only fields below the map now follow the order of openstreetmap.org and Google Maps. Only the display changed: the saved value is still `[longitude, latitude]`, as GeoJSON requires.
+- **One coordinates field, latitude first** - The separate Longitude and Latitude fields below the map are now a single read-only "Latitude, longitude" field, in the order of openstreetmap.org and Google Maps, showing exactly what the copy button copies. Only the display changed: the saved value is still `[longitude, latitude]`, as GeoJSON requires.
 
 ## [1.9.0] - 2026-10-22
 

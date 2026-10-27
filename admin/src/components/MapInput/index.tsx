@@ -901,11 +901,13 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   }, [longitude, latitude]);
 
   // "lat, lon" is what Google Maps, openstreetmap.org's search and our own search box accept pasted.
+  const coordinatesText = `${latitude}, ${longitude}`;
+
   // The clipboard API is missing outside a secure context (an admin served over plain http), so a
   // failure is reported rather than leaving the user to paste whatever was there before.
   const handleCopyCoordinates = async () => {
     try {
-      await navigator.clipboard.writeText(`${latitude}, ${longitude}`);
+      await navigator.clipboard.writeText(coordinatesText);
       toggleNotification({
         type: 'info',
         message: formatMessage({
@@ -997,8 +999,9 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       )}
 
       <Grid.Root gap={2} marginTop={1}>
-        {/* Row 1: Name (half) + Latitude (quarter) + Longitude (quarter). Latitude comes first, as
-            on openstreetmap.org and Google Maps; the stored value stays [lng, lat] (GeoJSON). */}
+        {/* Row 1: Name (half) + Coordinates (half). One field, latitude first, because it shows
+            exactly what its copy button copies: the "lat, lon" that openstreetmap.org, Google Maps
+            and our search box accept pasted. The stored value stays [lng, lat] (GeoJSON). */}
         <Grid.Item col={6} direction="column" alignItems="stretch">
           <Field.Root>
             <Field.Label>
@@ -1007,25 +1010,17 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
             <Field.Input name="place_name" value={locationName} placeholder="—" disabled />
           </Field.Root>
         </Grid.Item>
-        <Grid.Item col={3} direction="column" alignItems="stretch">
-          <Field.Root>
-            <Field.Label>
-              {formatMessage({ id: getTranslation('fields.latitude'), defaultMessage: 'Latitude' })}
-            </Field.Label>
-            <Field.Input name="latitude" value={latitude} disabled />
-          </Field.Root>
-        </Grid.Item>
-        <Grid.Item col={3} direction="column" alignItems="stretch">
+        <Grid.Item col={6} direction="column" alignItems="stretch">
           <Field.Root>
             <Field.Label>
               {formatMessage({
-                id: getTranslation('fields.longitude'),
-                defaultMessage: 'Longitude',
+                id: getTranslation('fields.coordinates'),
+                defaultMessage: 'Latitude, longitude',
               })}
             </Field.Label>
             <Field.Input
-              name="longitude"
-              value={longitude}
+              name="coordinates"
+              value={coordinatesText}
               disabled
               endAction={
                 <IconButton
