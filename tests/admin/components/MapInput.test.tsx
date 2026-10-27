@@ -402,6 +402,24 @@ describe('MapInput Component', () => {
     expect(mockMapInstance.easeTo).not.toHaveBeenCalled();
   });
 
+  test('pasted coordinates fly there and are saved like a double-click', async () => {
+    mockMapInstance.flyTo.mockClear();
+    mockMapInstance.easeTo.mockClear();
+
+    render(<MockMapInput {...defaultProps} />);
+    const { onSelectCoordinates } =
+      mockSearchBoxProps.mock.calls[mockSearchBoxProps.mock.calls.length - 1][0];
+
+    onSelectCoordinates([9.1901, 45.4601]);
+
+    await waitFor(() => expect(mockOnChange).toHaveBeenCalledTimes(1));
+    const feature = JSON.parse(mockOnChange.mock.calls[0][0].target.value);
+    expect(feature.geometry.coordinates).toEqual([9.1901, 45.4601]);
+    expect(feature.properties.inputMethod).toBe('coordinates');
+    expect(mockMapInstance.flyTo).toHaveBeenCalledTimes(1);
+    expect(mockMapInstance.easeTo).not.toHaveBeenCalled();
+  });
+
   test('the geolocate accuracy circle is made click-through', () => {
     // Without this the circle — often kilometres wide on desktop — covers the location pin and
     // swallows the mousedown that starts a drag.

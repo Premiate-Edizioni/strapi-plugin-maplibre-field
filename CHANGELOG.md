@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Coordinates in the search box are used as they are** - Typing or pasting `45.4601, 9.1901` (latitude first, as Google Maps and openstreetmap.org copy them) now places the point exactly there, like a double-click: it snaps to a POI within `poiSnapRadius`, otherwise the coordinates themselves are saved with `inputMethod: "coordinates"`. They used to go to Nominatim, which saved the nearest OpenStreetMap object instead. Other formats still go to Nominatim.
+
 ## [1.9.0] - 2026-10-22
 
 ### Added
