@@ -57,8 +57,9 @@ export interface SearchConfig {
   queryMapFeatures?: (sourceId: string, sourceLayer: string) => MapFeature[];
 }
 
-// Two decimal numbers, separated by a comma or a space. Whole numbers and the decimal comma are
-// left to the search: "12, 20100" is part of an address far more often than it is a point.
+// Two numbers with a decimal point (any number of decimals), separated by a comma or a space.
+// Whole numbers and the decimal comma are left to the search: "12, 20100" is part of an address
+// far more often than it is a point.
 const COORDINATES_PATTERN = /^\s*(-?\d{1,3}\.\d+)\s*(?:,\s*|\s+)(-?\d{1,3}\.\d+)\s*$/;
 
 /**
