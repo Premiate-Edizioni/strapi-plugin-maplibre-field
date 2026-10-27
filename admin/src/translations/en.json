@@ -15,11 +15,14 @@
   "fields.address": "Address",
   "fields.longitude": "Longitude",
   "fields.latitude": "Latitude",
+  "fields.copy-coordinates": "Copy coordinates",
   "coordinates-saved": "Coordinates set",
   "notification.selected": "Selected {name}",
   "notification.selected-from-layer": "Selected {name} from {layer}",
   "notification.snapped": "Selected {name} ({distance}m away)",
   "notification.snapped-from-layer": "Selected {name} from {layer} ({distance}m away)",
+  "notification.coordinates-copied": "Coordinates copied",
+  "notification.copy-failed": "Could not copy the coordinates",
   "i18n.localized.label": "Enable localization for this field",
   "i18n.localized.description": "The field can have different values in each language"
 }

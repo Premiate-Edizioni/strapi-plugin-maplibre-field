@@ -276,6 +276,55 @@ describe('MapInput Component', () => {
     expect(screen.getByDisplayValue('Milano, Italia')).toBeInTheDocument();
   });
 
+  test('shows latitude before longitude, as openstreetmap.org and Google Maps do', () => {
+    render(<MockMapInput {...defaultProps} />);
+    const latitude = screen.getByLabelText('Latitude');
+    const longitude = screen.getByLabelText('Longitude');
+    expect(latitude.compareDocumentPosition(longitude)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  describe('copy coordinates', () => {
+    const value = JSON.stringify({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [14.4802381, 42.2456351] },
+      properties: { name: 'Fossacesia' },
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    test('copies "lat, lon", the order a map site accepts pasted', async () => {
+      const writeText = vi.fn(() => Promise.resolve());
+      vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+      render(<MockMapInput {...defaultProps} value={value} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Copy coordinates' }));
+
+      await waitFor(() =>
+        expect(mockToggleNotification).toHaveBeenCalledWith(
+          expect.objectContaining({ type: 'info', message: 'Coordinates copied' })
+        )
+      );
+      expect(writeText).toHaveBeenCalledWith('42.2456351, 14.4802381');
+    });
+
+    test('says so when the clipboard is unavailable, as on an admin served over http', async () => {
+      vi.stubGlobal('navigator', { ...navigator, clipboard: undefined });
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      render(<MockMapInput {...defaultProps} value={value} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Copy coordinates' }));
+
+      await waitFor(() =>
+        expect(mockToggleNotification).toHaveBeenCalledWith(
+          expect.objectContaining({ type: 'danger', message: 'Could not copy the coordinates' })
+        )
+      );
+      consoleError.mockRestore();
+    });
+  });
+
   test('shows the same Name and Address fields whether or not the value is a POI', () => {
     const plain = JSON.stringify({
       type: 'Feature',

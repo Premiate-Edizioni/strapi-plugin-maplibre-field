@@ -4,7 +4,8 @@ import { useNotification } from '@strapi/strapi/admin';
 import SearchBox from './SearchBox';
 import BasemapControlComponent from './basemap-control';
 import LayerControl, { LayerConfig } from './layer-control';
-import { Box, Grid, Field } from '@strapi/design-system';
+import { Box, Grid, Field, IconButton } from '@strapi/design-system';
+import { Duplicate } from '@strapi/icons';
 import getTranslation from '../../utils/getTrad';
 import { Protocol } from 'pmtiles';
 import * as maplibregl from 'maplibre-gl';
@@ -899,6 +900,31 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     markerRef.current?.setLngLat([longitude, latitude]);
   }, [longitude, latitude]);
 
+  // "lat, lon" is what Google Maps, openstreetmap.org's search and our own search box accept pasted.
+  // The clipboard API is missing outside a secure context (an admin served over plain http), so a
+  // failure is reported rather than leaving the user to paste whatever was there before.
+  const handleCopyCoordinates = async () => {
+    try {
+      await navigator.clipboard.writeText(`${latitude}, ${longitude}`);
+      toggleNotification({
+        type: 'info',
+        message: formatMessage({
+          id: getTranslation('notification.coordinates-copied'),
+          defaultMessage: 'Coordinates copied',
+        }),
+      });
+    } catch (error) {
+      console.error('MapField: could not copy the coordinates', error);
+      toggleNotification({
+        type: 'danger',
+        message: formatMessage({
+          id: getTranslation('notification.copy-failed'),
+          defaultMessage: 'Could not copy the coordinates',
+        }),
+      });
+    }
+  };
+
   // Draw the POI layers, and draw them again whenever a style swap has wiped them.
   useEffect(() => {
     if (!map || !isStyleLoaded) return;
@@ -971,7 +997,8 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       )}
 
       <Grid.Root gap={2} marginTop={1}>
-        {/* Row 1: Name (half) + Longitude (quarter) + Latitude (quarter) */}
+        {/* Row 1: Name (half) + Latitude (quarter) + Longitude (quarter). Latitude comes first, as
+            on openstreetmap.org and Google Maps; the stored value stays [lng, lat] (GeoJSON). */}
         <Grid.Item col={6} direction="column" alignItems="stretch">
           <Field.Root>
             <Field.Label>
@@ -983,20 +1010,36 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
         <Grid.Item col={3} direction="column" alignItems="stretch">
           <Field.Root>
             <Field.Label>
-              {formatMessage({
-                id: getTranslation('fields.longitude'),
-                defaultMessage: 'Longitude',
-              })}
+              {formatMessage({ id: getTranslation('fields.latitude'), defaultMessage: 'Latitude' })}
             </Field.Label>
-            <Field.Input name="longitude" value={longitude} disabled />
+            <Field.Input name="latitude" value={latitude} disabled />
           </Field.Root>
         </Grid.Item>
         <Grid.Item col={3} direction="column" alignItems="stretch">
           <Field.Root>
             <Field.Label>
-              {formatMessage({ id: getTranslation('fields.latitude'), defaultMessage: 'Latitude' })}
+              {formatMessage({
+                id: getTranslation('fields.longitude'),
+                defaultMessage: 'Longitude',
+              })}
             </Field.Label>
-            <Field.Input name="latitude" value={latitude} disabled />
+            <Field.Input
+              name="longitude"
+              value={longitude}
+              disabled
+              endAction={
+                <IconButton
+                  label={formatMessage({
+                    id: getTranslation('fields.copy-coordinates'),
+                    defaultMessage: 'Copy coordinates',
+                  })}
+                  variant="ghost"
+                  onClick={handleCopyCoordinates}
+                >
+                  <Duplicate />
+                </IconButton>
+              }
+            />
           </Field.Root>
         </Grid.Item>
 
