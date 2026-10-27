@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **One coordinates field, latitude first** - The separate Longitude and Latitude fields below the map are now a single read-only "Latitude, longitude" field, in the order of openstreetmap.org and Google Maps, showing exactly what the copy button copies. Only the display changed: the saved value is still `[longitude, latitude]`, as GeoJSON requires.
 
+### Fixed
+
+- **Points placed on the map were saved with ~15 decimals** - A double-click or marker drop away from any POI saved MapLibre's raw floating-point coordinates (e.g. `41.85624318419025`). Every saved point is now rounded to 7 decimals (about 1 cm), the precision OpenStreetMap and Nominatim use, so the stored value, the coordinates field and the copied text agree. Locations saved earlier keep their coordinates until they are edited.
+
 ## [1.9.0] - 2026-10-22
 
 ### Added

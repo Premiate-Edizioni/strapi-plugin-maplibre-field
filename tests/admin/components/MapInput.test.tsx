@@ -139,6 +139,10 @@ vi.mock('../../../admin/src/services/poi-service', async (importOriginal) => ({
   // Pure, so the real one: it is what turns a source's properties into the saved address
   sourceAddress: (await importOriginal<typeof import('../../../admin/src/services/poi-service')>())
     .sourceAddress,
+  // Pure, so the real one: it decides the precision a point is saved with
+  roundCoordinates: (
+    await importOriginal<typeof import('../../../admin/src/services/poi-service')>()
+  ).roundCoordinates,
   createLocationFeature: vi.fn(
     (coords: [number, number], properties: Record<string, any> = {}) => ({
       type: 'Feature',
@@ -459,6 +463,17 @@ describe('MapInput Component', () => {
   test('main marker is draggable', () => {
     render(<MockMapInput {...defaultProps} />);
     expect(mockMarkers[mockMarkers.length - 1].options.draggable).toBe(true);
+  });
+
+  test('a point placed on the map is saved and shown with 7 decimals, not floating-point noise', async () => {
+    render(<MockMapInput {...defaultProps} />);
+
+    dragMarkerTo(12.4685157063123, 41.85624318419025);
+
+    await waitFor(() => expect(mockOnChange).toHaveBeenCalledTimes(1));
+    const saved = JSON.parse(mockOnChange.mock.calls[0][0].target.value);
+    expect(saved.geometry.coordinates).toEqual([12.4685157, 41.8562432]);
+    expect(screen.getByLabelText('Latitude, longitude')).toHaveValue('41.8562432, 12.4685157');
   });
 
   test('dragging the main marker updates coordinates when no POI is nearby', async () => {

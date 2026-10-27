@@ -26,6 +26,7 @@ import {
   POI,
   LocationFeature,
   createLocationFeature,
+  roundCoordinates,
   queryPOIsForViewport,
   queryNominatim,
   sourceAddress,
@@ -711,8 +712,13 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     }
   };
 
-  const updateValues = (feature: LocationFeature) => {
-    if (!feature) return;
+  const updateValues = (picked: LocationFeature) => {
+    if (!picked) return;
+    // Every way of placing a point ends here, so this is where the saved precision is decided.
+    const feature: LocationFeature = {
+      ...picked,
+      geometry: { ...picked.geometry, coordinates: roundCoordinates(picked.geometry.coordinates) },
+    };
     const value = JSON.stringify(feature);
     setLocationName(placeName(feature));
     setAddress(placeAddress(feature));
