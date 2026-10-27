@@ -988,8 +988,11 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       />
 
       {/* hasRadius, not borderRadius: '4px' — the literal was the theme's borderRadius token
-          spelled out, so the map corners would have drifted from every other boxed surface. */}
-      <Box height="500px" width="100%" hasRadius overflow="hidden">
+          spelled out, so the map corners would have drifted from every other boxed surface.
+          The height follows the window: a fixed 500px made the whole field ~850px tall, more than
+          a laptop shows at once. 440px keeps search and map within the 512px Strapi gives its own
+          tallest inputs (Wysiwyg, Blocks); 280px is the least that still shows a neighbourhood. */}
+      <Box height="clamp(280px, 45vh, 440px)" width="100%" hasRadius overflow="hidden">
         <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
       </Box>
 
