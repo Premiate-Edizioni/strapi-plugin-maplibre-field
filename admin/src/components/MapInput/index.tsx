@@ -1005,10 +1005,13 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       )}
 
       <Grid.Root gap={2} marginTop={1}>
-        {/* Row 1: Name (half) + Coordinates (half). One field, latitude first, because it shows
-            exactly what its copy button copies: the "lat, lon" that openstreetmap.org, Google Maps
-            and our search box accept pasted. The stored value stays [lng, lat] (GeoJSON). */}
-        <Grid.Item col={6} direction="column" alignItems="stretch">
+        {/* Row 1: Name (half) + Coordinates (half), each on its own row on narrow screens as in the
+            edit view. Not a third: a read-only field must not cut what it shows, and "lat, lon" with
+            7 decimals, a minus and a 3-digit longitude does not fit one. One field, latitude first,
+            because it shows exactly what its copy button copies: the "lat, lon" that
+            openstreetmap.org, Google Maps and our search box accept pasted. The stored value stays
+            [lng, lat] (GeoJSON). */}
+        <Grid.Item col={6} s={12} xs={12} direction="column" alignItems="stretch">
           <Field.Root>
             <Field.Label>
               {formatMessage({ id: getTranslation('fields.name'), defaultMessage: 'Name' })}
@@ -1016,7 +1019,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
             <Field.Input name="place_name" value={locationName} placeholder="—" disabled />
           </Field.Root>
         </Grid.Item>
-        <Grid.Item col={6} direction="column" alignItems="stretch">
+        <Grid.Item col={6} s={12} xs={12} direction="column" alignItems="stretch">
           <Field.Root>
             <Field.Label>
               {formatMessage({
