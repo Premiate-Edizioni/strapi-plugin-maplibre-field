@@ -565,12 +565,12 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
   /**
    * Place the location at the given coordinates, snapping to the nearest POI
    * within the configured radius. Falls back to plain coordinates when no POI
-   * is close enough. Shared by the double-click and marker-drag handlers so
-   * both gestures behave identically.
+   * is close enough. Shared by the double-click and marker-drag handlers and by
+   * coordinates typed in the search box, so all three behave identically.
    */
   const setLocationWithPOISnap = async (
     clickCoords: [number, number],
-    inputMethod: 'map_click' | 'marker_drag'
+    inputMethod: 'map_click' | 'marker_drag' | 'coordinates'
   ) => {
     const selectionId = ++selectionIdRef.current;
 
@@ -778,6 +778,13 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
     });
   };
 
+  // Coordinates from the search box are placed like a double-click, after the same flight as a result
+  const handleSearchCoordinates = async (coordinates: [number, number]) => {
+    cameraMovedBySearchRef.current = true;
+    map?.flyTo({ center: coordinates, zoom: 15, essential: true });
+    await setLocationWithPOISnap(coordinates, 'coordinates');
+  };
+
   // Keep the picked point centred when it moves — but never touch the zoom. This used to fly to a
   // hardcoded zoom 15, which threw the user back out whenever they placed a point while zoomed in,
   // and silently undid the search's own flyTo to 16. The zoom is the user's working context;
@@ -973,6 +980,7 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
       {/* Search Box - NEW */}
       <SearchBox
         onSelectResult={handleSearchResult}
+        onSelectCoordinates={handleSearchCoordinates}
         nominatimUrl={config.nominatimUrl || 'https://nominatim.openstreetmap.org'}
         poiSearchEnabled={config.poiSearchEnabled}
         poiSources={searchablePoiSources}

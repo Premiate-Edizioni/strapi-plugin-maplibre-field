@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Copy coordinates** - A button in the coordinates field copies the point as `latitude, longitude`, ready to paste into openstreetmap.org, Google Maps or the field's own search box. See [USAGE.md](docs/USAGE.md#readonly-fields).
 
+- **Coordinates in the search box are used as they are** - Typing or pasting `45.4601, 9.1901` (latitude first, as Google Maps and openstreetmap.org copy them) now places the point exactly there, like a double-click: it snaps to a POI within `poiSnapRadius`, otherwise the coordinates themselves are saved with `inputMethod: "coordinates"`. They used to go to Nominatim, which saved the nearest OpenStreetMap object instead. Other formats still go to Nominatim.
+
 ### Changed
 
 - **One coordinates field, latitude first** - The separate Longitude and Latitude fields below the map are now a single read-only "Latitude, longitude" field, in the order of openstreetmap.org and Google Maps, showing exactly what the copy button copies. Only the display changed: the saved value is still `[longitude, latitude]`, as GeoJSON requires.

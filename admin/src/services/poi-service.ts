@@ -40,8 +40,8 @@ export interface LocationProperties {
   category?: string;
   /** City, region, country and other administrative levels, one field each */
   addressDetails?: AddressDetails;
-  /** How the location was created: "search" | "poi_click" | "map_click" | "marker_drag" */
-  inputMethod?: 'search' | 'poi_click' | 'map_click' | 'marker_drag';
+  /** How the location was created: "search" | "poi_click" | "map_click" | "marker_drag" | "coordinates" */
+  inputMethod?: 'search' | 'poi_click' | 'map_click' | 'marker_drag' | 'coordinates';
   /** Original metadata preserved from the source */
   metadata?: Record<string, unknown>;
 }

@@ -3,6 +3,7 @@
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
+  parseCoordinates,
   performSearch,
   type POISource,
   type SearchConfig,
@@ -63,6 +64,38 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+describe('parseCoordinates', () => {
+  test('reads "lat, lng" as copied from Google Maps or openstreetmap.org', () => {
+    expect(parseCoordinates('45.4601, 9.1901')).toEqual([9.1901, 45.4601]);
+  });
+
+  test('accepts a space as the separator, and negative values', () => {
+    expect(parseCoordinates(' -33.8568 151.2153 ')).toEqual([151.2153, -33.8568]);
+  });
+
+  test('leaves an address with numbers in it to the search', () => {
+    expect(parseCoordinates('Via Roma 12, 20100')).toBeNull();
+    expect(parseCoordinates('12, 20100')).toBeNull();
+  });
+
+  test('leaves whole numbers to the search: a pair like that is more likely a query than a point', () => {
+    expect(parseCoordinates('45, 9')).toBeNull();
+  });
+
+  test('rejects a latitude out of range rather than swapping the pair', () => {
+    expect(parseCoordinates('9.1901, 145.4601')).toEqual([145.4601, 9.1901]);
+    expect(parseCoordinates('145.4601, 9.1901')).toBeNull();
+  });
+
+  test('rejects a longitude out of range', () => {
+    expect(parseCoordinates('45.4601, 190.5')).toBeNull();
+  });
+
+  test('leaves the Italian decimal comma to the search', () => {
+    expect(parseCoordinates('45,4601 9,1901')).toBeNull();
+  });
 });
 
 describe('performSearch', () => {

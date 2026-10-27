@@ -49,7 +49,7 @@ interface LocationProperties {
   sourceId?: string;
   sourceLayer?: string;
   category?: string;
-  inputMethod?: 'search' | 'poi_click' | 'map_click' | 'marker_drag';
+  inputMethod?: 'search' | 'poi_click' | 'map_click' | 'marker_drag' | 'coordinates';
   metadata?: Record<string, unknown>;
 }
 
@@ -234,9 +234,10 @@ The `poiSources[].name` from the plugin config, as shown in the layer control (e
 
 **Values**:
 - `"search"` - picked from the search results
-- `"poi_click"` - a POI was picked: clicked, or snapped onto by a double-click or marker drop
+- `"poi_click"` - a POI was picked: clicked, or snapped onto by a double-click, a marker drop or typed coordinates
 - `"map_click"` - double-clicked on the map, away from any POI
 - `"marker_drag"` - dragged the pin, away from any POI
+- `"coordinates"` - typed or pasted coordinates in the search box, away from any POI
 
 Always present once a location has been picked.
 
