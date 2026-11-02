@@ -24,6 +24,9 @@ interface LayerControlLabels {
   toggle: string;
 }
 
+/** Gap between the open panel and the map's top and bottom edges, as MapLibre's own controls keep. */
+const PANEL_INSET = 10;
+
 /**
  * MapLibre native layer control implementation
  * Follows MapLibre GL JS IControl interface standard
@@ -36,6 +39,7 @@ class LayerControlImpl implements IControl {
   private _panel?: HTMLDivElement;
   private _listContainer?: HTMLDivElement;
   private _outsideClickHandler?: (e: MouseEvent) => void;
+  private _resizeHandler = () => this._fitPanel();
 
   constructor(
     private _layers: LayerConfig[],
@@ -81,19 +85,18 @@ class LayerControlImpl implements IControl {
     // matched to the map surface on purpose, and are not design system values gone stale.
     // Nothing here declares a font: MapLibre sets `12px/20px Helvetica Neue, …` on
     // `.maplibregl-map`, and inheriting it is what keeps the panel looking like the rest of the map.
-    // Create panel (once)
+    // Create panel (once). Its top and max height are set by _fitPanel each time it opens.
     this._panel = document.createElement('div');
     this._panel.className = 'maplibregl-ctrl-layers-panel';
     this._panel.style.display = 'none';
     this._panel.style.position = 'absolute';
-    this._panel.style.top = '0';
     this._panel.style.right = '40px';
+    this._panel.style.boxSizing = 'border-box';
     this._panel.style.background = 'white';
     this._panel.style.borderRadius = '4px';
     this._panel.style.boxShadow = '0 0 0 2px rgba(0, 0, 0, 0.1)';
     this._panel.style.padding = '8px';
     this._panel.style.minWidth = '180px';
-    this._panel.style.maxHeight = '300px';
     this._panel.style.overflowY = 'auto';
 
     // Add title (once)
@@ -112,7 +115,10 @@ class LayerControlImpl implements IControl {
     button.addEventListener('click', () => {
       this._isPanelOpen = !this._isPanelOpen;
       this._panel!.style.display = this._isPanelOpen ? 'block' : 'none';
+      this._fitPanel();
     });
+    // Entering or leaving fullscreen resizes the map under an open panel.
+    map.on('resize', this._resizeHandler);
 
     // Outside click handler using mousedown (fires before click, more reliable)
     // Uses contains() instead of stopPropagation — avoids interference with inner clicks
@@ -136,10 +142,29 @@ class LayerControlImpl implements IControl {
     if (this._outsideClickHandler) {
       document.removeEventListener('mousedown', this._outsideClickHandler);
     }
+    this._map?.off('resize', this._resizeHandler);
     if (this._container && this._container.parentNode) {
       this._container.parentNode.removeChild(this._container);
     }
     this._map = undefined;
+  }
+
+  /**
+   * Pins the open panel to the map's top edge and caps it at the map's height, so it scrolls
+   * instead of running past the bottom edge. The map clips its controls, and anchored to the
+   * button — the fourth control down, ~185px from the top — a list of ten or more layers ran
+   * past the bottom of a short map: scrolling to the end left the last layers under the edge,
+   * where they could not be clicked.
+   */
+  private _fitPanel(): void {
+    if (!this._isPanelOpen || !this._map || !this._panel || !this._container) return;
+
+    // The panel is positioned against this control's group, so the map's top edge is measured
+    // from there. Both boxes are viewport-relative, which cancels out page scroll.
+    const mapBox = this._map.getContainer().getBoundingClientRect();
+    const controlBox = this._container.getBoundingClientRect();
+    this._panel.style.top = `${mapBox.top + PANEL_INSET - controlBox.top}px`;
+    this._panel.style.maxHeight = `${mapBox.height - 2 * PANEL_INSET}px`;
   }
 
   private _renderList(): void {

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The map was too tall for a laptop screen** - The map was a fixed 500px, which made the whole field about 850px tall: on a laptop it could not be seen at once. Its height now follows the window, between 280px and 440px (45% of the window height), so search and map stay within the 512px Strapi gives its own tallest inputs. Fullscreen is still there for detailed work.
+
+- **Layers at the end of a long POI list could not be selected** - The POI layers panel opened next to its button, ~185px below the top of the map, and was up to 300px tall, so with ten or more layers it reached the map's bottom edge, where the map cuts it off. On a shorter map, scrolling to the end of the list left the last layers under that edge. The panel now opens at the top of the map, is never taller than the map, and fits again when the map is resized, so every layer can be reached at any map height and in fullscreen.
+
 ## [1.10.0] - 2026-10-27
 
 ### Added
