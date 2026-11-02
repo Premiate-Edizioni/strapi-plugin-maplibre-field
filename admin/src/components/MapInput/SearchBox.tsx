@@ -200,9 +200,10 @@ const SearchBox: React.FC<SearchBoxProps> = ({
     }
 
     // Custom POI - look up color from configuration
-    const sourceId = result.feature.properties?.sourceId;
-    if (sourceId && poiSources) {
-      const source = poiSources.find((s) => s.id === sourceId);
+    // `source` names the configured layer; `sourceId` is the feature's own id inside it
+    const layerId = result.feature.properties?.source;
+    if (layerId && poiSources) {
+      const source = poiSources.find((s) => s.id === layerId);
       if (source?.color) {
         return source.color;
       }

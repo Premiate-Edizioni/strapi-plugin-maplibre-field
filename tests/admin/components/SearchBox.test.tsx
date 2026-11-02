@@ -22,8 +22,26 @@ const poiResult = {
     properties: {
       name: 'Bump dietro Centrale',
       address: 'Via Sammartini, Milano',
-      sourceId: 'skatespots',
+      source: 'skatespots',
+      sourceId: '1234',
       sourceLayer: 'Skatespots',
+    },
+  },
+};
+
+// A PMTiles layer in a colour that is not the red fallback, so a failed lookup shows
+const parkResult = {
+  id: 'pmtiles-skateparks-0',
+  place_name: 'Skatepark Area Motta',
+  source: 'custom' as const,
+  feature: {
+    type: 'Feature' as const,
+    geometry: { type: 'Point' as const, coordinates: [9.22, 45.45] as [number, number] },
+    properties: {
+      name: 'Skatepark Area Motta',
+      source: 'skateparks',
+      sourceId: '99',
+      sourceLayer: 'Skateparks',
     },
   },
 };
@@ -57,6 +75,14 @@ const defaultProps = {
       name: 'Skatespots',
       apiUrl: 'https://poi.test/s.geojson',
       color: '#cc0000',
+    },
+    {
+      id: 'skateparks',
+      name: 'Skateparks',
+      type: 'pmtiles',
+      apiUrl: 'https://poi.test/parks.pmtiles',
+      sourceLayer: 'skateparks',
+      color: '#1dbff0',
     },
   ],
 };
@@ -129,6 +155,17 @@ describe('SearchBox', () => {
     // neutral500 in the light theme; a literal grey here would not follow the dark theme.
     expect(dotOf(nominatimOption)).toBe('rgb(142, 142, 169)');
     expect(dotOf(poiOption)).toBe('rgb(204, 0, 0)');
+  });
+
+  test('the dot of a result takes the colour of the layer it came from, not the red fallback', async () => {
+    vi.mocked(performSearch).mockResolvedValue([parkResult] as any);
+
+    render(<Wrapper {...defaultProps} />);
+    await searchFor('motta');
+
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1));
+    const dot = screen.getByRole('option').querySelector('[aria-hidden="true"]')!;
+    expect(getComputedStyle(dot).backgroundColor).toBe('rgb(29, 191, 240)');
   });
 
   test('tells the user when a search found nothing', async () => {

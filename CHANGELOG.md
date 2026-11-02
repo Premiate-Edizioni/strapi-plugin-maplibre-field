@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Every search result from a POI layer had a red dot** - The dot should repeat the colour of the layer a result comes from, but it looked the layer up by the feature's own id instead of the layer's, so it never found it and fell back to red. A PMTiles layer in light blue showed red in the results. It started when search results began saving the same source fields as a click (`source` for the layer, `sourceId` for the feature).
+
 - **The map sometimes failed to load with "Style is not done loading"** - The map opens with the default style while the plugin config is still being fetched, and swaps to the configured style when it arrives. If the first style had already loaded by then, the POI layers were drawn in the same moment as the swap, on a style that was not ready, and `addSource` threw. It depended on which came first, the style or the config, so reloading the page could clear it. The style now counts as loaded only for the URL whose `style.load` has fired, and that is decided while rendering, so no POI layer is drawn on a style that has just been replaced.
 
 - **The map was too tall for a laptop screen** - The map was a fixed 500px, which made the whole field about 850px tall: on a laptop it could not be seen at once. Its height now follows the window, between 280px and 440px (45% of the window height), so search and map stay within the 512px Strapi gives its own tallest inputs. Fullscreen is still there for detailed work.
