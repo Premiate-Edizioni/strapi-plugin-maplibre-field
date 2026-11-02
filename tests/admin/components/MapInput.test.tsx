@@ -257,6 +257,18 @@ describe('MapInput Component', () => {
     expect(options.zoom).toBe(5);
   });
 
+  test('the map has the same outline as the inputs below it: 1px, neutral200', () => {
+    vi.mocked(maplibregl.Map).mockClear();
+    render(<MockMapInput {...defaultProps} />);
+
+    const [options] = vi.mocked(maplibregl.Map).mock.calls[0] as any[];
+    const frame = getComputedStyle((options.container as HTMLElement).parentElement!);
+    expect(frame.borderTopWidth).toBe('1px');
+    expect(frame.borderTopStyle).toBe('solid');
+    // neutral200 in the light theme, the border colour of every Strapi input
+    expect(frame.borderTopColor).toBe('rgb(220, 220, 228)');
+  });
+
   test('displays initial coordinates when value is null', () => {
     render(<MockMapInput {...defaultProps} />);
     // With our mocked config, defaultCenter is [10, 45]

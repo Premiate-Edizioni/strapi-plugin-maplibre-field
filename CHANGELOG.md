@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The map has the outline of a Strapi input** - The frame around the map had the rounded corners of the design system but no border, so it stood out from the fields under it. It now draws the same 1px `neutral200` outline they do.
+
 ### Fixed
 
 - **Every search result from a POI layer had a red dot** - The dot should repeat the colour of the layer a result comes from, but it looked the layer up by the feature's own id instead of the layer's, so it never found it and fell back to red. A PMTiles layer in light blue showed red in the results. It started when search results began saving the same source fields as a click (`source` for the layer, `sourceId` for the feature).

@@ -991,8 +991,18 @@ const MapField: React.FC<MapFieldProps> = ({ intlLabel, name, onChange, value })
           spelled out, so the map corners would have drifted from every other boxed surface.
           The height follows the window: a fixed 500px made the whole field ~850px tall, more than
           a laptop shows at once. 440px keeps search and map within the 512px Strapi gives its own
-          tallest inputs (Wysiwyg, Blocks); 280px is the least that still shows a neighbourhood. */}
-      <Box height="clamp(280px, 45vh, 440px)" width="100%" hasRadius overflow="hidden">
+          tallest inputs (Wysiwyg, Blocks); 280px is the least that still shows a neighbourhood.
+          The 1px neutral200 outline is the one every Strapi input draws, so the map reads as a
+          field like the ones below it rather than a picture stuck in the form. */}
+      <Box
+        height="clamp(280px, 45vh, 440px)"
+        width="100%"
+        hasRadius
+        overflow="hidden"
+        borderColor="neutral200"
+        borderStyle="solid"
+        borderWidth="1px"
+      >
         <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
       </Box>
 
