@@ -24,7 +24,7 @@ How to use the MapLibre Field in your Strapi content types.
 7. Click **Finish**
 8. **Save** the content type
 
-![Add map field to content type](../add-maplibre-custom-field.png)
+![Strapi's Content-Type Builder, Custom tab, showing the Map field](https://raw.githubusercontent.com/Premiate-Edizioni/strapi-plugin-maplibre-field/main/add-maplibre-custom-field.png)
 
 ### Via Schema Definition
 

@@ -14,7 +14,7 @@
   <a href="https://strapi.io"><img src="https://img.shields.io/badge/Strapi-v5-blue" alt="Strapi v5"></a>
 </p>
 
-![Map Field](https://raw.githubusercontent.com/Premiate-Edizioni/strapi-plugin-maplibre-field/main/add-or-pin-on-map.png)
+![The Map field in a Strapi edit view: search box, map with the POI layers panel open, name, coordinates and address](https://raw.githubusercontent.com/Premiate-Edizioni/strapi-plugin-maplibre-field/main/add-or-pin-on-map.png)
 
 ## ✨ Key Features
 
@@ -22,17 +22,17 @@
 - **GeoJSON Feature** storage (RFC 7946 compliant), ready to use in any frontend map library
 - **Four ways to place a point** - search, POI click, double-click, or drag the marker
 - **OpenStreetMap geocoding** via Nominatim, in the language of the admin panel
-- **Custom POI layers** (GeoJSON or PMTiles) with a layer control panel to toggle sources
-- **Keyboard-accessible search** built on Strapi's Combobox (WAI-ARIA combobox pattern)
+- **Custom POI layers** (GeoJSON or PMTiles) - click to pick one, find them from the search box, and toggle each source from a layer panel
+- **Keyboard-accessible search**
 - **Five UI languages** - English, German, Spanish, French, Italian
-- **Interactive MapLibre GL map** with fullscreen, zoom, compass and geolocate controls
+- **Interactive MapLibre GL map** with fullscreen, zoom, compass, geolocate and basemap switcher controls
 
 ## 📦 Installation
 
 ### Requirements
 
 - Strapi v5.0.0 or higher
-- Node.js 22.0.0 or higher
+- Node.js 22 to 26
 
 ### Install
 
@@ -107,7 +107,7 @@ In the Strapi Content-Type Builder pick up your Collection Type, Single Type or 
 4. Type a name for the field
 5. Click **Finish**
 
-![Add map field](https://raw.githubusercontent.com/Premiate-Edizioni/strapi-plugin-maplibre-field/main/add-maplibre-custom-field.png)
+![Strapi's Content-Type Builder, Custom tab, showing the Map field](https://raw.githubusercontent.com/Premiate-Edizioni/strapi-plugin-maplibre-field/main/add-maplibre-custom-field.png)
 
 ## 🎯 How to Select a Location
 
@@ -118,7 +118,7 @@ There are four ways to select a location:
 - **Double-click map** - Place marker at exact coordinates
 - **Drag the marker** - Reposition an existing point directly on the map
 
-The selected location is saved as a GeoJSON Feature with coordinates, name, address, and metadata.
+The button at the end of the coordinates field copies them as `latitude, longitude`, ready to paste into openstreetmap.org or Google Maps.
 
 ## 📚 Documentation
 
@@ -138,18 +138,6 @@ The plugin supports any [MapLibre Style Specification](https://maplibre.org/mapl
 - **Custom styles** - build your own with [Maputnik](https://maputnik.github.io/)
 
 See the [Configuration Guide](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/docs/CONFIGURATION.md) for detailed setup instructions.
-
-## 🏢 POI Support
-
-Integrate custom Points of Interest from a GeoJSON URL (static file or API) or a PMTiles vector tile archive:
-
-- Display POI markers on the map
-- Click to select and save complete POI data
-- Layer control to toggle multiple POI sources
-- Search integration (queries both Nominatim and custom APIs)
-- Configurable zoom levels and display limits
-
-See the [POI Integration Guide](https://github.com/Premiate-Edizioni/strapi-plugin-maplibre-field/blob/main/docs/POI.md) for setup and examples.
 
 ## 🔧 Data Structure
 
