@@ -7,19 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.1] - 2026-11-02
+
 ### Changed
 
 - **The map has the outline of a Strapi input** - The frame around the map had the rounded corners of the design system but no border, so it stood out from the fields under it. It now draws the same 1px `neutral200` outline they do.
 
 ### Fixed
 
-- **Every search result from a POI layer had a red dot** - The dot should repeat the colour of the layer a result comes from, but it looked the layer up by the feature's own id instead of the layer's, so it never found it and fell back to red. A PMTiles layer in light blue showed red in the results. It started when search results began saving the same source fields as a click (`source` for the layer, `sourceId` for the feature).
+- **Every search result from a POI layer had a red dot** - Since 1.9.0. The dot should repeat the colour of the layer a result comes from, but it looked the layer up by the feature's own id instead of the layer's, so it never found it and fell back to red. A PMTiles layer in light blue showed red in the results. It started when search results began saving the same source fields as a click (`source` for the layer, `sourceId` for the feature).
 
-- **The map sometimes failed to load with "Style is not done loading"** - The map opens with the default style while the plugin config is still being fetched, and swaps to the configured style when it arrives. If the first style had already loaded by then, the POI layers were drawn in the same moment as the swap, on a style that was not ready, and `addSource` threw. It depended on which came first, the style or the config, so reloading the page could clear it. The style now counts as loaded only for the URL whose `style.load` has fired, and that is decided while rendering, so no POI layer is drawn on a style that has just been replaced.
+- **The map sometimes failed to load with "Style is not done loading"** - Since 1.8.0. The map opens with the default style while the plugin config is still being fetched, and swaps to the configured style when it arrives. If the first style had already loaded by then, the POI layers were drawn in the same moment as the swap, on a style that was not ready, and `addSource` threw. It depended on which came first, the style or the config, so reloading the page could clear it. The style now counts as loaded only for the URL whose `style.load` has fired, and that is decided while rendering, so no POI layer is drawn on a style that has just been replaced.
 
 - **The map was too tall for a laptop screen** - The map was a fixed 500px, which made the whole field about 850px tall: on a laptop it could not be seen at once. Its height now follows the window, between 280px and 440px (45% of the window height), so search and map stay within the 512px Strapi gives its own tallest inputs. Fullscreen is still there for detailed work.
 
 - **Layers at the end of a long POI list could not be selected** - The POI layers panel opened next to its button, ~185px below the top of the map, and was up to 300px tall, so with ten or more layers it reached the map's bottom edge, where the map cuts it off. On a shorter map, scrolling to the end of the list left the last layers under that edge. The panel now opens at the top of the map, is never taller than the map, and fits again when the map is resized, so every layer can be reached at any map height and in fullscreen.
+
+### Documentation
+
+- **README and screenshots** - Both screenshots retaken in the light theme with the current field: the shorter, outlined map, the POI layers panel at the top, a PMTiles layer and the copy button. Every image now has alt text, and `USAGE.md` links its screenshot through `raw.githubusercontent.com` like the README, so it renders outside the repository too. The README states Node 22 to 26 as the `engines` field does, names the basemap switcher and the copy button, and no longer repeats the POI feature list in a section of its own.
 
 ## [1.10.0] - 2026-10-27
 
