@@ -59,6 +59,26 @@ describe('useMaplibreMap', () => {
     expect(latest.isStyleLoaded).toBe(true);
   });
 
+  test('never reports a style as loaded in the render that asks for another one', () => {
+    // The plugin config arrives after the map was created with the default style. An effect in
+    // that same commit (the POI one) reads this flag and calls addSource, so it must already be
+    // false in the render that carries the new URL, not only after the hook's own effect ran.
+    const seen: Array<{ styleUrl: string; isStyleLoaded: boolean }> = [];
+    const Recorder = ({ styleUrl }: { styleUrl: string }) => {
+      const result = useMaplibreMap({ styleUrl, center: [10, 45], zoom: 5 });
+      seen.push({ styleUrl, isStyleLoaded: result.isStyleLoaded });
+      return <div ref={result.containerRef} />;
+    };
+
+    const { rerender } = render(<Recorder styleUrl="https://styles.test/a.json" />);
+    act(() => mockMap.handlers['style.load']());
+    rerender(<Recorder styleUrl="https://styles.test/b.json" />);
+
+    const forB = seen.filter((entry) => entry.styleUrl === 'https://styles.test/b.json');
+    expect(forB.length).toBeGreaterThan(0);
+    expect(forB.every((entry) => !entry.isStyleLoaded)).toBe(true);
+  });
+
   test('does not reload the style it opened with', () => {
     const { rerender } = render(<Harness styleUrl="https://styles.test/a.json" />);
     rerender(<Harness styleUrl="https://styles.test/a.json" />);

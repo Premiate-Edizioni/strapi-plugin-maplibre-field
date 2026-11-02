@@ -34,7 +34,10 @@ export const useMaplibreMap = ({
 }: UseMaplibreMapOptions): UseMaplibreMapResult => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<maplibregl.Map | null>(null);
-  const [isStyleLoaded, setIsStyleLoaded] = useState(false);
+  // The URL whose `style.load` last fired. Compared with `styleUrl` while rendering, so a new URL
+  // reads as "not loaded" in the very render that carries it: an effect in the same commit (the
+  // POI one) would otherwise still see the old flag and call `addSource` on a half-built style.
+  const [loadedStyleUrl, setLoadedStyleUrl] = useState<string | null>(null);
 
   const initialRef = useRef({ styleUrl, center, zoom });
   const appliedStyleRef = useRef(styleUrl);
@@ -52,7 +55,7 @@ export const useMaplibreMap = ({
     });
     appliedStyleRef.current = initialStyle;
 
-    const handleStyleLoad = () => setIsStyleLoaded(true);
+    const handleStyleLoad = () => setLoadedStyleUrl(appliedStyleRef.current);
     instance.on('style.load', handleStyleLoad);
     setMap(instance);
 
@@ -60,18 +63,21 @@ export const useMaplibreMap = ({
       instance.off('style.load', handleStyleLoad);
       instance.remove();
       setMap(null);
-      setIsStyleLoaded(false);
+      setLoadedStyleUrl(null);
     };
   }, []);
 
   useEffect(() => {
     if (!map || !styleUrl || styleUrl === appliedStyleRef.current) return;
     appliedStyleRef.current = styleUrl;
-    setIsStyleLoaded(false);
     // `diff: false` rebuilds the style from scratch, which is what fires `style.load` again. A
     // diffed swap would drop our layers just the same but never say it had finished.
     map.setStyle(styleUrl, { diff: false });
   }, [map, styleUrl]);
 
-  return { containerRef, map, isStyleLoaded };
+  return {
+    containerRef,
+    map,
+    isStyleLoaded: loadedStyleUrl !== null && loadedStyleUrl === styleUrl,
+  };
 };

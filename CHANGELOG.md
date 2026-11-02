@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The map sometimes failed to load with "Style is not done loading"** - The map opens with the default style while the plugin config is still being fetched, and swaps to the configured style when it arrives. If the first style had already loaded by then, the POI layers were drawn in the same moment as the swap, on a style that was not ready, and `addSource` threw. It depended on which came first, the style or the config, so reloading the page could clear it. The style now counts as loaded only for the URL whose `style.load` has fired, and that is decided while rendering, so no POI layer is drawn on a style that has just been replaced.
+
 - **The map was too tall for a laptop screen** - The map was a fixed 500px, which made the whole field about 850px tall: on a laptop it could not be seen at once. Its height now follows the window, between 280px and 440px (45% of the window height), so search and map stay within the 512px Strapi gives its own tallest inputs. Fullscreen is still there for detailed work.
 
 - **Layers at the end of a long POI list could not be selected** - The POI layers panel opened next to its button, ~185px below the top of the map, and was up to 300px tall, so with ten or more layers it reached the map's bottom edge, where the map cuts it off. On a shorter map, scrolling to the end of the list left the last layers under that edge. The panel now opens at the top of the map, is never taller than the map, and fits again when the map is resized, so every layer can be reached at any map height and in fullscreen.
