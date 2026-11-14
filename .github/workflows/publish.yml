@@ -25,8 +25,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
+          # Same reason as in ci.yml: npm 12 and jsdom 30 need at least Node 22.22.2.
+          check-latest: true
       # Same pin as ci.yml, and for the same reason: see the comment there.
-      - run: npm i -g npm@11
+      - run: npm i -g npm@12
       - run: npm ci
       - run: npm run build
       - run: npm run verify
@@ -45,12 +47,14 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
+          # npm 12 needs at least 24.15.0; see the test job above.
+          check-latest: true
           registry-url: 'https://registry.npmjs.org'
       # Before `npm ci`, not after: this is the same pin the other jobs use, and it doubles as
       # the npm upgrade Trusted Publishing needs (npm/cli#8730 puts the minimum at 11.5.1).
-      # Pinned rather than @latest so a future npm 12 cannot change the install behaviour of a
+      # Pinned rather than @latest so a future npm 13 cannot change the install behaviour of a
       # release without anyone deciding to.
-      - run: npm i -g npm@11
+      - run: npm i -g npm@12
       - run: npm ci
       - run: npm --version
       # --provenance is required the first time a package is published from a given repository
