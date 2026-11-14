@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Strapi refused to start unless every option was set** - The plugin's defaults were written as a schema (`{ type, default }`), but Strapi merges `config.default` into the app's config as plain values. An option the app left out therefore received the schema object instead of its default: `defaultZoom`, `defaultCenter`, `poiMinZoom`, `poiMaxDisplay` and `poiSnapRadius` failed validation and stopped the boot, `mapStyles` did too, so the documented OpenFreeMap fallback never applied, and a missing `nominatimUrl` sent searches to `[object Object]/search`. The defaults are now plain values, every option can be left out, and a test runs the config through the same merge Strapi does.
+
 - **The layers button was invisible in Strapi's dark theme** - The icon was an inline SVG drawn with `currentColor`, and its button declared no colour, so it took the admin theme's button colour: white in dark mode, on the map's white control. It is now drawn the way MapLibre draws its own icons, as a `background-image` with the colour baked in, so nothing is inherited from the admin theme.
 
 ## [1.10.1] - 2026-11-02

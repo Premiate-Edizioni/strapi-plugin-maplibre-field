@@ -6,16 +6,16 @@ import type { MapLibreConfig, MapStyle, POISource } from '../types/config';
  * Throws an error if required fields are missing or invalid.
  */
 function validator(config: MapLibreConfig): void {
-  // Validate mapStyles
-  if (!config.mapStyles || !Array.isArray(config.mapStyles)) {
+  // Validate mapStyles. Optional: without it the admin falls back to OpenFreeMap.
+  if (config.mapStyles !== undefined && !Array.isArray(config.mapStyles)) {
     throw new Error('[maplibre-field] config.mapStyles must be an array');
   }
 
-  if (config.mapStyles.length === 0) {
+  if (config.mapStyles?.length === 0) {
     throw new Error('[maplibre-field] config.mapStyles must contain at least one style');
   }
 
-  config.mapStyles.forEach((style: MapStyle, index: number) => {
+  config.mapStyles?.forEach((style: MapStyle, index: number) => {
     if (!style.id || typeof style.id !== 'string') {
       throw new Error(`[maplibre-field] mapStyles[${index}].id must be a non-empty string`);
     }

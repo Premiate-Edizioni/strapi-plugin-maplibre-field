@@ -51,7 +51,7 @@ export default {
 |--------|------|---------|-------------|
 | `mapStyles` | `MapStyle[]` | OpenFreeMap Liberty | Array of map style configurations |
 | `defaultCenter` | `[number, number]` | `[0, 0]` | Initial map center [longitude, latitude] |
-| `defaultZoom` | `number` | `4.5` | Initial zoom level (0-20) |
+| `defaultZoom` | `number` | `4.5` | Initial zoom level (0-24) |
 | `geocodingProvider` | `string` | `'nominatim'` | Geocoding service provider |
 | `nominatimUrl` | `string` | `'https://nominatim.openstreetmap.org'` | Nominatim API endpoint |
 | `poiDisplayEnabled` | `boolean` | `true` | Display POI markers on map |

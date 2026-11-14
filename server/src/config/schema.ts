@@ -1,60 +1,32 @@
-export default {
-  mapStyles: {
-    type: 'array',
-    default: [
-      {
-        id: 'ofm',
-        name: 'OpenFreeMap',
-        url: 'https://tiles.openfreemap.org/styles/liberty',
-        isDefault: true,
-      },
-    ],
-  },
-  defaultZoom: {
-    type: 'number',
-    default: 4.5,
-  },
-  defaultCenter: {
-    type: 'array',
-    default: [0, 0],
-  },
-  geocodingProvider: {
-    type: 'string',
-    default: 'nominatim',
-  },
-  nominatimUrl: {
-    type: 'string',
-    default: 'https://nominatim.openstreetmap.org',
-  },
-  poiDisplayEnabled: {
-    type: 'boolean',
-    default: true,
-    description: 'Display POI markers on map',
-  },
-  poiMinZoom: {
-    type: 'number',
-    default: 10,
-    description: 'Minimum zoom level to display POI markers',
-  },
-  poiMaxDisplay: {
-    type: 'number',
-    default: 100,
-    description: 'Maximum number of POIs to display on map',
-  },
-  poiSearchEnabled: {
-    type: 'boolean',
-    default: true,
-    description: 'Include custom API results in search field',
-  },
-  poiSnapRadius: {
-    type: 'number',
-    default: 5,
-    description: 'Snap radius in meters for double-click POI detection (default: 5m)',
-  },
-  useFullscreenPseudo: {
-    type: 'boolean',
-    default: true,
-    description:
-      'Use CSS-based fullscreen (faster on some devices) instead of the native Fullscreen API',
-  },
+import type { MapLibreConfig } from '../types/config';
+
+/**
+ * Default values, merged under the app's config by Strapi at boot with lodash's `defaultsDeep`.
+ *
+ * They must be plain values: Strapi does not read a `{ type, default }` schema, it merges this
+ * object as-is, so a schema here ends up as the option's value.
+ *
+ * `mapStyles` and `defaultCenter` are left out on purpose. `defaultsDeep` merges arrays index by
+ * index, so a default array would leak into the app's: its first style would inherit
+ * `isDefault: true` from ours. When they are not configured, the admin falls back to OpenFreeMap
+ * and `[0, 0]` (see `DEFAULT_CONFIG` in admin/src/hooks/usePluginConfig.ts).
+ */
+const defaults: Omit<MapLibreConfig, 'mapStyles' | 'defaultCenter'> = {
+  defaultZoom: 4.5,
+  geocodingProvider: 'nominatim',
+  nominatimUrl: 'https://nominatim.openstreetmap.org',
+  // Display POI markers on the map
+  poiDisplayEnabled: true,
+  // Minimum zoom level at which POI markers are displayed
+  poiMinZoom: 10,
+  // Maximum number of POIs displayed on the map
+  poiMaxDisplay: 100,
+  // Include custom POI results in the search field
+  poiSearchEnabled: true,
+  // Radius in metres within which a picked point snaps to a POI
+  poiSnapRadius: 5,
+  // CSS-based fullscreen (faster on some devices) instead of the native Fullscreen API
+  useFullscreenPseudo: true,
 };
+
+export default defaults;

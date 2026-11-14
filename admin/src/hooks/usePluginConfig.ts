@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useFetchClient } from '@strapi/strapi/admin';
 import type { MapLibreConfig } from '../../../server/src/types/config';
 
-// Default configuration - fallback if API fails
+// Fallback while the config loads, or if the request fails. Also the only source of the default
+// mapStyles and defaultCenter, which the server leaves out (see server/src/config/schema.ts).
 const DEFAULT_CONFIG: MapLibreConfig = {
   mapStyles: [
     {
-      id: 'default',
-      name: 'Default',
+      id: 'ofm',
+      name: 'OpenFreeMap',
       url: 'https://tiles.openfreemap.org/styles/liberty',
       isDefault: true,
     },
