@@ -24,6 +24,15 @@ interface LayerControlLabels {
   toggle: string;
 }
 
+/**
+ * The toggle's icon, drawn the way MapLibre draws its own: an SVG in `background-image` with the
+ * colour baked in, so it depends on nothing inherited from the admin theme. MapLibre ships no
+ * layers icon (only zoom, compass, locate, fullscreen, globe, terrain), hence ours.
+ */
+const LAYERS_ICON = `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='29' height='29' viewBox='0 0 24 24' fill='none' stroke='#333' stroke-width='1.5' stroke-linejoin='round'><path d='M12 5L4 9.5l8 4.5 8-4.5L12 5z'/><path d='M4 13l8 4.5 8-4.5'/><path d='M4 16.5l8 4.5 8-4.5'/></svg>"
+)}")`;
+
 /** Gap between the open panel and the map's top and bottom edges, as MapLibre's own controls keep. */
 const PANEL_INSET = 10;
 
@@ -61,13 +70,7 @@ class LayerControlImpl implements IControl {
     button.className = 'maplibregl-ctrl-icon';
     button.title = this._labels.toggle;
     button.setAttribute('aria-label', this._labels.toggle);
-    button.innerHTML = `
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-        <path d="M2 17l10 5 10-5"/>
-        <path d="M2 12l10 5 10-5"/>
-      </svg>
-    `;
+    button.style.backgroundImage = LAYERS_ICON;
     button.style.width = '29px';
     button.style.height = '29px';
     button.style.cursor = 'pointer';

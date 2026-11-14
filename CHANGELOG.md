@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The layers button was invisible in Strapi's dark theme** - The icon was an inline SVG drawn with `currentColor`, and its button declared no colour, so it took the admin theme's button colour: white in dark mode, on the map's white control. It is now drawn the way MapLibre draws its own icons, as a `background-image` with the colour baked in, so nothing is inherited from the admin theme.
+
 ## [1.10.1] - 2026-11-02
 
 ### Changed
