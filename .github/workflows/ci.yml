@@ -24,13 +24,16 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
+          # npm 12 needs at least 24.15.0; see the matrix job below.
+          check-latest: true
           cache: npm
-      # Pin npm instead of taking whatever each Node ships (22 -> npm 10, 24/26 -> npm 11).
-      # `npm ci` refuses to install when the lockfile's tree is not the one it would compute,
-      # and npm 10 and 11 do not always hoist identically, so a lockfile written on one and
-      # read on the other can fail before a single test runs. The matrix is here to test our
-      # code on three Node versions, not to test npm against itself.
-      - run: npm i -g npm@11
+      # Pin npm instead of taking whatever each Node ships (22 -> npm 10, 24 -> npm 11,
+      # 26 -> npm 12). `npm ci` refuses to install when the lockfile's tree is not the one it
+      # would compute, and npm majors do not always hoist identically, so a lockfile written on
+      # one and read on another can fail before a single test runs. The matrix is here to test
+      # our code on three Node versions, not to test npm against itself. npm 12 is what Node 26
+      # LTS ships, so it is also what the lockfile is written with locally.
+      - run: npm i -g npm@12
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
@@ -41,22 +44,20 @@ jobs:
       fail-fast: false
       matrix:
         # Supported range declared in package.json engines (>=22 <=26), matching what
-        # @strapi/strapi 5 itself declares. Node 26 is blocking here, on push and PRs, so a
-        # break surfaces while working rather than during a release; publish.yml deliberately
-        # keeps a narrower matrix, see the comment there.
+        # @strapi/strapi 5 itself declares. Same matrix as publish.yml, so a break surfaces on
+        # push and PRs rather than during a release.
         node-version: ['22', '24', '26']
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
+          # Without it setup-node may reuse an older 22.x cached on the runner image, and both
+          # npm 12 and jsdom 30 need at least 22.22.2.
+          check-latest: true
           cache: npm
-      # Pin npm instead of taking whatever each Node ships (22 -> npm 10, 24/26 -> npm 11).
-      # `npm ci` refuses to install when the lockfile's tree is not the one it would compute,
-      # and npm 10 and 11 do not always hoist identically, so a lockfile written on one and
-      # read on the other can fail before a single test runs. The matrix is here to test our
-      # code on three Node versions, not to test npm against itself.
-      - run: npm i -g npm@11
+      # Same pin as the lint job, and for the same reason: see the comment there.
+      - run: npm i -g npm@12
       - run: npm ci
       - run: npm run build
       - run: npm run verify
